@@ -204,7 +204,7 @@ const Btn=({variant="primary",children,...p})=>{
   return <button style={{...styles[variant],borderRadius:12,fontSize:14,fontWeight:600,padding:"11px 16px",cursor:"pointer",transition:"all .15s",fontFamily:"inherit",...p.style}} {...p}>{children}</button>;
 };
 const SL=({children,style:st})=><div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:10,...st}}>{children}</div>;
-const SLDark=({children})=><div style={{fontSize:11,fontWeight:700,color:C.modalSub,letterSpacing:".08em",textTransform:"uppercase",marginBottom:10}}>{children}</div>;
+
 
 // ── Alocação Modal ────────────────────────────────────────────────────────────
 function AlocacaoModal({open,onClose,plantao,regras,invests,objetivos,dividas,onConfirm}) {
@@ -425,7 +425,8 @@ export default function App() {
   const empAnalise=useMemo(()=>{
     const map={};
     plantoes.forEach(p=>{
-      if(!map[p.empresa])map[p.empresa]={nome:p.empresa,total:0,count:0,atrasos:0,recebido:0,pendente:0,cor:empNome(p.empresa).cor||C.magenta};
+      const empC=empresas.find(e=>e.nome===p.empresa);
+      if(!map[p.empresa])map[p.empresa]={nome:p.empresa,total:0,count:0,atrasos:0,recebido:0,pendente:0,cor:empC?.cor||C.magenta};
       map[p.empresa].total+=p.valorTotal;
       map[p.empresa].count+=1;
       const se=getPltStatus(p);
@@ -434,6 +435,7 @@ export default function App() {
       if(["pendente","atrasado"].includes(se))map[p.empresa].pendente+=p.valorTotal;
     });
     return Object.values(map).sort((a,b)=>b.total-a.total);
+  // eslint-disable-next-line eslint-disable-next-line react-hooks/exhaustive-deps
   },[plantoes,empresas]);
 
   const maxEmpTotal=empAnalise.length?Math.max(...empAnalise.map(e=>e.total)):1;
