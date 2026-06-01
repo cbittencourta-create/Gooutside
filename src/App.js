@@ -1,9 +1,50 @@
 import { useState, useEffect, useMemo } from "react";
 
+const SUPA_URL = "https://hbzldrnrbxvnkrbnntoe.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhiemxkcm5yYnh2bmtyYm5udG9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNDM1OTAsImV4cCI6MjA5NTkxOTU5MH0.eQYfb5PDkiKdGDfdtL9NZYm_xSHQkLAEWhcpGM4YpLI";
+
+async function supaGet(key) {
+  try {
+    const r = await fetch(`${SUPA_URL}/rest/v1/velara_data?key=eq.${key}&select=value`, {
+      headers: {'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`}
+    });
+    const d = await r.json();
+    return d?.[0]?.value ?? null;
+  } catch { return null; }
+}
+
+async function supaSet(key, value) {
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/velara_data`, {
+      method: 'POST',
+      headers: {'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'},
+      body: JSON.stringify({key, value, updated_at: new Date().toISOString()})
+    });
+  } catch {}
+}
+
 function useLS(key, init) {
   const [v, sv] = useState(() => { try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : init; } catch { return init; } });
-  useEffect(() => { try { localStorage.setItem(key, JSON.stringify(v)); } catch {} }, [key, v]);
-  return [v, sv];
+  
+  // Load from Supabase on mount
+  useEffect(() => {
+    supaGet(key).then(remote => {
+      if (remote !== null) {
+        sv(remote);
+        try { localStorage.setItem(key, JSON.stringify(remote)); } catch {}
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  // Save to localStorage and Supabase on change
+  const setV = (newVal) => {
+    sv(newVal);
+    try { localStorage.setItem(key, JSON.stringify(newVal)); } catch {}
+    supaSet(key, newVal);
+  };
+
+  return [v, setV];
 }
 
 // ── Paleta glass olive/burgundy ───────────────────────────────────────────────
@@ -435,7 +476,7 @@ export default function App() {
       if(["pendente","atrasado"].includes(se))map[p.empresa].pendente+=p.valorTotal;
     });
     return Object.values(map).sort((a,b)=>b.total-a.total);
-  // eslint-disable-next-line eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   },[plantoes,empresas]);
 
   const maxEmpTotal=empAnalise.length?Math.max(...empAnalise.map(e=>e.total)):1;
