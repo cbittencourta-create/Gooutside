@@ -3,50 +3,77 @@ import { useState, useEffect, useMemo } from "react";
 const SUPA_URL = "https://hbzldrnrbxvnkrbnntoe.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhiemxkcm5yYnh2bmtyYm5udG9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNDM1OTAsImV4cCI6MjA5NTkxOTU5MH0.eQYfb5PDkiKdGDfdtL9NZYm_xSHQkLAEWhcpGM4YpLI";
 
-async function supaGet(key) {
+// E-mails autorizados a se cadastrar
+const INVITED_EMAILS = [];
+
+const supaAuth = {
+  async signUp(email, password, name) {
+    const r = await fetch(`${SUPA_URL}/auth/v1/signup`, {
+      method: "POST",
+      headers: {"apikey": SUPA_KEY, "Content-Type": "application/json"},
+      body: JSON.stringify({email, password, data: {name}})
+    });
+    return r.json();
+  },
+  async signIn(email, password) {
+    const r = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+      method: "POST",
+      headers: {"apikey": SUPA_KEY, "Content-Type": "application/json"},
+      body: JSON.stringify({email, password})
+    });
+    return r.json();
+  },
+  async signOut(token) {
+    await fetch(`${SUPA_URL}/auth/v1/logout`, {
+      method: "POST",
+      headers: {"apikey": SUPA_KEY, "Authorization": `Bearer ${token}`}
+    });
+  }
+};
+
+async function supaGet(key, userId) {
   try {
-    const r = await fetch(`${SUPA_URL}/rest/v1/velara_data?key=eq.${key}&select=value`, {
-      headers: {'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`}
+    const r = await fetch(`${SUPA_URL}/rest/v1/velara_data?key=eq.${userId}_${key}&select=value`, {
+      headers: {"apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`}
     });
     const d = await r.json();
     return d?.[0]?.value ?? null;
   } catch { return null; }
 }
 
-async function supaSet(key, value) {
+async function supaSet(key, value, userId) {
   try {
     await fetch(`${SUPA_URL}/rest/v1/velara_data`, {
-      method: 'POST',
-      headers: {'apikey': SUPA_KEY, 'Authorization': `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'},
-      body: JSON.stringify({key, value, updated_at: new Date().toISOString()})
+      method: "POST",
+      headers: {"apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json", "Prefer": "resolution=merge-duplicates"},
+      body: JSON.stringify({key: `${userId}_${key}`, value, updated_at: new Date().toISOString()})
     });
   } catch {}
 }
 
-function useLS(key, init) {
-  const [v, sv] = useState(() => { try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : init; } catch { return init; } });
-  
-  // Load from Supabase on mount
+function useLS(key, init, userId) {
+  const storageKey = userId ? `${userId}_${key}` : key;
+  const [v, sv] = useState(() => { try { const s = localStorage.getItem(storageKey); return s ? JSON.parse(s) : init; } catch { return init; } });
+
   useEffect(() => {
-    supaGet(key).then(remote => {
+    if (!userId) return;
+    supaGet(key, userId).then(remote => {
       if (remote !== null) {
         sv(remote);
-        try { localStorage.setItem(key, JSON.stringify(remote)); } catch {}
+        try { localStorage.setItem(storageKey, JSON.stringify(remote)); } catch {}
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
+  }, [userId]);
 
-  // Save to localStorage and Supabase on change
   const setV = (newVal) => {
     sv(newVal);
-    try { localStorage.setItem(key, JSON.stringify(newVal)); } catch {}
-    supaSet(key, newVal);
+    try { localStorage.setItem(storageKey, JSON.stringify(newVal)); } catch {}
+    if (userId) supaSet(key, newVal, userId);
   };
 
   return [v, setV];
 }
-
 // ── Paleta glass olive/burgundy ───────────────────────────────────────────────
 const C = {
   text:"#1A1209", textSub:"rgba(26,18,9,0.65)", textMuted:"rgba(26,18,9,0.45)",
@@ -352,17 +379,107 @@ function RegrasModal({open,onClose,regras,setRegras,invests,objetivos,dividas}) 
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// ── Login Screen ─────────────────────────────────────────────────────────────
+function LoginScreen({onLogin}) {
+  const [mode, setMode]       = useState("login"); // login | signup
+  const [email, setEmail]     = useState("");
+  const [password, setPass]   = useState("");
+  const [name, setName]       = useState("");
+  const [error, setError]     = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async () => {
+    setError(""); setLoading(true);
+    if (!email || !password) { setError("Preencha e-mail e senha."); setLoading(false); return; }
+    if (mode === "signup") {
+      if (INVITED_EMAILS.length > 0 && !INVITED_EMAILS.includes(email.toLowerCase())) {
+        setError("Este e-mail não está na lista de convidados."); setLoading(false); return;
+      }
+      const r = await supaAuth.signUp(email, password, name);
+      if (r.error) { setError(r.error.message); setLoading(false); return; }
+      setError("Conta criada! Faça login agora."); setMode("login"); setLoading(false); return;
+    }
+    const r = await supaAuth.signIn(email, password);
+    if (r.error) { setError(r.error.message || "E-mail ou senha incorretos."); setLoading(false); return; }
+    const userId = r.user?.id || r.id;
+    const userName = r.user?.user_metadata?.name || email.split("@")[0];
+    localStorage.setItem("velara_token", r.access_token);
+    localStorage.setItem("velara_user_id", userId);
+    localStorage.setItem("velara_user_name", userName);
+    onLogin({token: r.access_token, id: userId, name: userName, email});
+    setLoading(false);
+  };
+
+  return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Cormorant Garamond','Georgia',serif",position:"relative"}}>
+      <div className="wallpaper-bg"/>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+        *{box-sizing:border-box;margin:0;padding:0}
+        input,button{font-family:'DM Sans',sans-serif}
+        body,#root{background:#C4A96A;min-height:100vh}
+        .wallpaper-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-color:#C4A96A;background-image:repeating-linear-gradient(0deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px),repeating-linear-gradient(90deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px);background-size:160px 160px}
+        input::placeholder{color:rgba(26,18,9,0.4)}
+      `}</style>
+      <div style={{background:"rgba(255,255,255,0.88)",backdropFilter:"blur(24px)",borderRadius:24,padding:"36px 32px",width:"100%",maxWidth:380,margin:16,boxShadow:"0 8px 40px rgba(0,0,0,0.15)",position:"relative",zIndex:1}}>
+        <div style={{textAlign:"center",marginBottom:28}}>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:".2em",textTransform:"uppercase",color:"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>Velara Finance</div>
+          <div style={{fontSize:28,fontWeight:300,letterSpacing:"-.02em",color:"#1A1209"}}>{mode==="login"?"Bem-vinda":"Criar conta"}</div>
+        </div>
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {mode==="signup"&&(
+            <input placeholder="Seu nome" value={name} onChange={e=>setName(e.target.value)}
+              style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"12px 14px",fontSize:14,color:"#1A1209",outline:"none",width:"100%"}}/>
+          )}
+          <input placeholder="E-mail" type="email" value={email} onChange={e=>setEmail(e.target.value)}
+            style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"12px 14px",fontSize:14,color:"#1A1209",outline:"none",width:"100%"}}/>
+          <input placeholder="Senha" type="password" value={password} onChange={e=>setPass(e.target.value)}
+            onKeyDown={e=>e.key==="Enter"&&submit()}
+            style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"12px 14px",fontSize:14,color:"#1A1209",outline:"none",width:"100%"}}/>
+          {error&&<div style={{fontSize:12,color:error.includes("criada")?"#2D6E20":"#C0392B",fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>{error}</div>}
+          <button onClick={submit} disabled={loading}
+            style={{background:"#E8205F",color:"#fff",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:4,opacity:loading?0.7:1}}>
+            {loading?"Aguarde...":(mode==="login"?"Entrar":"Criar conta")}
+          </button>
+          <div style={{textAlign:"center",fontSize:12,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>
+            {mode==="login"?"Não tem conta?":"Já tem conta?"}{" "}
+            <button onClick={()=>{setMode(mode==="login"?"signup":"login");setError("");}}
+              style={{background:"none",border:"none",color:"#E8205F",fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>
+              {mode==="login"?"Cadastrar":"Fazer login"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
-  const [movs,      setMovs]      = useLS("v4_movs",   []);
-  const [empresas,  setEmpresas]  = useLS("v4_emp",    []);
-  const [plantoes,  setPlantoes]  = useLS("v4_plt",    []);
-  const [invests,   setInvests]   = useLS("v4_inv",    []);
-  const [objetivos, setObjetivos] = useLS("v4_obj",    []);
-  const [dividas,   setDividas]   = useLS("v4_div",    []);
-  const [cartoes,   setCartoes]   = useLS("v4_cart",   []);
-  const [ccMovs,    setCCMovs]    = useLS("v4_ccm",    []);
-  const [regras,    setRegras]    = useLS("v4_regras", []);
-  const [alocacoes, setAlocacoes] = useLS("v4_aloc",   []);
+  const [user, setUser] = useState(() => {
+    const token = localStorage.getItem("velara_token");
+    const id    = localStorage.getItem("velara_user_id");
+    const name  = localStorage.getItem("velara_user_name");
+    const email = localStorage.getItem("velara_user_email");
+    return token && id ? {token, id, name, email} : null;
+  });
+
+  if (!user) return <LoginScreen onLogin={u=>{localStorage.setItem("velara_user_email",u.email);setUser(u);}}/>;
+
+  return <AppMain user={user} onLogout={()=>{supaAuth.signOut(user.token);localStorage.removeItem("velara_token");localStorage.removeItem("velara_user_id");localStorage.removeItem("velara_user_name");localStorage.removeItem("velara_user_email");setUser(null);}}/>;
+}
+
+function AppMain({user, onLogout}) {
+  const uid = user.id;
+  const [movs,      setMovs]      = useLS("v4_movs",   [], uid);
+  const [empresas,  setEmpresas]  = useLS("v4_emp",    [], uid);
+  const [plantoes,  setPlantoes]  = useLS("v4_plt",    [], uid);
+  const [invests,   setInvests]   = useLS("v4_inv",    [], uid);
+  const [objetivos, setObjetivos] = useLS("v4_obj",    [], uid);
+  const [dividas,   setDividas]   = useLS("v4_div",    [], uid);
+  const [cartoes,   setCartoes]   = useLS("v4_cart",   [], uid);
+  const [ccMovs,    setCCMovs]    = useLS("v4_ccm",    [], uid);
+  const [regras,    setRegras]    = useLS("v4_regras", [], uid);
+  const [alocacoes, setAlocacoes] = useLS("v4_aloc",   [], uid);
 
   const [tab,setTab]=useState("dashboard");
   const [modal,setModal]=useState(null);
@@ -587,13 +704,17 @@ export default function App() {
           <div style={{fontSize:10,fontWeight:700,letterSpacing:".2em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>Velara Finance</div>
           <div style={{fontSize:20,fontWeight:300,letterSpacing:"-.02em",color:"#fff"}}>Menu</div>
         </div>
-        <div style={{padding:"8px 0",overflowY:"auto",maxHeight:"calc(100vh - 100px)"}}>
+        <div style={{padding:"8px 0",overflowY:"auto",maxHeight:"calc(100vh - 160px)"}}>
           {TABS.map(t=>(
             <div key={t.id} className={`navitem ${tab===t.id?"active":""}`} onClick={()=>navTo(t.id)}>
               <span className="nav-icon">{t.icon}</span>
               <span>{t.label}</span>
             </div>
           ))}
+        </div>
+        <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>👤 {user.name||user.email}</div>
+          <button onClick={onLogout} style={{background:"rgba(232,32,95,0.3)",border:"1px solid rgba(232,32,95,0.4)",borderRadius:10,color:"#fff",fontSize:12,fontWeight:600,padding:"8px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%"}}>Sair</button>
         </div>
       </div>
 
