@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 
 const SUPA_URL = "https://hbzldrnrbxvnkrbnntoe.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhiemxkcm5yYnh2bmtyYm5udG9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAzNDM1OTAsImV4cCI6MjA5NTkxOTU5MH0.eQYfb5PDkiKdGDfdtL9NZYm_xSHQkLAEWhcpGM4YpLI";
@@ -53,8 +53,12 @@ async function supaSet(key, value, userId) {
 
 function useLS(key, init, userId) {
   const storageKey = userId ? `${userId}_${key}` : key;
-  const [v, sv] = useState(() => { try { const s = localStorage.getItem(storageKey); return s ? JSON.parse(s) : init; } catch { return init; } });
+  const [v, sv] = useState(() => { 
+    try { const s = localStorage.getItem(storageKey); return s ? JSON.parse(s) : init; } 
+    catch { return init; } 
+  });
 
+  // Load from Supabase on mount
   useEffect(() => {
     if (!userId) return;
     supaGet(key, userId).then(remote => {
@@ -64,13 +68,16 @@ function useLS(key, init, userId) {
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId]);
+  }, [userId, storageKey]);
 
-  const setV = (newVal) => {
-    sv(newVal);
-    try { localStorage.setItem(storageKey, JSON.stringify(newVal)); } catch {}
-    if (userId) supaSet(key, newVal, userId);
-  };
+  // Wrapped setter that also saves to localStorage and Supabase
+  const setV = useCallback((newVal) => {
+    const resolved = typeof newVal === 'function' ? newVal(v) : newVal;
+    sv(resolved);
+    try { localStorage.setItem(storageKey, JSON.stringify(resolved)); } catch {}
+    if (userId) supaSet(key, resolved, userId);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey, userId, key]);
 
   return [v, setV];
 }
