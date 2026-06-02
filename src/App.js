@@ -474,17 +474,17 @@ export default function App() {
 }
 
 function AppMain({user, onLogout}) {
-  const uid = user.id;
-  const [movs,      setMovs]      = useLS("v4_movs",   [], uid);
-  const [empresas,  setEmpresas]  = useLS("v4_emp",    [], uid);
-  const [plantoes,  setPlantoes]  = useLS("v4_plt",    [], uid);
-  const [invests,   setInvests]   = useLS("v4_inv",    [], uid);
-  const [objetivos, setObjetivos] = useLS("v4_obj",    [], uid);
-  const [dividas,   setDividas]   = useLS("v4_div",    [], uid);
-  const [cartoes,   setCartoes]   = useLS("v4_cart",   [], uid);
-  const [ccMovs,    setCCMovs]    = useLS("v4_ccm",    [], uid);
-  const [regras,    setRegras]    = useLS("v4_regras", [], uid);
-  const [alocacoes, setAlocacoes] = useLS("v4_aloc",   [], uid);
+  const userId = user.id;
+  const [movs,      setMovs]      = useLS("v4_movs",   [], userId);
+  const [empresas,  setEmpresas]  = useLS("v4_emp",    [], userId);
+  const [plantoes,  setPlantoes]  = useLS("v4_plt",    [], userId);
+  const [invests,   setInvests]   = useLS("v4_inv",    [], userId);
+  const [objetivos, setObjetivos] = useLS("v4_obj",    [], userId);
+  const [dividas,   setDividas]   = useLS("v4_div",    [], userId);
+  const [cartoes,   setCartoes]   = useLS("v4_cart",   [], userId);
+  const [ccMovs,    setCCMovs]    = useLS("v4_ccm",    [], userId);
+  const [regras,    setRegras]    = useLS("v4_regras", [], userId);
+  const [alocacoes, setAlocacoes] = useLS("v4_aloc",   [], userId);
 
   const [tab,setTab]=useState("dashboard");
   const [modal,setModal]=useState(null);
