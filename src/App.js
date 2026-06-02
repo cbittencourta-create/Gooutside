@@ -406,8 +406,10 @@ function LoginScreen({onLogin}) {
     }
     const r = await supaAuth.signIn(email, password);
     if (r.error) { setError(r.error.message || "E-mail ou senha incorretos."); setLoading(false); return; }
-    const userId = r.user?.id || r.id;
-    const userName = r.user?.user_metadata?.name || email.split("@")[0];
+    console.log("Login response:", JSON.stringify(r));
+    const userId = r.user?.id || r.id || r.sub;
+    const userName = r.user?.user_metadata?.name || r.user?.email?.split("@")[0] || email.split("@")[0];
+    if (!userId) { setError("Erro ao obter ID do usuário. Tente novamente."); setLoading(false); return; }
     localStorage.setItem("velara_token", r.access_token);
     localStorage.setItem("velara_user_id", userId);
     localStorage.setItem("velara_user_name", userName);
@@ -465,7 +467,8 @@ export default function App() {
     const id    = localStorage.getItem("velara_user_id");
     const name  = localStorage.getItem("velara_user_name");
     const email = localStorage.getItem("velara_user_email");
-    return token && id ? {token, id, name, email} : null;
+    console.log("Stored user id:", id);
+    return token && id && id !== "undefined" ? {token, id, name, email} : null;
   });
 
   if (!user) return <LoginScreen onLogin={u=>{localStorage.setItem("velara_user_email",u.email);setUser(u);}}/>;
