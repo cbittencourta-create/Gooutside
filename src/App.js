@@ -406,14 +406,20 @@ function LoginScreen({onLogin}) {
     }
     const r = await supaAuth.signIn(email, password);
     if (r.error) { setError(r.error.message || "E-mail ou senha incorretos."); setLoading(false); return; }
-    console.log("Login response:", JSON.stringify(r));
-    const userId = r.user?.id || r.id || r.sub;
-    const userName = r.user?.user_metadata?.name || r.user?.email?.split("@")[0] || email.split("@")[0];
-    if (!userId) { setError("Erro ao obter ID do usuário. Tente novamente."); setLoading(false); return; }
-    localStorage.setItem("velara_token", r.access_token);
-    localStorage.setItem("velara_user_id", userId);
+    // Decode user id from JWT token
+    const token = r.access_token;
+    let userId = r.user?.id || r.id;
+    if (!userId && token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        userId = payload.sub;
+      } catch(e) {}
+    }
+    const userName = r.user?.user_metadata?.name || email.split("@")[0];
+    localStorage.setItem("velara_token", token);
+    localStorage.setItem("velara_user_id", userId || email);
     localStorage.setItem("velara_user_name", userName);
-    onLogin({token: r.access_token, id: userId, name: userName, email});
+    onLogin({token, id: userId || email, name: userName, email});
     setLoading(false);
   };
 
@@ -468,7 +474,7 @@ export default function App() {
     const name  = localStorage.getItem("velara_user_name");
     const email = localStorage.getItem("velara_user_email");
     console.log("Stored user id:", id);
-    return token && id && id !== "undefined" ? {token, id, name, email} : null;
+    return token && id && id !== "undefined" && id !== "null" ? {token, id, name, email} : null;
   });
 
   if (!user) return <LoginScreen onLogin={u=>{localStorage.setItem("velara_user_email",u.email);setUser(u);}}/>;
