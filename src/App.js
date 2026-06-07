@@ -896,6 +896,8 @@ export default function App() {
 
 function AppMain({user, onLogout}) {
   const userId = user.id;
+  const [cats,      setCats]      = useLS("v4_cats",   DEFAULT_CATS, userId);
+  const [orcamento, setOrcamento] = useLS("v4_orc",    {}, userId);
   const [movs,      setMovs]      = useLS("v4_movs",   [], userId);
   const [empresas,  setEmpresas]  = useLS("v4_emp",    [], userId);
   const [plantoes,  setPlantoes]  = useLS("v4_plt",    [], userId);
