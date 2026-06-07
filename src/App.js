@@ -1447,78 +1447,95 @@ function AppMain({user, onLogout}) {
         {/* ══ ANÁLISE ══ */}
         {tab==="analise"&&(
           <div className="fade">
-            <div style={{fontSize:22,fontWeight:300,color:TXT,marginBottom:14}}>Análise Completa</div>
+            {/* Título */}
+            <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:14,padding:"12px 16px",border:"1px solid rgba(255,255,255,0.98)",marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
+              <div style={{fontSize:22,fontWeight:300,color:"#1A1209"}}>Análise Completa</div>
+            </div>
 
-            {/* Donut empresas */}
-            {donutEmpresas.length>0&&(
-              <div className={CARD} style={{marginBottom:12}}>
+            {/* Linha 1: Donut empresas + Donut gastos */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+              <div className={CARD}>
                 <SL>Receita por empresa</SL>
-                <div style={{display:"flex",gap:14,alignItems:"center"}}>
-                  <div style={{position:"relative",flexShrink:0}}>
-                    <Donut data={donutEmpresas} size={110} thick={15}/>
+                <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+                  <div style={{position:"relative"}}>
+                    <Donut data={donutEmpresas} size={90} thick={13}/>
                     <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <div className="num" style={{fontSize:9,fontWeight:700,color:TXT,textAlign:"center",lineHeight:1.3}}>{R(empAnalise.reduce((s,e)=>s+e.total,0))}</div>
+                      <div className="num" style={{fontSize:8,fontWeight:700,color:"#1A1209",textAlign:"center",lineHeight:1.3}}>{R(empAnalise.reduce((s,e)=>s+e.total,0))}</div>
                     </div>
-                  </div>
-                  <div style={{flex:1}}>
-                    {donutEmpresas.map(d=>{
-                      const tot=donutEmpresas.reduce((s,x)=>s+x.v,0);
-                      return <div key={d.label} style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
-                        <div style={{width:7,height:7,borderRadius:99,background:d.color,flexShrink:0}}/>
-                        <span style={{fontSize:11,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",flex:1}}>{d.label}</span>
-                        <span className="num" style={{fontSize:11,fontWeight:700,color:TXT}}>{tot>0?(d.v/tot*100).toFixed(0):0}%</span>
-                      </div>;
-                    })}
                   </div>
                 </div>
+                {donutEmpresas.slice(0,5).map(d=>{
+                  const tot=donutEmpresas.reduce((s,x)=>s+x.v,0);
+                  return <div key={d.label} style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+                    <div style={{width:6,height:6,borderRadius:99,background:d.color,flexShrink:0}}/>
+                    <span style={{fontSize:10,color:"rgba(26,18,9,0.75)",fontFamily:"'DM Sans',sans-serif",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label}</span>
+                    <span className="num" style={{fontSize:10,fontWeight:700,color:"#1A1209",flexShrink:0}}>{tot>0?(d.v/tot*100).toFixed(0):0}%</span>
+                  </div>;
+                })}
               </div>
-            )}
 
-            {/* Donut gastos */}
-            {donutGastos.length>0&&(
-              <div className={CARD} style={{marginBottom:12}}>
-                <SL>Maiores gastos · {monthLabel(selMes)}</SL>
-                <div style={{display:"flex",gap:14,alignItems:"center"}}>
-                  <div style={{position:"relative",flexShrink:0}}>
-                    <Donut data={donutGastos} size={110} thick={15}/>
-                    <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      <div className="num" style={{fontSize:9,fontWeight:700,color:TXT,textAlign:"center",lineHeight:1.3}}>{R(totalGastos)}</div>
+              <div className={CARD}>
+                <SL>Gastos · {monthLabel(selMes)}</SL>
+                {donutGastos.length>0 ? (
+                  <>
+                    <div style={{display:"flex",justifyContent:"center",marginBottom:8}}>
+                      <div style={{position:"relative"}}>
+                        <Donut data={donutGastos} size={90} thick={13}/>
+                        <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          <div className="num" style={{fontSize:8,fontWeight:700,color:"#1A1209",textAlign:"center",lineHeight:1.3}}>{R(totalGastos)}</div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div style={{flex:1}}>
-                    {donutGastos.map(d=>(
-                      <div key={d.label} style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
-                        <div style={{width:7,height:7,borderRadius:99,background:d.color,flexShrink:0}}/>
-                        <span style={{fontSize:11,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",flex:1}}>{d.label.split(" ").slice(1).join(" ")}</span>
-                        <span className="num" style={{fontSize:11,fontWeight:700,color:TXT}}>{R(d.v)}</span>
+                    {donutGastos.slice(0,5).map(d=>(
+                      <div key={d.label} style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
+                        <div style={{width:6,height:6,borderRadius:99,background:d.color,flexShrink:0}}/>
+                        <span style={{fontSize:10,color:"rgba(26,18,9,0.75)",fontFamily:"'DM Sans',sans-serif",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label.split(" ").slice(1).join(" ")}</span>
+                        <span className="num" style={{fontSize:10,fontWeight:700,color:"#1A1209",flexShrink:0}}>{totalGastos>0?(d.v/totalGastos*100).toFixed(0):0}%</span>
                       </div>
                     ))}
-                  </div>
-                </div>
+                  </>
+                ):(
+                  <div style={{textAlign:"center",padding:"20px 0",color:"rgba(26,18,9,0.4)",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>Sem gastos em {monthLabel(selMes)}</div>
+                )}
               </div>
-            )}
+            </div>
 
             {empAnalise.length>0&&(
               <>
-                {/* Maior receita */}
-                <div className={CARD} style={{marginBottom:12}}>
-                  <SL>Maior receita por empresa</SL>
-                  {empAnalise.map(e=><HBar key={e.nome} label={e.nome} value={e.total} max={maxEmpTotal} color={e.cor||C.magenta}/>)}
+                {/* Linha 2: Maior receita + Mais plantões */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                  <div className={CARD}>
+                    <SL>Maior receita</SL>
+                    {empAnalise.map(e=><HBar key={e.nome} label={e.nome} value={e.total} max={maxEmpTotal} color={e.cor||C.magenta}/>)}
+                  </div>
+                  <div className={CARD}>
+                    <SL>Mais plantões</SL>
+                    {[...empAnalise].sort((a,b)=>b.count-a.count).map(e=><HBar key={e.nome} label={e.nome} value={e.count} max={maxEmpCount} color={e.cor||C.blue} sub={`${e.count}x`}/>)}
+                  </div>
                 </div>
 
-                {/* Mais plantões */}
-                <div className={CARD} style={{marginBottom:12}}>
-                  <SL>Mais plantões realizados</SL>
-                  {[...empAnalise].sort((a,b)=>b.count-a.count).map(e=><HBar key={e.nome} label={e.nome} value={e.count} max={maxEmpCount} color={e.cor||C.blue} sub={`${e.count} plantão${e.count!==1?"ões":""}`}/>)}
-                </div>
-
-                {/* Mais atrasos */}
-                <div className={CARD} style={{marginBottom:12}}>
-                  <SL>Empresas que mais atrasam</SL>
-                  {empAnalise.some(e=>e.atrasos>0)
-                    ?[...empAnalise].sort((a,b)=>b.atrasos-a.atrasos).filter(e=>e.atrasos>0).map(e=><HBar key={e.nome} label={e.nome} value={e.atrasos} max={maxEmpAtraso} color={C.red} sub={`${e.atrasos} atraso${e.atrasos!==1?"s":""}`}/>)
-                    :<div style={{color:"rgba(26,18,9,0.85)",fontSize:13,textAlign:"center",padding:"12px 0",fontFamily:"'DM Sans',sans-serif"}}>Nenhum atraso registrado 🎉</div>
-                  }
+                {/* Linha 3: Mais atrasos + Resumo */}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                  <div className={CARD}>
+                    <SL>Mais atrasos</SL>
+                    {empAnalise.some(e=>e.atrasos>0)
+                      ?[...empAnalise].sort((a,b)=>b.atrasos-a.atrasos).filter(e=>e.atrasos>0).map(e=><HBar key={e.nome} label={e.nome} value={e.atrasos} max={maxEmpAtraso} color={C.red} sub={`${e.atrasos}x`}/>)
+                      :<div style={{color:"rgba(26,18,9,0.4)",fontSize:12,textAlign:"center",padding:"12px 0",fontFamily:"'DM Sans',sans-serif"}}>🎉 Nenhum atraso</div>
+                    }
+                  </div>
+                  <div className={CARD}>
+                    <SL>Resumo</SL>
+                    {empAnalise.map((e,i)=>(
+                      <div key={e.nome} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderBottom:i<empAnalise.length-1?"1px solid rgba(26,18,9,0.07)":"none"}}>
+                        <div style={{width:7,height:7,borderRadius:99,background:e.cor||CHART_COLORS[i%CHART_COLORS.length],flexShrink:0}}/>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:11,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.nome}</div>
+                          <div style={{fontSize:9,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>{e.count} plantão{e.count!==1?"ões":""}{e.atrasos>0?` · ${e.atrasos} atraso`:""}</div>
+                        </div>
+                        <div className="num" style={{fontSize:11,fontWeight:700,color:"#2D5A10",flexShrink:0}}>{R(e.recebido)}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Tabela resumo */}
