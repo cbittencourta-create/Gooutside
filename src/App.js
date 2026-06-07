@@ -1127,6 +1127,10 @@ function AppMain({user, onLogout}) {
         .navitem .nav-icon{font-size:16px;width:20px;text-align:center}
         input::placeholder{color:rgba(26,18,9,0.4)!important}
         .card button{font-family:'DM Sans',sans-serif}
+        /* Force all card content to be dark */
+        .card, .card div, .card span, .card p, .card label, .card small { color: #1A1209 !important; }
+        /* Exception: colored value numbers keep their accent color via inline style - override below */
+        .card svg text { fill: #1A1209 !important; }
       `}</style>
 
       {/* SIDEBAR */}
