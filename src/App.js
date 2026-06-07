@@ -276,7 +276,7 @@ const Btn=({variant="primary",children,...p})=>{
   };
   return <button style={{...styles[variant],borderRadius:12,fontSize:14,fontWeight:600,padding:"11px 16px",cursor:"pointer",transition:"all .15s",fontFamily:"inherit",...p.style}} {...p}>{children}</button>;
 };
-const SL=({children,style:st})=><div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:10,...st}}>{children}</div>;
+const SL=({children,style:st})=><div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.55)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:10,...st}}>{children}</div>;
 
 
 // ── Alocação Modal ────────────────────────────────────────────────────────────
@@ -581,8 +581,8 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
           {l:"Saldo",v:totalPlanejado-totalGasto,c:totalPlanejado-totalGasto>=0?"#A8E063":"#FF8A80"},
         ].map(x=>(
           <div key={x.l} className="card" style={{padding:"10px 12px",textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(255,255,255,0.6)",fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{x.l}</div>
-            <div style={{fontSize:13,fontWeight:700,color:x.c,fontFamily:"'DM Sans',sans-serif"}}>{R(x.v)}</div>
+            <div style={{fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{x.l}</div>
+            <div style={{fontSize:13,fontWeight:700,color:x.c,fontFamily:"'DM Sans',sans-serif",letterSpacing:"-.01em"}}>{R(x.v)}</div>
           </div>
         ))}
       </div>
@@ -590,11 +590,11 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
       {/* Toggle % */}
       <div style={{display:"flex",background:"rgba(255,255,255,0.12)",borderRadius:12,padding:3,marginBottom:12,border:"1px solid rgba(255,255,255,0.2)"}}>
         <button onClick={()=>setViewMode("planejado")}
-          style={{flex:1,background:viewMode==="planejado"?"rgba(232,32,95,0.7)":"transparent",color:"#fff",border:"none",borderRadius:10,padding:"7px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+          style={{flex:1,background:viewMode==="planejado"?"#E8205F":"transparent",color:viewMode==="planejado"?"#fff":"rgba(26,18,9,0.6)",border:"none",borderRadius:10,padding:"7px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
           % do Planejado
         </button>
         <button onClick={()=>setViewMode("recebimento")}
-          style={{flex:1,background:viewMode==="recebimento"?"rgba(232,32,95,0.7)":"transparent",color:"#fff",border:"none",borderRadius:10,padding:"7px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+          style={{flex:1,background:viewMode==="recebimento"?"#E8205F":"transparent",color:viewMode==="recebimento"?"#fff":"rgba(26,18,9,0.6)",border:"none",borderRadius:10,padding:"7px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
           % do Recebimento Previsto
         </button>
       </div>
@@ -615,7 +615,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
       <div className="card">
         <div style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,marginBottom:10,paddingBottom:8,borderBottom:"1px solid rgba(255,255,255,0.1)"}}>
           {["Categoria","Planejado","Realizado","%"].map(h=>(
-            <div key={h} style={{fontSize:10,fontWeight:700,color:"rgba(255,255,255,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:h!=="Categoria"?"right":"left"}}>{h}</div>
+            <div key={h} style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:h!=="Categoria"?"right":"left"}}>{h}</div>
           ))}
         </div>
         {categorias.map(c=>{
@@ -628,7 +628,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
           return (
             <div key={c.id} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,alignItems:"center",marginBottom:8}}>
               <div>
-                <div style={{fontSize:12,fontWeight:600,color:"#fff",fontFamily:"'DM Sans',sans-serif"}}>{c.emoji} {c.nome}</div>
+                <div style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{c.emoji} {c.nome}</div>
                 <div style={{marginTop:3}}>
                   <div style={{background:"rgba(0,0,0,0.2)",borderRadius:99,height:4,overflow:"hidden"}}>
                     <div style={{width:`${Math.min(pct,100)}%`,height:"100%",background:over?"#FF8A80":"#A8E063",borderRadius:99,transition:"width .5s"}}/>
@@ -643,12 +643,12 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
                     autoFocus style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:6,padding:"3px 6px",width:70,fontSize:11,color:"#fff",outline:"none",textAlign:"right",fontFamily:"inherit"}}/>
                 ) : (
                   <button onClick={()=>{setEditCat(c.id);setEditVal(plan||"");}}
-                    style={{background:"none",border:"none",color:plan>0?"rgba(255,255,255,0.9)":"rgba(255,255,255,0.3)",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:plan>0?600:400}}>
+                    style={{background:"none",border:"none",color:plan>0?"#1A1209":"rgba(26,18,9,0.35)",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:plan>0?600:400}}>
                     {plan>0?R(plan):"+ planejar"}
                   </button>
                 )}
               </div>
-              <div style={{textAlign:"right",fontSize:11,color:"rgba(255,255,255,0.8)",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{R(gasto)}</div>
+              <div style={{textAlign:"right",fontSize:11,color:"rgba(26,18,9,0.75)",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{R(gasto)}</div>
               <div style={{textAlign:"right",fontSize:11,fontWeight:700,color:over?"#FF8A80":pct>80?"#FFD580":"#A8E063",fontFamily:"'DM Sans',sans-serif"}}>{pct.toFixed(0)}%</div>
             </div>
           );
@@ -703,14 +703,14 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
         {[{l:"↑ Receitas",v:entM,c:"#A8E063"},{l:"↓ Despesas",v:saiM,c:"#FF8A80"},{l:"= Saldo",v:entM-saiM,c:entM-saiM>=0?"#A8E063":"#FF8A80"}].map(x=>(
           <div key={x.l} className="card" style={{flex:1,padding:"10px 12px",textAlign:"center"}}>
             <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{x.l}</div>
-            <div style={{fontSize:13,fontWeight:700,color:x.c,fontFamily:"'DM Sans',sans-serif"}}>{R(x.v)}</div>
+            <div style={{fontSize:13,fontWeight:700,color:x.c,fontFamily:"'DM Sans',sans-serif",letterSpacing:"-.01em"}}>{R(x.v)}</div>
           </div>
         ))}
       </div>
 
       {/* Gráfico de linha */}
       <div className="card" style={{marginBottom:12}}>
-        <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.6)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>Receitas vs Despesas — 12 meses</div>
+        <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>Receitas vs Despesas — 12 meses</div>
         <svg width="100%" height={H+30} viewBox={`0 0 ${meses.length*40} ${H+30}`} style={{overflow:"visible"}}>
           {/* Grid lines */}
           {[0,25,50,75,100].map(y=>(
@@ -729,13 +729,13 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
             <g key={d.ym}>
               <circle cx={i*40+20} cy={H-(d.ent/maxVal*H)} r={3} fill="#A8E063"/>
               <circle cx={i*40+20} cy={H-(d.sai/maxVal*H)} r={3} fill="#FF8A80"/>
-              <text x={i*40+20} y={H+20} textAnchor="middle" fontSize={8} fill={d.ym===selMes?"#fff":"rgba(255,255,255,0.4)"} fontFamily="DM Sans">{d.label}</text>
+              <text x={i*40+20} y={H+20} textAnchor="middle" fontSize={8} fill={d.ym===selMes?"#1A1209":"rgba(26,18,9,0.4)"} fontFamily="DM Sans">{d.label}</text>
             </g>
           ))}
         </svg>
         <div style={{display:"flex",gap:12,justifyContent:"center",marginTop:6}}>
           {[["#A8E063","Receitas"],["#FF8A80","Despesas"]].map(([c,l])=>(
-            <div key={l} style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:99,background:c}}/><span style={{fontSize:10,color:"rgba(255,255,255,0.6)",fontFamily:"'DM Sans',sans-serif"}}>{l}</span></div>
+            <div key={l} style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:99,background:c}}/><span style={{fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif"}}>{l}</span></div>
           ))}
         </div>
       </div>
@@ -743,15 +743,15 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
       {/* Gastos por categoria — barras horizontais */}
       {catData.length>0&&(
         <div className="card" style={{marginBottom:12}}>
-          <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.6)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>% por categoria · {monthLabel(selMes)}</div>
+          <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>% por categoria · {monthLabel(selMes)}</div>
           {catData.map(([cat,val],i)=>{
             const pct = totalGastos>0 ? val/totalGastos*100 : 0;
             return (
               <div key={cat} style={{marginBottom:10}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                  <span style={{fontSize:12,color:"#fff",fontFamily:"'DM Sans',sans-serif"}}>{cat}</span>
+                  <span style={{fontSize:12,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{cat}</span>
                   <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                    <span style={{fontSize:11,color:"rgba(255,255,255,0.6)",fontFamily:"'DM Sans',sans-serif"}}>{R(val)}</span>
+                    <span style={{fontSize:11,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif"}}>{R(val)}</span>
                     <span style={{fontSize:11,fontWeight:700,color:CHART_COLORS[i%CHART_COLORS.length],fontFamily:"'DM Sans',sans-serif",minWidth:35,textAlign:"right"}}>{pct.toFixed(1)}%</span>
                   </div>
                 </div>
@@ -767,11 +767,11 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
       {/* Cartões */}
       {cartaoData.length>0&&(
         <div className="card">
-          <div style={{fontSize:11,fontWeight:700,color:"rgba(255,255,255,0.6)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>Gastos com cartões · {monthLabel(selMes)}</div>
+          <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>Gastos com cartões · {monthLabel(selMes)}</div>
           {cartaoData.map(c=>(
             <div key={c.id} style={{marginBottom:12}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                <span style={{fontSize:12,fontWeight:600,color:"#fff",fontFamily:"'DM Sans',sans-serif"}}>▭ {c.nome}</span>
+                <span style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>▭ {c.nome}</span>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <span style={{fontSize:11,fontWeight:700,color:c.pct>100?"#FF8A80":c.pct>80?"#FFD580":"rgba(255,255,255,0.7)",fontFamily:"'DM Sans',sans-serif"}}>{c.pct.toFixed(1)}%</span>
                   <span style={{fontSize:11,color:"rgba(255,255,255,0.6)",fontFamily:"'DM Sans',sans-serif"}}>{R(c.usado)}</span>
@@ -780,14 +780,14 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
               <div style={{background:"rgba(0,0,0,0.2)",borderRadius:99,height:6,overflow:"hidden"}}>
                 <div style={{width:`${Math.min(c.pct,100)}%`,height:"100%",background:c.pct>100?"#FF8A80":c.pct>80?"#FFD580":"#E8205F",borderRadius:99,transition:"width .5s"}}/>
               </div>
-              <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginTop:3,fontFamily:"'DM Sans',sans-serif"}}>Limite: {R(c.limite)} · Disponível: {R(Math.max(c.limite-c.usado,0))}</div>
+              <div style={{fontSize:10,color:"rgba(26,18,9,0.4)",marginTop:3,fontFamily:"'DM Sans',sans-serif"}}>Limite: {R(c.limite)} · Disponível: {R(Math.max(c.limite-c.usado,0))}</div>
             </div>
           ))}
         </div>
       )}
 
       {catData.length===0&&cartaoData.length===0&&(
-        <div className="card" style={{textAlign:"center",padding:36,color:"rgba(255,255,255,0.4)",fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>
+        <div className="card" style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.4)",fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>
           Nenhum gasto registrado em {monthLabel(selMes)}
         </div>
       )}
@@ -866,7 +866,7 @@ function LoginScreen({onLogin}) {
             style={{background:"#E8205F",color:"#fff",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:4,opacity:loading?0.7:1}}>
             {loading?"Aguarde...":(mode==="login"?"Entrar":"Criar conta")}
           </button>
-          <div style={{textAlign:"center",fontSize:12,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>
+          <div style={{textAlign:"center",fontSize:12,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif"}}>
             {mode==="login"?"Não tem conta?":"Já tem conta?"}{" "}
             <button onClick={()=>{setMode(mode==="login"?"signup":"login");setError("");}}
               style={{background:"none",border:"none",color:"#E8205F",fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>
@@ -1160,14 +1160,14 @@ function AppMain({user, onLogout}) {
                 <div style={{width:11,height:1.5,background:"rgba(0,0,0,0.75)",borderRadius:1}}/>
               </button>
               <div>
-                <div style={{fontSize:10,fontWeight:600,letterSpacing:".15em",textTransform:"uppercase",color:"rgba(0,0,0,0.45)",fontFamily:"'DM Sans',sans-serif",marginBottom:1}}>{TABS.find(t=>t.id===tab)?.label||"Velara Finance"}</div>
+                <div style={{fontSize:10,fontWeight:600,letterSpacing:".15em",textTransform:"uppercase",color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:1}}>{TABS.find(t=>t.id===tab)?.label||"Velara Finance"}</div>
                 <div style={{fontSize:24,fontWeight:300,letterSpacing:"-.03em",lineHeight:1,color:"#1A1209"}}>{R(saldo)}</div>
-                <div style={{fontSize:10,color:"rgba(0,0,0,0.45)",marginTop:1,fontFamily:"'DM Sans',sans-serif"}}>saldo · {monthLabel(selMes)}</div>
+                <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",marginTop:1,fontFamily:"'DM Sans',sans-serif"}}>saldo · {monthLabel(selMes)}</div>
               </div>
             </div>
             <div style={{textAlign:"right"}}>
-              <div style={{fontSize:12,color:"#2D6E20",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>▲ {R(entradas)}</div>
-              <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>▼ {R(saidas)}</div>
+              <div style={{fontSize:12,color:"#2D6E20",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▲ {R(entradas)}</div>
+              <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>⏳ {R(totalPendPlant)}</div>}
             </div>
           </div>
@@ -1189,12 +1189,12 @@ function AppMain({user, onLogout}) {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
               {[
                 {label:"A Receber", val:totalPendPlant, color:"#FFD580",  bg:"rgba(0,0,0,0.35)", bdr:"rgba(212,168,67,0.5)"},
-                {label:"Investido",  val:totalInvestido, color:"#4A7A1A", bg:"rgba(143,196,58,0.15)", bdr:"rgba(143,196,58,0.4)"},
-                {label:"Em Dívidas", val:totalDividas,   color:"#C0392B",  bg:"rgba(224,82,82,0.1)", bdr:"rgba(224,82,82,0.35)"},
+                {label:"Investido",  val:totalInvestido, color:"#2D5A10", bg:"rgba(143,196,58,0.18)", bdr:"rgba(143,196,58,0.4)"},
+                {label:"Em Dívidas", val:totalDividas,   color:"#8B1A1A",  bg:"rgba(224,82,82,0.15)", bdr:"rgba(224,82,82,0.4)"},
               ].map(c=>(
                 <div key={c.label} className={CARD} style={{padding:"10px 10px",background:c.bg,border:`1px solid ${c.bdr}`,textAlign:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",borderRadius:12}}>
-                  <div style={{fontSize:8,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.6)",fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{c.label}</div>
-                  <div className="num" style={{fontSize:14,fontWeight:700,color:"#1A1209"}}>{R(c.val)}</div>
+                  <div style={{fontSize:8,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:c.color,fontFamily:"'DM Sans',sans-serif",marginBottom:3,opacity:0.8}}>{c.label}</div>
+                  <div className="num" style={{fontSize:14,fontWeight:700,color:c.color}}>{R(c.val)}</div>
                 </div>
               ))}
             </div>
@@ -1218,7 +1218,7 @@ function AppMain({user, onLogout}) {
                     {donutGastos.slice(0,4).map(d=>(
                       <div key={d.label} style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
                         <div style={{width:6,height:6,borderRadius:99,background:d.color,flexShrink:0}}/>
-                        <span style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label.split(" ").slice(1).join(" ")}</span>
+                        <span style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label.split(" ").slice(1).join(" ")}</span>
                         <span className="num" style={{fontSize:10,fontWeight:700,color:TXT,flexShrink:0}}>{totalGastos>0?(d.v/totalGastos*100).toFixed(0):0}%</span>
                       </div>
                     ))}
@@ -1228,7 +1228,7 @@ function AppMain({user, onLogout}) {
                     <div style={{width:70,height:70,borderRadius:"50%",border:"2px dashed rgba(255,255,255,0.35)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                       <span style={{fontSize:24,opacity:.4}}>💳</span>
                     </div>
-                    <div style={{fontSize:10,color:"rgba(26,18,9,0.5)",textAlign:"center",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Sem gastos<br/>em {monthLabel(selMes)}</div>
+                    <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",textAlign:"center",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Sem gastos<br/>em {monthLabel(selMes)}</div>
                     <button onClick={()=>openM("mov")} style={{background:C.magentaGlass,border:`1px solid ${C.magenta}44`,borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Lançar</button>
                   </div>
                 )}
@@ -1251,7 +1251,7 @@ function AppMain({user, onLogout}) {
                       const tot=donutEmpresas.reduce((s,x)=>s+x.v,0);
                       return <div key={d.label} style={{display:"flex",alignItems:"center",gap:5,marginBottom:4}}>
                         <div style={{width:6,height:6,borderRadius:99,background:d.color,flexShrink:0}}/>
-                        <span style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label}</span>
+                        <span style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.label}</span>
                         <span className="num" style={{fontSize:10,fontWeight:700,color:TXT,flexShrink:0}}>{tot>0?(d.v/tot*100).toFixed(0):0}%</span>
                       </div>;
                     })}
@@ -1261,7 +1261,7 @@ function AppMain({user, onLogout}) {
                     <div style={{width:70,height:70,borderRadius:"50%",border:"2px dashed rgba(255,255,255,0.35)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                       <span style={{fontSize:24,opacity:.4}}>🏥</span>
                     </div>
-                    <div style={{fontSize:10,color:"rgba(26,18,9,0.5)",textAlign:"center",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Sem plantões<br/>cadastrados</div>
+                    <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",textAlign:"center",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Sem plantões<br/>cadastrados</div>
                     <button onClick={()=>navTo("plantoes")} style={{background:C.magentaGlass,border:`1px solid ${C.magenta}44`,borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Plantão</button>
                   </div>
                 )}
@@ -1295,7 +1295,7 @@ function AppMain({user, onLogout}) {
                 ):(
                   <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"20px 0",gap:6}}>
                     <span style={{fontSize:22,opacity:.4}}>✅</span>
-                    <div style={{fontSize:10,color:"rgba(26,18,9,0.5)",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}>Tudo em dia!</div>
+                    <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}>Tudo em dia!</div>
                   </div>
                 )}
               </div>
@@ -1307,21 +1307,21 @@ function AppMain({user, onLogout}) {
               {empAnalise.length>0 ? (
                 <>
                   <div style={{marginBottom:12}}>
-                    <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",letterSpacing:".05em",marginBottom:7}}>💰 MAIOR RECEITA</div>
+                    <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",letterSpacing:".05em",marginBottom:7}}>💰 MAIOR RECEITA</div>
                     {empAnalise.slice(0,3).map((e,i)=><HBar key={e.nome} label={e.nome} value={e.total} max={empAnalise[0].total} color={e.cor||CHART_COLORS[i]}/>)}
                   </div>
                   {empAnalise.some(e=>e.atrasos>0)&&(
                     <>
                       <div style={{height:1,background:"rgba(0,0,0,0.08)",marginBottom:12}}/>
                       <div>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",letterSpacing:".05em",marginBottom:7}}>⚠ MAIS ATRASOS</div>
+                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",letterSpacing:".05em",marginBottom:7}}>⚠ MAIS ATRASOS</div>
                         {[...empAnalise].filter(e=>e.atrasos>0).sort((a,b)=>b.atrasos-a.atrasos).slice(0,3).map(e=><HBar key={e.nome} label={e.nome} value={e.atrasos} max={Math.max(...empAnalise.map(x=>x.atrasos))} color={C.red} sub={`${e.atrasos}x`}/>)}
                       </div>
                     </>
                   )}
                 </>
               ):(
-                <div style={{textAlign:"center",padding:"16px 0",color:"rgba(26,18,9,0.5)",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>
+                <div style={{textAlign:"center",padding:"16px 0",color:"rgba(26,18,9,0.55)",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>
                   <span style={{fontSize:24,display:"block",marginBottom:6,opacity:.4}}>🏥</span>
                   Cadastre plantões para ver o ranking
                 </div>
@@ -1342,12 +1342,12 @@ function AppMain({user, onLogout}) {
                   {alocacoes.slice(0,2).map(a=>(
                     <div key={a.id} style={{background:"rgba(0,0,0,0.05)",borderRadius:10,border:"1px solid rgba(0,0,0,0.07)",padding:"9px 11px",marginBottom:6}}>
                       <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{a.empresa}</span><span className="num" style={{fontSize:12,fontWeight:700,color:C.green}}>{R(a.totalRecebido)}</span></div>
-                      {a.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;return <div key={j} style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>{dc.icon} {it.destinoNome}</span><span className="num" style={{fontSize:10,fontWeight:700,color:dc.color}}>{R(it.valor)}</span></div>;})}
+                      {a.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;return <div key={j} style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{dc.icon} {it.destinoNome}</span><span className="num" style={{fontSize:10,fontWeight:700,color:dc.color}}>{R(it.valor)}</span></div>;})}
                     </div>
                   ))}
                 </>
               ):(
-                <div style={{textAlign:"center",padding:"10px 0",color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",fontSize:12}}>
+                <div style={{textAlign:"center",padding:"10px 0",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",fontSize:12}}>
                   Sem distribuições ainda —{" "}
                   <button onClick={()=>setModal("regras")} style={{background:"none",border:"none",color:C.magenta,fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>configurar regras →</button>
                 </div>
@@ -1362,12 +1362,12 @@ function AppMain({user, onLogout}) {
               </div>
               {objetivos.length>0 ? objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;
                 return <div key={o.id} style={{marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{o.nome}</span><span className="num" style={{fontSize:10,color:"rgba(26,18,9,0.7)"}}>{pct.toFixed(0)}%</span></div>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{o.nome}</span><span className="num" style={{fontSize:10,color:"rgba(26,18,9,0.85)"}}>{pct.toFixed(0)}%</span></div>
                   <Bar value={o.atual} max={o.meta} color={o.cor} h={5}/>
-                  <div style={{fontSize:9,color:"rgba(26,18,9,0.5)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>falta {R(o.meta-o.atual)}</div>
+                  <div style={{fontSize:9,color:"rgba(26,18,9,0.55)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>falta {R(o.meta-o.atual)}</div>
                 </div>;
               }):(
-                <div style={{textAlign:"center",padding:"14px 0",color:"rgba(26,18,9,0.5)",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>
+                <div style={{textAlign:"center",padding:"14px 0",color:"rgba(26,18,9,0.55)",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>
                   <span style={{fontSize:22,display:"block",marginBottom:6,opacity:.4}}>🎯</span>
                   <button onClick={()=>navTo("objetivos")} style={{background:"none",border:"none",color:C.magenta,fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>Criar primeiro objetivo →</button>
                 </div>
@@ -1382,18 +1382,18 @@ function AppMain({user, onLogout}) {
           <div className="fade">
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div style={{display:"flex",gap:8}}>
-                <div className={CARD} style={{padding:"10px 14px",textAlign:"center",background:C.greenGlass,border:`1px solid ${C.green}44`}}><div style={{fontSize:9,color:C.green,fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>ENTRADAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:C.green}}>{R(entradas)}</div></div>
-                <div className={CARD} style={{padding:"10px 14px",textAlign:"center",background:C.redGlass,border:`1px solid ${C.red}44`}}><div style={{fontSize:9,color:C.red,fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>SAÍDAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:C.red}}>{R(saidas)}</div></div>
+                <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:12,padding:"10px 16px",textAlign:"center",border:"1px solid rgba(143,196,58,0.4)"}}><div style={{fontSize:9,color:"#2D5A10",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>ENTRADAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#2D5A10"}}>{R(entradas)}</div></div>
+                <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:12,padding:"10px 16px",textAlign:"center",border:"1px solid rgba(224,82,82,0.4)"}}><div style={{fontSize:9,color:"#8B1A1A",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>SAÍDAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#8B1A1A"}}>{R(saidas)}</div></div>
               </div>
               <Btn variant="primary" style={{padding:"9px 14px",fontSize:12}} onClick={()=>openM("mov")}>+ Lançamento</Btn>
             </div>
-            {movsDoMes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.5)",fontSize:14}}>Nenhum lançamento em {monthLabel(selMes)}</div>
+            {movsDoMes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum lançamento em {monthLabel(selMes)}</div>
               :[...movsDoMes].sort((a,b)=>b.data.localeCompare(a.data)).map(m=>(
                 <div key={m.id} className={CARD} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7,padding:"11px 14px"}}>
                   <div style={{width:34,height:34,borderRadius:10,background:m.tipo==="entrada"?"rgba(0,0,0,0.3)":"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,border:`1px solid ${m.tipo==="entrada"?C.green:C.red}44`}}>{m.categoria.split(" ")[0]}</div>
-                  <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>{fd(m.data)} · {m.categoria.split(" ").slice(1).join(" ")}</div></div>
+                  <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>{fd(m.data)} · {m.categoria.split(" ").slice(1).join(" ")}</div></div>
                   <div className="num" style={{fontSize:14,fontWeight:700,color:m.tipo==="entrada"?C.green:C.red,flexShrink:0}}>{m.tipo==="entrada"?"+":"-"}{R(m.valor)}</div>
-                  <button onClick={()=>remove(movs,setMovs,m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.5)",fontSize:17,cursor:"pointer",padding:"0 3px",lineHeight:1}}>×</button>
+                  <button onClick={()=>remove(movs,setMovs,m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.55)",fontSize:17,cursor:"pointer",padding:"0 3px",lineHeight:1}}>×</button>
                 </div>
               ))
             }
@@ -1410,11 +1410,11 @@ function AppMain({user, onLogout}) {
                 <Btn variant="primary" style={{fontSize:11,padding:"7px 11px"}} onClick={()=>openM("plt")}>+ Plantão</Btn>
               </div>
             </div>
-            {empresas.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>{empresas.map(e=><span key={e.id} onClick={()=>openM("emp",e)} style={{fontSize:10,fontWeight:700,padding:"4px 11px",borderRadius:99,background:e.cor+"22",color:e.cor,border:`1px solid ${e.cor}55`,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{e.nome}</span>)}</div>}
-            {plantoesEfetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.5)",fontSize:14}}>Adicione empresas e plantões</div>
+            {empresas.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>{empresas.map(e=><span key={e.id} onClick={()=>openM("emp",e)} style={{fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:99,background:"rgba(255,255,255,0.9)",color:e.cor,border:`2px solid ${e.cor}`,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{e.nome}</span>)}</div>}
+            {plantoesEfetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Adicione empresas e plantões</div>
               :[...plantoesEfetivos].sort((a,b)=>b.data.localeCompare(a.data)).map(p=>{
                 const emp=empNome(p.empresa);const d=daysUntil(p.previsao);
-                const sc={pendente:{label:"Pendente",color:C.gold,bg:C.goldGlass},recebido:{label:"Recebido",color:C.green,bg:C.greenGlass},atrasado:{label:"Atrasado",color:C.red,bg:C.redGlass},cancelado:{label:"Cancelado",color:"rgba(26,18,9,0.7)",bg:C.glass}};
+                const sc={pendente:{label:"Pendente",color:C.gold,bg:C.goldGlass},recebido:{label:"Recebido",color:C.green,bg:C.greenGlass},atrasado:{label:"Atrasado",color:C.red,bg:C.redGlass},cancelado:{label:"Cancelado",color:"rgba(26,18,9,0.85)",bg:C.glass}};
                 const s=sc[p.se]||sc.pendente;
                 const aloc=alocacoes.find(a=>a.plantaoId===p.id);
                 return (
@@ -1422,7 +1422,7 @@ function AppMain({user, onLogout}) {
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                       <div>
                         <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}><span style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{emp.nome}</span><Badge label={s.label} color={s.color} bg={s.bg}/></div>
-                        <div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>{fd(p.data)}{p.horas&&` · ${p.horas}h`}{p.previsao&&` · pgto ${fd(p.previsao)}`}{p.previsao&&p.status!=="recebido"&&d!==null&&<span style={{color:d<0?C.red:d<7?C.gold:TSUB,fontWeight:600}}> ({d<0?`${Math.abs(d)}d atrasado`:d===0?"hoje":d===1?"amanhã":`${d}d`})</span>}</div>
+                        <div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{fd(p.data)}{p.horas&&` · ${p.horas}h`}{p.previsao&&` · pgto ${fd(p.previsao)}`}{p.previsao&&p.status!=="recebido"&&d!==null&&<span style={{color:d<0?C.red:d<7?C.gold:TSUB,fontWeight:600}}> ({d<0?`${Math.abs(d)}d atrasado`:d===0?"hoje":d===1?"amanhã":`${d}d`})</span>}</div>
                         {aloc&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:5}}>{aloc.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;return <span key={j} style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:99,background:dc.bg,color:dc.color,backdropFilter:"blur(4px)"}}>{it.destinoNome}: {R(it.valor)}</span>;})}</div>}
                       </div>
                       <div className="num" style={{fontSize:16,fontWeight:700,flexShrink:0,color:TXT}}>{R(p.valorTotal)}</div>
@@ -1460,7 +1460,7 @@ function AppMain({user, onLogout}) {
                       const tot=donutEmpresas.reduce((s,x)=>s+x.v,0);
                       return <div key={d.label} style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
                         <div style={{width:7,height:7,borderRadius:99,background:d.color,flexShrink:0}}/>
-                        <span style={{fontSize:11,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",flex:1}}>{d.label}</span>
+                        <span style={{fontSize:11,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",flex:1}}>{d.label}</span>
                         <span className="num" style={{fontSize:11,fontWeight:700,color:TXT}}>{tot>0?(d.v/tot*100).toFixed(0):0}%</span>
                       </div>;
                     })}
@@ -1484,7 +1484,7 @@ function AppMain({user, onLogout}) {
                     {donutGastos.map(d=>(
                       <div key={d.label} style={{display:"flex",alignItems:"center",gap:6,marginBottom:5}}>
                         <div style={{width:7,height:7,borderRadius:99,background:d.color,flexShrink:0}}/>
-                        <span style={{fontSize:11,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",flex:1}}>{d.label.split(" ").slice(1).join(" ")}</span>
+                        <span style={{fontSize:11,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",flex:1}}>{d.label.split(" ").slice(1).join(" ")}</span>
                         <span className="num" style={{fontSize:11,fontWeight:700,color:TXT}}>{R(d.v)}</span>
                       </div>
                     ))}
@@ -1512,7 +1512,7 @@ function AppMain({user, onLogout}) {
                   <SL>Empresas que mais atrasam</SL>
                   {empAnalise.some(e=>e.atrasos>0)
                     ?[...empAnalise].sort((a,b)=>b.atrasos-a.atrasos).filter(e=>e.atrasos>0).map(e=><HBar key={e.nome} label={e.nome} value={e.atrasos} max={maxEmpAtraso} color={C.red} sub={`${e.atrasos} atraso${e.atrasos!==1?"s":""}`}/>)
-                    :<div style={{color:"rgba(26,18,9,0.7)",fontSize:13,textAlign:"center",padding:"12px 0",fontFamily:"'DM Sans',sans-serif"}}>Nenhum atraso registrado 🎉</div>
+                    :<div style={{color:"rgba(26,18,9,0.85)",fontSize:13,textAlign:"center",padding:"12px 0",fontFamily:"'DM Sans',sans-serif"}}>Nenhum atraso registrado 🎉</div>
                   }
                 </div>
 
@@ -1524,7 +1524,7 @@ function AppMain({user, onLogout}) {
                       <div style={{width:8,height:8,borderRadius:99,background:e.cor||CHART_COLORS[i%CHART_COLORS.length],flexShrink:0}}/>
                       <div style={{flex:1}}>
                         <div style={{fontSize:13,fontWeight:600,color:TXT,fontFamily:"'DM Sans',sans-serif"}}>{e.nome}</div>
-                        <div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>{e.count} plantão{e.count!==1?"ões":""} · {e.atrasos>0?<span style={{color:C.red}}>{e.atrasos} atraso{e.atrasos!==1?"s":""}</span>:"sem atrasos"}</div>
+                        <div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{e.count} plantão{e.count!==1?"ões":""} · {e.atrasos>0?<span style={{color:C.red}}>{e.atrasos} atraso{e.atrasos!==1?"s":""}</span>:"sem atrasos"}</div>
                       </div>
                       <div style={{textAlign:"right"}}>
                         <div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{R(e.recebido)}</div>
@@ -1535,7 +1535,7 @@ function AppMain({user, onLogout}) {
                 </div>
               </>
             )}
-            {empAnalise.length===0&&<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.5)",fontSize:14}}>Cadastre plantões para ver a análise por empresa</div>}
+            {empAnalise.length===0&&<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Cadastre plantões para ver a análise por empresa</div>}
           </div>
         )}
 
@@ -1546,19 +1546,19 @@ function AppMain({user, onLogout}) {
               <div><div style={{fontSize:22,fontWeight:300,color:TXT}}>Investimentos</div><div className="num" style={{fontSize:15,fontWeight:700,color:C.green}}>{R(totalInvestido)}</div></div>
               <Btn variant="primary" style={{fontSize:12,padding:"9px 14px"}} onClick={()=>openM("inv")}>+ Investimento</Btn>
             </div>
-            {invests.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.5)",fontSize:14}}>Nenhum investimento registrado</div>
+            {invests.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum investimento registrado</div>
               :invests.map(i=>{const rend=i.aporte*(parseFloat(i.taxa)||0)/100/12;
                 return <div key={i.id} className={CARD} style={{marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                    <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{i.nome}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>{i.tipo}{i.banco&&` · ${i.banco}`} · desde {fd(i.data)}</div></div>
+                    <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{i.nome}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>{i.tipo}{i.banco&&` · ${i.banco}`} · desde {fd(i.data)}</div></div>
                     <div className="num" style={{fontSize:16,fontWeight:700,color:C.green}}>{R(i.aporte)}</div>
                   </div>
                   <div style={{display:"flex",gap:8,background:"rgba(0,0,0,0.05)",borderRadius:10,border:"1px solid rgba(0,0,0,0.07)",padding:"9px 11px",marginBottom:9}}>
-                    <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:9,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>TAXA A.A.</div><div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{i.taxa||"—"}%</div></div>
+                    <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>TAXA A.A.</div><div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{i.taxa||"—"}%</div></div>
                     <div style={{width:1,background:"rgba(255,255,255,0.2)"}}/>
-                    <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:9,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>REND./MÊS</div><div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{R(rend)}</div></div>
+                    <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>REND./MÊS</div><div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{R(rend)}</div></div>
                   </div>
-                  {i.obs&&<div style={{fontSize:11,color:"rgba(26,18,9,0.5)",marginBottom:8,fontFamily:"'DM Sans',sans-serif"}}>{i.obs}</div>}
+                  {i.obs&&<div style={{fontSize:11,color:"rgba(26,18,9,0.55)",marginBottom:8,fontFamily:"'DM Sans',sans-serif"}}>{i.obs}</div>}
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("inv",i)}>Editar</Btn>
                     <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(invests,setInvests,i.id)}>Excluir</Btn>
@@ -1576,18 +1576,18 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:22,fontWeight:300,color:TXT}}>Objetivos</div>
               <Btn variant="primary" style={{fontSize:12,padding:"9px 14px"}} onClick={()=>openM("obj")}>+ Objetivo</Btn>
             </div>
-            {objetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.5)",fontSize:14}}>Crie seus objetivos financeiros</div>
+            {objetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Crie seus objetivos financeiros</div>
               :objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;const d=daysUntil(o.prazo);
                 return <div key={o.id} className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${o.cor}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:9}}>
                     <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{o.nome}</div>
-                      {o.prazo&&<div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Prazo: {fdFull(o.prazo)}{d!==null&&<span style={{color:d<=30?C.gold:TSUB}}> · {d>0?`${d}d`:d===0?"Hoje":"Vencido"}</span>}</div>}
-                      {o.obs&&<div style={{fontSize:10,color:"rgba(26,18,9,0.5)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>{o.obs}</div>}
+                      {o.prazo&&<div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Prazo: {fdFull(o.prazo)}{d!==null&&<span style={{color:d<=30?C.gold:TSUB}}> · {d>0?`${d}d`:d===0?"Hoje":"Vencido"}</span>}</div>}
+                      {o.obs&&<div style={{fontSize:10,color:"rgba(26,18,9,0.55)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>{o.obs}</div>}
                     </div>
-                    <div style={{textAlign:"right"}}><div className="num" style={{fontSize:15,fontWeight:700,color:TXT}}>{R(o.atual)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>de {R(o.meta)}</div></div>
+                    <div style={{textAlign:"right"}}><div className="num" style={{fontSize:15,fontWeight:700,color:TXT}}>{R(o.atual)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>de {R(o.meta)}</div></div>
                   </div>
                   <Bar value={o.atual} max={o.meta} color={o.cor} h={6}/>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>{pct.toFixed(1)}%</span><span>Falta {R(Math.max(o.meta-o.atual,0))}</span></div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>{pct.toFixed(1)}%</span><span>Falta {R(Math.max(o.meta-o.atual,0))}</span></div>
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("aporte",null,o.id)}>+ Aporte</Btn>
                     <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("obj",o)}>Editar</Btn>
@@ -1606,18 +1606,18 @@ function AppMain({user, onLogout}) {
               <div><div style={{fontSize:22,fontWeight:300,color:TXT}}>Dívidas</div><div className="num" style={{fontSize:12,color:C.red,fontWeight:600}}>{R(totalDividas)} em aberto</div></div>
               <Btn variant="primary" style={{fontSize:12,padding:"9px 14px"}} onClick={()=>openM("div")}>+ Dívida</Btn>
             </div>
-            {dividas.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.5)",fontSize:14}}>Nenhuma dívida registrada 🎉</div>
+            {dividas.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhuma dívida registrada 🎉</div>
               :dividas.map(d=>{const s=statusDiv(d);const pct=+d.total>0?Math.min(+d.pago/+d.total*100,100):0;
                 return <div key={d.id} className={CARD} style={{marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                     <div><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:2}}><span style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{d.credor}</span><Badge label={s.label} color={s.color} bg={s.bg}/></div>
-                      {d.prazo&&<div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>Prazo: {fdFull(d.prazo)}</div>}
-                      {d.parcelas&&<div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>{d.parcelas}</div>}
+                      {d.prazo&&<div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>Prazo: {fdFull(d.prazo)}</div>}
+                      {d.parcelas&&<div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{d.parcelas}</div>}
                     </div>
-                    <div style={{textAlign:"right"}}><div className="num" style={{fontSize:15,fontWeight:700,color:C.red}}>{R(+d.total-+d.pago)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>restante</div></div>
+                    <div style={{textAlign:"right"}}><div className="num" style={{fontSize:15,fontWeight:700,color:C.red}}>{R(+d.total-+d.pago)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>restante</div></div>
                   </div>
                   <Bar value={+d.pago} max={+d.total} color={C.green} h={5}/>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>Pago: {R(+d.pago)}</span><span>{pct.toFixed(0)}%</span><span>Total: {R(+d.total)}</span></div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>Pago: {R(+d.pago)}</span><span>{pct.toFixed(0)}%</span><span>Total: {R(+d.total)}</span></div>
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("pgto",null,d.id)}>+ Pagamento</Btn>
                     <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("div",d)}>Editar</Btn>
@@ -1639,17 +1639,17 @@ function AppMain({user, onLogout}) {
                 <Btn variant="primary" style={{fontSize:11,padding:"7px 11px"}} onClick={()=>openM("ccmov")}>+ Compra</Btn>
               </div>
             </div>
-            {cartoes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.5)",fontSize:14}}>Adicione seus cartões</div>
+            {cartoes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Adicione seus cartões</div>
               :cartoes.map(c=>{const usado=ccGastosMes(c.id);const pct=+c.limite>0?Math.min(usado/+c.limite*100,100):0;const alerta=pct>=80;
                 const cc=ccMovs.filter(m=>m.cartao===c.id&&monthKey(m.data)===selMes).sort((a,b)=>b.data.localeCompare(a.data));
                 return <div key={c.id} style={{marginBottom:14}}>
                   <div className={CARD} style={{background:alerta?"rgba(224,82,82,0.22)":"rgba(255,255,255,0.15)",border:`1px solid ${alerta?C.red+"55":"rgba(255,255,255,0.26)"}`,marginBottom:7}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:11}}>
-                      <div><div style={{fontSize:15,fontWeight:700,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{c.nome}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.7)",marginTop:1,fontFamily:"'DM Sans',sans-serif"}}>{c.bandeira&&`${c.bandeira} · `}Fecha dia {c.fechamento} · Vence dia {c.vencimento}</div></div>
-                      <div style={{textAlign:"right"}}><div className="num" style={{fontSize:17,fontWeight:700,color:alerta?C.red:TXT}}>{R(usado)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>de {R(+c.limite)}</div></div>
+                      <div><div style={{fontSize:15,fontWeight:700,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{c.nome}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",marginTop:1,fontFamily:"'DM Sans',sans-serif"}}>{c.bandeira&&`${c.bandeira} · `}Fecha dia {c.fechamento} · Vence dia {c.vencimento}</div></div>
+                      <div style={{textAlign:"right"}}><div className="num" style={{fontSize:17,fontWeight:700,color:alerta?C.red:TXT}}>{R(usado)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>de {R(+c.limite)}</div></div>
                     </div>
                     <Bar value={usado} max={+c.limite} color={alerta?C.red:C.magenta} h={5}/>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",marginTop:4}}><span>{pct.toFixed(0)}%</span>{alerta&&<span style={{color:C.red,fontWeight:700}}>⚠ Limite próximo</span>}<span>Disponível: {R(+c.limite-usado)}</span></div>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:4}}><span>{pct.toFixed(0)}%</span>{alerta&&<span style={{color:C.red,fontWeight:700}}>⚠ Limite próximo</span>}<span>Disponível: {R(+c.limite-usado)}</span></div>
                     <div style={{display:"flex",gap:6,marginTop:9}}>
                       <Btn variant="primary" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("ccmov",null,c.id)}>+ Compra</Btn>
                       <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("cart",c)}>Editar</Btn>
@@ -1659,9 +1659,9 @@ function AppMain({user, onLogout}) {
                   {cc.slice(0,4).map(m=>(
                     <div key={m.id} className={CARD} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 12px",marginBottom:5}}>
                       <div style={{fontSize:17}}>{m.categoria.split(" ")[0]}</div>
-                      <div style={{flex:1}}><div style={{fontSize:12,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div><div style={{fontSize:9,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>{fd(m.data)}</div></div>
+                      <div style={{flex:1}}><div style={{fontSize:12,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div><div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{fd(m.data)}</div></div>
                       <div className="num" style={{fontSize:12,fontWeight:700,color:C.magenta}}>{R(m.valor)}</div>
-                      <button onClick={()=>remove(ccMovs,setCCMovs,m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.5)",fontSize:16,cursor:"pointer",padding:"0 2px"}}>×</button>
+                      <button onClick={()=>remove(ccMovs,setCCMovs,m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.55)",fontSize:16,cursor:"pointer",padding:"0 2px"}}>×</button>
                     </div>
                   ))}
                 </div>;
@@ -1674,7 +1674,7 @@ function AppMain({user, onLogout}) {
         {tab==="previsao"&&(
           <div className="fade">
             <div style={{fontSize:22,fontWeight:300,color:TXT,marginBottom:4}}>Previsão — 8 meses</div>
-            <div style={{fontSize:12,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",marginBottom:14}}>Plantões agendados + investimentos + histórico</div>
+            <div style={{fontSize:12,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginBottom:14}}>Plantões agendados + investimentos + histórico</div>
             <div className={CARD} style={{marginBottom:14}}>
               <div style={{display:"flex",alignItems:"flex-end",gap:5,height:110,marginBottom:9}}>
                 {forecast.map(f=>{const hE=maxFc>0?(f.entradas/maxFc)*100:0;const hS=maxFc>0?(f.saidas/maxFc)*100:0;const isNow=f.ym===today().slice(0,7);
@@ -1688,12 +1688,12 @@ function AppMain({user, onLogout}) {
                 })}
               </div>
               <div style={{display:"flex",gap:12,justifyContent:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:C.green}}/><span style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>Entradas</span></div>
-                <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:C.magenta}}/><span style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>Saídas</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:C.green}}/><span style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>Entradas</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:C.magenta}}/><span style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>Saídas</span></div>
               </div>
             </div>
             {forecast.map(f=>{const isNow=f.ym===today().slice(0,7);
-              return <div key={f.ym} className={CARD} style={{marginBottom:7,background:isNow?"rgba(232,32,95,0.1)":"rgba(255,255,255,0.82)",border:`1px solid ${isNow?"rgba(232,32,95,0.4)":"rgba(255,255,255,0.9)"}`}}>
+              return <div key={f.ym} className={CARD} style={{marginBottom:7,background:isNow?"rgba(232,32,95,0.12)":"rgba(255,255,255,0.88)",border:`1px solid ${isNow?"rgba(232,32,95,0.5)":"rgba(255,255,255,0.95)"}`}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
                   <div style={{fontSize:13,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:isNow?C.magenta:TXT}}>{monthLabel(f.ym)}{isNow&&<span style={{fontSize:9,marginLeft:6,background:C.magenta,color:"#fff",borderRadius:99,padding:"1px 7px"}}>Atual</span>}</div>
                   <div className="num" style={{fontSize:15,fontWeight:700,color:f.saldo>=0?C.green:C.red}}>{R(f.saldo)}</div>
@@ -1701,7 +1701,7 @@ function AppMain({user, onLogout}) {
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5}}>
                   {[{l:"Entradas",v:f.entradas,c:C.green},{l:"Saídas",v:f.saidas,c:C.red},{l:"Rendim.",v:f.rendimentos,c:C.gold}].map(r=>(
                     <div key={r.l} style={{background:"rgba(0,0,0,0.05)",borderRadius:7,padding:"6px 8px",textAlign:"center"}}>
-                      <div style={{fontSize:8,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,letterSpacing:".05em",marginBottom:1}}>{r.l}</div>
+                      <div style={{fontSize:8,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,letterSpacing:".05em",marginBottom:1}}>{r.l}</div>
                       <div className="num" style={{fontSize:11,fontWeight:700,color:r.c}}>{R(r.v)}</div>
                     </div>
                   ))}
@@ -1728,7 +1728,7 @@ function AppMain({user, onLogout}) {
         {/* ══ CATEGORIAS ══ */}
         {tab==="categorias"&&(
           <div className="fade">
-            <div style={{fontSize:22,fontWeight:300,color:"#fff",marginBottom:14}}>Categorias</div>
+            <div style={{background:"rgba(255,255,255,0.88)",backdropFilter:"blur(12px)",borderRadius:12,padding:"8px 14px",border:"1px solid rgba(255,255,255,0.95)",fontSize:22,fontWeight:300,color:"#1A1209",marginBottom:14}}>Categorias</div>
             <div className="card">
               <GerenciarCategorias cats={cats} setCats={setCats} onClose={()=>navTo("movimentos")}/>
             </div>
