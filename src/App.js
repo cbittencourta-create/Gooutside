@@ -600,13 +600,13 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
       </div>
 
       {viewMode==="recebimento"&&recebimentoPrevMes===0&&(
-        <div style={{background:"rgba(212,168,67,0.2)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#FFD580",fontFamily:"'DM Sans',sans-serif"}}>
+        <div style={{background:"rgba(212,168,67,0.2)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#8B6000",fontFamily:"'DM Sans',sans-serif"}}>
           ⚠ Nenhum plantão com previsão para {monthLabel(selMes)}. Cadastre plantões para ver a % do recebimento.
         </div>
       )}
 
       {viewMode==="recebimento"&&recebimentoPrevMes>0&&(
-        <div style={{background:"rgba(168,224,99,0.15)",border:"1px solid rgba(168,224,99,0.3)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#A8E063",fontFamily:"'DM Sans',sans-serif"}}>
+        <div style={{background:"rgba(168,224,99,0.15)",border:"1px solid rgba(168,224,99,0.3)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif"}}>
           Base: {R(recebimentoPrevMes)} previstos para {monthLabel(selMes)}
         </div>
       )}
@@ -640,7 +640,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
                   <input type="number" value={editVal} onChange={e=>setEditVal(e.target.value)}
                     onBlur={()=>{setOrcamento({...orcamento,[selMes]:{...(orcamento[selMes]||{}),[c.id]:+editVal}});setEditCat(null);}}
                     onKeyDown={e=>e.key==="Enter"&&(setOrcamento({...orcamento,[selMes]:{...(orcamento[selMes]||{}),[c.id]:+editVal}}),setEditCat(null))}
-                    autoFocus style={{background:"rgba(255,255,255,0.15)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:6,padding:"3px 6px",width:70,fontSize:11,color:"#fff",outline:"none",textAlign:"right",fontFamily:"inherit"}}/>
+                    autoFocus style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:6,padding:"3px 6px",width:70,fontSize:11,color:"#1A1209",outline:"none",textAlign:"right",fontFamily:"inherit"}}/>
                 ) : (
                   <button onClick={()=>{setEditCat(c.id);setEditVal(plan||"");}}
                     style={{background:"none",border:"none",color:plan>0?"#1A1209":"rgba(26,18,9,0.35)",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:plan>0?600:400}}>
@@ -649,7 +649,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
                 )}
               </div>
               <div style={{textAlign:"right",fontSize:11,color:"rgba(26,18,9,0.75)",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{R(gasto)}</div>
-              <div style={{textAlign:"right",fontSize:11,fontWeight:700,color:over?"#FF8A80":pct>80?"#FFD580":"#A8E063",fontFamily:"'DM Sans',sans-serif"}}>{pct.toFixed(0)}%</div>
+              <div style={{textAlign:"right",fontSize:11,fontWeight:700,color:over?"#8B1A1A":pct>80?"#8B6000":"#2D5A10",fontFamily:"'DM Sans',sans-serif"}}>{pct.toFixed(0)}%</div>
             </div>
           );
         })}
@@ -774,13 +774,13 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
                 <span style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>▭ {c.nome}</span>
                 <div style={{display:"flex",gap:8,alignItems:"center"}}>
                   <span style={{fontSize:11,fontWeight:700,color:c.pct>100?"#FF8A80":c.pct>80?"#FFD580":"rgba(255,255,255,0.7)",fontFamily:"'DM Sans',sans-serif"}}>{c.pct.toFixed(1)}%</span>
-                  <span style={{fontSize:11,color:"rgba(255,255,255,0.6)",fontFamily:"'DM Sans',sans-serif"}}>{R(c.usado)}</span>
+                  <span style={{fontSize:11,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif"}}>{R(c.usado)}</span>
                 </div>
               </div>
               <div style={{background:"rgba(0,0,0,0.2)",borderRadius:99,height:6,overflow:"hidden"}}>
                 <div style={{width:`${Math.min(c.pct,100)}%`,height:"100%",background:c.pct>100?"#FF8A80":c.pct>80?"#FFD580":"#E8205F",borderRadius:99,transition:"width .5s"}}/>
               </div>
-              <div style={{fontSize:10,color:"rgba(26,18,9,0.4)",marginTop:3,fontFamily:"'DM Sans',sans-serif"}}>Limite: {R(c.limite)} · Disponível: {R(Math.max(c.limite-c.usado,0))}</div>
+              <div style={{fontSize:10,color:"rgba(26,18,9,0.45)",marginTop:3,fontFamily:"'DM Sans',sans-serif"}}>Limite: {R(c.limite)} · Disponível: {R(Math.max(c.limite-c.usado,0))}</div>
             </div>
           ))}
         </div>
@@ -1043,7 +1043,7 @@ function AppMain({user, onLogout}) {
   })).map(f=>({...f,saldo:f.entradas-f.saidas+f.rendimentos})),[movs,plantoes,invests,ccMovs]);
   const maxFc=Math.max(...forecast.map(f=>Math.max(f.entradas,f.saidas,1)));
 
-  const statusDiv=d=>{if(!d.prazo)return{label:"Em aberto",color:"rgba(255,255,255,0.6)",bg:C.glass};if(isPast(d.prazo)&&d.pago<d.total)return{label:"Atrasada",color:C.red,bg:C.redGlass};if(daysUntil(d.prazo)<=30)return{label:"Vence em breve",color:C.gold,bg:C.goldGlass};return{label:"Em dia",color:C.green,bg:C.greenGlass};};
+  const statusDiv=d=>{if(!d.prazo)return{label:"Em aberto",color:"rgba(26,18,9,0.5)",bg:"rgba(0,0,0,0.06)"};if(isPast(d.prazo)&&d.pago<d.total)return{label:"Atrasada",color:C.red,bg:C.redGlass};if(daysUntil(d.prazo)<=30)return{label:"Vence em breve",color:C.gold,bg:C.goldGlass};return{label:"Em dia",color:C.green,bg:C.greenGlass};};
 
   const TABS=[
     {id:"dashboard",icon:"◈",label:"Início"},
@@ -1229,7 +1229,7 @@ function AppMain({user, onLogout}) {
                       <span style={{fontSize:24,opacity:.4}}>💳</span>
                     </div>
                     <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",textAlign:"center",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Sem gastos<br/>em {monthLabel(selMes)}</div>
-                    <button onClick={()=>openM("mov")} style={{background:C.magentaGlass,border:`1px solid ${C.magenta}44`,borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Lançar</button>
+                    <button onClick={()=>openM("mov")} style={{background:"#E8205F",border:"1px solid #C0154A",borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Lançar</button>
                   </div>
                 )}
               </div>
@@ -1262,7 +1262,7 @@ function AppMain({user, onLogout}) {
                       <span style={{fontSize:24,opacity:.4}}>🏥</span>
                     </div>
                     <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",textAlign:"center",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Sem plantões<br/>cadastrados</div>
-                    <button onClick={()=>navTo("plantoes")} style={{background:C.magentaGlass,border:`1px solid ${C.magenta}44`,borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Plantão</button>
+                    <button onClick={()=>navTo("plantoes")} style={{background:"#E8205F",border:"1px solid #C0154A",borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Plantão</button>
                   </div>
                 )}
               </div>
