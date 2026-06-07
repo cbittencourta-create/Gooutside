@@ -1117,7 +1117,7 @@ function AppMain({user, onLogout}) {
         select option{background:#3d1a10;color:#fff}
         .fade{animation:fd .2s ease} @keyframes fd{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
         .scr::-webkit-scrollbar{display:none}
-        .sidebar{position:fixed;top:0;left:0;height:100vh;width:230px;background:rgba(30,15,10,0.94);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid rgba(255,255,255,0.15);z-index:100;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 32px rgba(0,0,0,.3)}
+        .sidebar{position:fixed;top:0;left:0;height:100vh;width:240px;background:rgba(30,15,10,0.94);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid rgba(255,255,255,0.15);z-index:100;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 32px rgba(0,0,0,.3)}
         .sidebar.open{transform:translateX(0)}
         .overlay-side{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(2px);z-index:99;display:none}
         .overlay-side.open{display:block}
@@ -1156,7 +1156,7 @@ function AppMain({user, onLogout}) {
 
       {/* TOP BAR */}
       <div style={{background:"rgba(255,255,255,0.78)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",borderBottom:"1px solid rgba(0,0,0,0.08)",padding:"14px 16px 12px",position:"sticky",top:0,zIndex:50,boxShadow:"0 2px 20px rgba(0,0,0,0.1)"}}>
-        <div style={{maxWidth:600,margin:"0 auto"}}>
+        <div style={{maxWidth:1100,margin:"0 auto"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
               <button onClick={()=>setSideOpen(true)} style={{background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:10,width:38,height:38,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5,flexShrink:0,backdropFilter:"blur(8px)"}}>
@@ -1184,7 +1184,7 @@ function AppMain({user, onLogout}) {
         </div>
       </div>
 
-      <div style={{maxWidth:600,margin:"0 auto",padding:"14px 14px 80px",position:"relative",zIndex:1}}>
+      <div style={{maxWidth:1100,margin:"0 auto",padding:"14px 24px 80px",position:"relative",zIndex:1}}>
 
         {/* ══ DASHBOARD ══ */}
         {tab==="dashboard"&&(
