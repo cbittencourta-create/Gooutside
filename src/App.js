@@ -568,8 +568,8 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
         <div>
-          <div style={{fontSize:22,fontWeight:300,color:"#fff"}}>{monthLabel(selMes)}</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.6)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Planejamento orçamentário</div>
+          <div style={{fontSize:22,fontWeight:300,color:"#1A1209"}}>{monthLabel(selMes)}</div>
+          <div style={{fontSize:11,color:"rgba(26,18,9,0.6)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Planejamento orçamentário</div>
         </div>
       </div>
 
@@ -702,7 +702,7 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
       <div style={{display:"flex",gap:10,marginBottom:14}}>
         {[{l:"↑ Receitas",v:entM,c:"#A8E063"},{l:"↓ Despesas",v:saiM,c:"#FF8A80"},{l:"= Saldo",v:entM-saiM,c:entM-saiM>=0?"#A8E063":"#FF8A80"}].map(x=>(
           <div key={x.l} className="card" style={{flex:1,padding:"10px 12px",textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:700,color:"rgba(255,255,255,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{x.l}</div>
+            <div style={{fontSize:9,fontWeight:700,color:"rgba(26,18,9,0.6)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{x.l}</div>
             <div style={{fontSize:13,fontWeight:700,color:x.c,fontFamily:"'DM Sans',sans-serif",letterSpacing:"-.01em"}}>{R(x.v)}</div>
           </div>
         ))}
@@ -729,7 +729,7 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
             <g key={d.ym}>
               <circle cx={i*40+20} cy={H-(d.ent/maxVal*H)} r={3} fill="#A8E063"/>
               <circle cx={i*40+20} cy={H-(d.sai/maxVal*H)} r={3} fill="#FF8A80"/>
-              <text x={i*40+20} y={H+20} textAnchor="middle" fontSize={8} fill={d.ym===selMes?"#1A1209":"rgba(26,18,9,0.4)"} fontFamily="DM Sans">{d.label}</text>
+              <text x={i*40+20} y={H+20} textAnchor="middle" fontSize={8} fill={d.ym===selMes?"#1A1209":"rgba(26,18,9,0.35)"} fontFamily="DM Sans">{d.label}</text>
             </g>
           ))}
         </svg>
@@ -1062,9 +1062,9 @@ function AppMain({user, onLogout}) {
   const navTo=id=>{setTab(id);setSideOpen(false);};
 
   const CARD="card"; // className shorthand
-  const TXT=C.text;
-  const TSUB=C.textSub;
-  const TMUT=C.textMuted;
+  const TXT="#1A1209";
+  const TSUB="rgba(26,18,9,0.65)";
+  const TMUT="rgba(26,18,9,0.45)";
 
   return (
     <div style={{minHeight:"100vh",color:TXT,fontFamily:"'Cormorant Garamond','Georgia',serif",position:"relative"}}>
@@ -1112,7 +1112,7 @@ function AppMain({user, onLogout}) {
     );
   background-size:160px 160px;
 }
-        .card{background:rgba(255,255,255,0.82);border:1px solid rgba(255,255,255,0.95);border-radius:18px;padding:18px;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:0 4px 24px rgba(0,0,0,0.18),0 1px 0 rgba(255,255,255,1) inset;color:#1A1209}
+        .card{background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.98);border-radius:18px;padding:18px;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,1) inset;color:#1A1209}.card *{color:inherit}.card span,.card div,.card p{color:#1A1209}
         .card *{color:inherit}
         select option{background:#3d1a10;color:#fff}
         .fade{animation:fd .2s ease} @keyframes fd{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
@@ -1126,6 +1126,7 @@ function AppMain({user, onLogout}) {
         .navitem.active{background:rgba(232,32,95,0.4);color:#fff;font-weight:700;border:1px solid rgba(232,32,95,0.5);box-shadow:0 2px 12px rgba(232,32,95,0.2)}
         .navitem .nav-icon{font-size:16px;width:20px;text-align:center}
         input::placeholder{color:rgba(26,18,9,0.4)!important}
+        .card button{font-family:'DM Sans',sans-serif}
       `}</style>
 
       {/* SIDEBAR */}
@@ -1144,7 +1145,7 @@ function AppMain({user, onLogout}) {
           ))}
         </div>
         <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>👤 {user.name||user.email}</div>
+          <div style={{fontSize:11,color:"rgba(26,18,9,0.6)",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>👤 {user.name||user.email}</div>
           <button onClick={onLogout} style={{background:"rgba(232,32,95,0.3)",border:"1px solid rgba(232,32,95,0.4)",borderRadius:10,color:"#fff",fontSize:12,fontWeight:600,padding:"8px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%"}}>Sair</button>
         </div>
       </div>
@@ -1173,7 +1174,7 @@ function AppMain({user, onLogout}) {
           </div>
           <div className="scr" style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:2}}>
             {Array.from({length:12},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-3+i);const ym=d.toISOString().slice(0,7);const isSel=ym===selMes;
-              return <button key={ym} onClick={()=>setSelMes(ym)} style={{flexShrink:0,background:isSel?"#E8205F":"rgba(0,0,0,0.1)",color:isSel?"#fff":"rgba(0,0,0,0.7)",border:isSel?"1px solid #E8205F":"1px solid rgba(0,0,0,0.12)",borderRadius:99,padding:"4px 12px",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",boxShadow:isSel?"0 2px 8px rgba(232,32,95,0.3)":"none"}}>{monthLabel(ym)}</button>;
+              return <button key={ym} onClick={()=>setSelMes(ym)} style={{flexShrink:0,background:isSel?"#E8205F":"rgba(0,0,0,0.08)",color:isSel?"#fff":"rgba(26,18,9,0.7)",border:isSel?"1px solid #E8205F":"1px solid rgba(0,0,0,0.12)",borderRadius:99,padding:"4px 12px",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",boxShadow:isSel?"0 2px 8px rgba(232,32,95,0.3)":"none"}}>{monthLabel(ym)}</button>;
             })}
           </div>
         </div>
@@ -1332,7 +1333,7 @@ function AppMain({user, onLogout}) {
             <div className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${C.magenta}`}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <SL>Alocação de receita</SL>
-                <button onClick={()=>setModal("regras")} style={{background:C.magentaGlass,border:`1px solid ${C.magenta}55`,borderRadius:8,color:"#fff",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>⚙ Regras</button>
+                <button onClick={()=>setModal("regras")} style={{background:C.magentaGlass,border:`1px solid ${C.magenta}55`,borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>⚙ Regras</button>
               </div>
               {alocacoes.length>0 ? (
                 <>
@@ -1358,7 +1359,7 @@ function AppMain({user, onLogout}) {
             <div className={CARD}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <SL>Objetivos</SL>
-                <button onClick={()=>navTo("objetivos")} style={{background:"rgba(0,0,0,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,color:"#fff",fontSize:10,fontWeight:600,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Ver todos</button>
+                <button onClick={()=>navTo("objetivos")} style={{background:"rgba(0,0,0,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:600,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Ver todos</button>
               </div>
               {objetivos.length>0 ? objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;
                 return <div key={o.id} style={{marginBottom:10}}>
@@ -1385,7 +1386,7 @@ function AppMain({user, onLogout}) {
                 <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:12,padding:"10px 16px",textAlign:"center",border:"1px solid rgba(143,196,58,0.4)"}}><div style={{fontSize:9,color:"#2D5A10",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>ENTRADAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#2D5A10"}}>{R(entradas)}</div></div>
                 <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:12,padding:"10px 16px",textAlign:"center",border:"1px solid rgba(224,82,82,0.4)"}}><div style={{fontSize:9,color:"#8B1A1A",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>SAÍDAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#8B1A1A"}}>{R(saidas)}</div></div>
               </div>
-              <Btn variant="primary" style={{padding:"9px 14px",fontSize:12}} onClick={()=>openM("mov")}>+ Lançamento</Btn>
+              <Btn variant="primary" style={{padding:"9px 14px",fontSize:12,boxShadow:"0 2px 10px rgba(232,32,95,0.3)"}} onClick={()=>openM("mov")}>+ Lançamento</Btn>
             </div>
             {movsDoMes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum lançamento em {monthLabel(selMes)}</div>
               :[...movsDoMes].sort((a,b)=>b.data.localeCompare(a.data)).map(m=>(
@@ -1406,7 +1407,7 @@ function AppMain({user, onLogout}) {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
               <div><div style={{fontSize:22,fontWeight:300,color:TXT}}>{plantoes.length} plantões</div><div className="num" style={{fontSize:12,color:C.magenta,fontWeight:600}}>{R(totalPendPlant)} a receber</div></div>
               <div style={{display:"flex",gap:7}}>
-                <Btn variant="secondary" style={{fontSize:11,padding:"7px 11px",color:"#fff",background:"rgba(255,255,255,0.2)",border:"1px solid rgba(255,255,255,0.25)"}} onClick={()=>openM("emp")}>+ Empresa</Btn>
+                <Btn variant="secondary" style={{fontSize:11,padding:"7px 11px",color:"#1A1209",background:"rgba(255,255,255,0.2)",border:"1px solid rgba(255,255,255,0.25)"}} onClick={()=>openM("emp")}>+ Empresa</Btn>
                 <Btn variant="primary" style={{fontSize:11,padding:"7px 11px"}} onClick={()=>openM("plt")}>+ Plantão</Btn>
               </div>
             </div>
@@ -1429,7 +1430,7 @@ function AppMain({user, onLogout}) {
                     </div>
                     <div style={{display:"flex",gap:6}}>
                       {p.status!=="recebido"&&<Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>marcarRecebido(p.id)}>✓ Recebido</Btn>}
-                      <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("plt",p)}>Editar</Btn>
+                      <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("plt",p)}>Editar</Btn>
                       <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(plantoes,setPlantoes,p.id)}>Excluir</Btn>
                     </div>
                   </div>
@@ -1560,7 +1561,7 @@ function AppMain({user, onLogout}) {
                   </div>
                   {i.obs&&<div style={{fontSize:11,color:"rgba(26,18,9,0.55)",marginBottom:8,fontFamily:"'DM Sans',sans-serif"}}>{i.obs}</div>}
                   <div style={{display:"flex",gap:6}}>
-                    <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("inv",i)}>Editar</Btn>
+                    <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("inv",i)}>Editar</Btn>
                     <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(invests,setInvests,i.id)}>Excluir</Btn>
                   </div>
                 </div>;
@@ -1590,7 +1591,7 @@ function AppMain({user, onLogout}) {
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>{pct.toFixed(1)}%</span><span>Falta {R(Math.max(o.meta-o.atual,0))}</span></div>
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("aporte",null,o.id)}>+ Aporte</Btn>
-                    <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("obj",o)}>Editar</Btn>
+                    <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("obj",o)}>Editar</Btn>
                     <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(objetivos,setObjetivos,o.id)}>Excluir</Btn>
                   </div>
                 </div>;
@@ -1620,7 +1621,7 @@ function AppMain({user, onLogout}) {
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>Pago: {R(+d.pago)}</span><span>{pct.toFixed(0)}%</span><span>Total: {R(+d.total)}</span></div>
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("pgto",null,d.id)}>+ Pagamento</Btn>
-                    <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("div",d)}>Editar</Btn>
+                    <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("div",d)}>Editar</Btn>
                     <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(dividas,setDividas,d.id)}>Excluir</Btn>
                   </div>
                 </div>;
@@ -1635,7 +1636,7 @@ function AppMain({user, onLogout}) {
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
               <div style={{fontSize:22,fontWeight:300,color:TXT}}>Cartões</div>
               <div style={{display:"flex",gap:7}}>
-                <Btn variant="secondary" style={{fontSize:11,padding:"7px 11px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("cart")}>+ Cartão</Btn>
+                <Btn variant="secondary" style={{fontSize:11,padding:"7px 11px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("cart")}>+ Cartão</Btn>
                 <Btn variant="primary" style={{fontSize:11,padding:"7px 11px"}} onClick={()=>openM("ccmov")}>+ Compra</Btn>
               </div>
             </div>
@@ -1652,7 +1653,7 @@ function AppMain({user, onLogout}) {
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:4}}><span>{pct.toFixed(0)}%</span>{alerta&&<span style={{color:C.red,fontWeight:700}}>⚠ Limite próximo</span>}<span>Disponível: {R(+c.limite-usado)}</span></div>
                     <div style={{display:"flex",gap:6,marginTop:9}}>
                       <Btn variant="primary" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("ccmov",null,c.id)}>+ Compra</Btn>
-                      <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#fff",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("cart",c)}>Editar</Btn>
+                      <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("cart",c)}>Editar</Btn>
                       <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(cartoes,setCartoes,c.id)}>Excluir</Btn>
                     </div>
                   </div>
