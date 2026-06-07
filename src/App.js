@@ -710,7 +710,7 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
 
       {/* Gráfico de linha */}
       <div className="card" style={{marginBottom:12}}>
-        <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>Receitas vs Despesas — 12 meses</div>
+        <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>Receitas vs Despesas — 12 meses</div>
         <svg width="100%" height={H+30} viewBox={`0 0 ${meses.length*40} ${H+30}`} style={{overflow:"visible"}}>
           {/* Grid lines */}
           {[0,25,50,75,100].map(y=>(
@@ -743,7 +743,7 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
       {/* Gastos por categoria — barras horizontais */}
       {catData.length>0&&(
         <div className="card" style={{marginBottom:12}}>
-          <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>% por categoria · {monthLabel(selMes)}</div>
+          <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>% por categoria · {monthLabel(selMes)}</div>
           {catData.map(([cat,val],i)=>{
             const pct = totalGastos>0 ? val/totalGastos*100 : 0;
             return (
@@ -767,7 +767,7 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
       {/* Cartões */}
       {cartaoData.length>0&&(
         <div className="card">
-          <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>Gastos com cartões · {monthLabel(selMes)}</div>
+          <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:12}}>Gastos com cartões · {monthLabel(selMes)}</div>
           {cartaoData.map(c=>(
             <div key={c.id} style={{marginBottom:12}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
