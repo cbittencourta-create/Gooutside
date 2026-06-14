@@ -104,30 +104,6 @@ const DEST_COLORS = {
 
 const CHART_COLORS = ["#E8205F","#8FC43A","#5BA3D4","#D4A843","#A07BC8","#E05252","#38B2AC","#ED8936","#48BB78"];
 
-const BG_OPTIONS = [
-  {
-    id:"tartan",
-    label:"Xadrez",
-    emoji:"🟫",
-    css:`background-color:#C4A96A;background-image:repeating-linear-gradient(0deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px),repeating-linear-gradient(90deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px);background-size:160px 160px;`,
-    bodyBg:"#C4A96A"
-  },
-  {
-    id:"midnight",
-    label:"Noturno",
-    emoji:"🌙",
-    css:`background:linear-gradient(135deg,#0f0c29 0%,#302b63 50%,#24243e 100%);`,
-    bodyBg:"#0f0c29"
-  },
-  {
-    id:"blush",
-    label:"Rosa",
-    emoji:"🌸",
-    css:`background:linear-gradient(135deg,#f8e8ef 0%,#e8d5e0 30%,#d4b8c4 60%,#c9a8b8 100%);`,
-    bodyBg:"#f8e8ef"
-  },
-];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const R = v => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v||0);
 const fd = d => d ? new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}) : "—";
@@ -861,8 +837,7 @@ function LoginScreen({onLogin}) {
 
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Cormorant Garamond','Georgia',serif",position:"relative"}}>
-      <div className="wallpaper-bg" style={{...(()=>{const bg=BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0];const s={};bg.css.split(";").filter(Boolean).forEach(r=>{const[k,...v]=r.split(":");if(k&&v.length)s[k.trim().replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]=v.join(":").trim();});return s;})()}}/>
-      <div className="wallpaper-blur"/>
+      <div className="wallpaper-bg"/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -921,7 +896,6 @@ export default function App() {
 
 function AppMain({user, onLogout}) {
   const userId = user.id;
-  const [bgId,       setBgId]      = useLS("v4_bg",    "tartan", userId);
   const [cats,      setCats]      = useLS("v4_cats",   DEFAULT_CATS, userId);
   const [orcamento, setOrcamento] = useLS("v4_orc",    {}, userId);
   const [movs,      setMovs]      = useLS("v4_movs",   [], userId);
@@ -941,7 +915,6 @@ function AppMain({user, onLogout}) {
   const [extra,setExtra]=useState(null);
   const [selMes,setSelMes]=useState(today().slice(0,7));
   const [sideOpen,setSideOpen]=useState(false);
-  const [alocExpanded,setAlocExpanded]=useState(false);
   const [pltDist,setPltDist]=useState(null);
 
   const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
@@ -1095,8 +1068,7 @@ function AppMain({user, onLogout}) {
 
   return (
     <div style={{minHeight:"100vh",color:TXT,fontFamily:"'Cormorant Garamond','Georgia',serif",position:"relative"}}>
-      <div className="wallpaper-bg" style={{...(()=>{const bg=BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0];const s={};bg.css.split(";").filter(Boolean).forEach(r=>{const[k,...v]=r.split(":");if(k&&v.length)s[k.trim().replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]=v.join(":").trim();});return s;})()}}/>
-      <div className="wallpaper-blur"/>
+      <div className="wallpaper-bg"/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -1202,7 +1174,6 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:12,color:"#2D6E20",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▲ {R(entradas)}</div>
               <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>⏳ {R(totalPendPlant)}</div>}
-              <div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:700}}>💵 {R(saldoReal)} disponível</div>
             </div>
           </div>
           <div className="scr" style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:2}}>
@@ -1305,7 +1276,7 @@ function AppMain({user, onLogout}) {
             {/* ── Linha 3: Calendário + Próximos recebimentos ── */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
               <div className={CARD} style={{padding:12}}>
-                <MultiCalendar plantoes={plantoes} movs={movs} onAddWithDate={(tipo,data)=>{if(tipo==="plantao"){openM("plt");setFPlt(f=>({...f,data}));}else{openM("mov");setFMov(f=>({...f,tipo,data}));}}}/>
+                <MultiCalendar plantoes={plantoes}/>
               </div>
               <div className={CARD} style={{padding:14}}>
                 <SL>Recebimentos</SL>
