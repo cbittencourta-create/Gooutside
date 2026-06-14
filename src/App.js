@@ -1,4 +1,3 @@
-O conteúdo é gerado pelo usuário e não verificado.
 import { useState, useEffect, useMemo } from "react";
 
 const SUPA_URL = "https://hbzldrnrbxvnkrbnntoe.supabase.co";
