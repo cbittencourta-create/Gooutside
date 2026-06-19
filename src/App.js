@@ -818,6 +818,242 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
 }
 
 
+
+// ── Importação de Extrato ────────────────────────────────────────────────────
+const KEYWORD_CATS = [
+  {cat:"🍔 Alimentação", keys:["ifood","rappi","uber eat","delivery","restaur","lanchon","mcdonalds","burger","subway","pizza","padaria","mercado","supermercado","pao de acucar","carrefour","extra ","atacadao","hortifruti","sacolao","açougue","acougue","sushi","churrasco","pastel","coxinha"]},
+  {cat:"🚗 Transporte",  keys:["uber","99app","taxi","táxi","gasolina","combustiv","posto ","shell","ipiranga","br distribu","estacionam","pedágio","pedagio","metro","ônibus","onibus","passagem","trem","brt","carro"]},
+  {cat:"🏠 Moradia",     keys:["aluguel","condomin","iptu","água","agua","sabesp","celesc","copel","cemig","coelba","energia","luz ","esgoto"]},
+  {cat:"💊 Saúde",       keys:["farmácia","farmacia","drogaria","droga raia","droga","hospital","clínica","clinica","médico","medico","plano de saude","unimed","hapvida","amil","sulamerica","bradesco saude","academia","smart fit","bio ritmo","bodytech","consultorio"]},
+  {cat:"🎭 Lazer",       keys:["netflix","spotify","amazon prime","disney","hbo","deezer","youtube","cinema","teatro","show ","ingresso","viagem","hotel","airbnb","booking","passagem aérea","passagem aerea"]},
+  {cat:"👕 Vestuário",   keys:["renner","riachuelo","c&a","zara","h&m","hm ","roupas","calçados","calcados","sapatos","americanas","marisa"]},
+  {cat:"📚 Educação",    keys:["escola","faculdade","universidade","curso","livro","saraiva","estácio","estacio","anhanguera","unip"]},
+  {cat:"💡 Contas",      keys:["claro","vivo","tim ","oi ","net ","giga","internet","celular","telefone","streaming","google ","apple ","icloud","microsoft","recarga"]},
+  {cat:"🍔 Alimentação", keys:["supermercado","hortifruti"]},
+];
+
+function guessCat(desc) {
+  const d = desc.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  for(const {cat, keys} of KEYWORD_CATS) {
+    if(keys.some(k=>d.includes(k))) return cat;
+  }
+  return "📦 Outros";
+}
+
+function parseOFX(text) {
+  const txns = [];
+  const blocks = text.split(/<STMTTRN>/i).slice(1);
+  blocks.forEach(block => {
+    const get = tag => { const m=block.match(new RegExp(`<${tag}>([^<\n]+)`,'i')); return m?m[1].trim():""; };
+    const amt = parseFloat(get("TRNAMT")||"0");
+    const memo = get("MEMO")||get("NAME")||"Sem descrição";
+    const dtRaw = get("DTPOSTED")||get("DTAVAIL")||"";
+    let data = "";
+    if(dtRaw.length>=8) data=`${dtRaw.slice(0,4)}-${dtRaw.slice(4,6)}-${dtRaw.slice(6,8)}`;
+    if(amt!==0) txns.push({desc:memo, valor:Math.abs(amt), tipo:amt>0?"entrada":"saida", data, categoria:guessCat(memo)});
+  });
+  return txns;
+}
+
+function parseCSV(text, banco) {
+  const txns = [];
+  const linhas = text.split(/\r?\n/).filter(l=>l.trim());
+  if(linhas.length<2) return txns;
+
+  // Detectar separador
+  const sep = linhas[0].includes(";") ? ";" : ",";
+  const header = linhas[0].toLowerCase();
+
+  // C6: Data;Identificador;Descrição;Valor
+  // Itaú: Data;Histórico;Docto.;Crédito;Débito;Saldo
+  // Nubank: date,transaction_type,title,amount
+  // Genérico
+
+  const cols = linhas[0].split(sep).map(c=>c.trim().toLowerCase().replace(/"/g,""));
+
+  const iData   = cols.findIndex(c=>c.includes("data")||c==="date");
+  const iDesc   = cols.findIndex(c=>c.includes("descri")||c.includes("histór")||c.includes("histor")||c.includes("title")||c.includes("memo")||c.includes("lançamento")||c.includes("lancamento"));
+  const iValor  = cols.findIndex(c=>c==="valor"||c==="amount"||c.includes("vlr"));
+  const iCred   = cols.findIndex(c=>c.includes("crédit")||c.includes("credit"));
+  const iDeb    = cols.findIndex(c=>c.includes("débit")||c.includes("debit"));
+
+  for(let i=1;i<linhas.length;i++){
+    const parts = linhas[i].split(sep).map(p=>p.trim().replace(/^"|"$/g,""));
+    if(parts.length<2) continue;
+
+    let desc = iDesc>=0 ? parts[iDesc] : parts[1] || "";
+    if(!desc || desc.toLowerCase().includes("saldo")) continue;
+
+    // Data
+    let data = "";
+    if(iData>=0){
+      const raw=parts[iData]||"";
+      if(raw.includes("/")){const[d,m,y]=raw.split("/");data=`${y.length===2?"20"+y:y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;}
+      else if(raw.includes("-")){data=raw.slice(0,10);}
+    }
+
+    // Valor
+    let valor=0, tipo="saida";
+    if(iValor>=0){
+      const v=(parts[iValor]||"").replace(/[R$\s]/g,"").replace(".","").replace(",",".");
+      valor=Math.abs(parseFloat(v)||0);
+      tipo=parseFloat(v)>0?"entrada":"saida";
+    } else if(iCred>=0||iDeb>=0){
+      const cred=parseFloat((parts[iCred]||"").replace(".","").replace(",","."))||0;
+      const deb =parseFloat((parts[iDeb] ||"").replace(".","").replace(",","."))||0;
+      if(cred>0){valor=cred;tipo="entrada";}
+      else if(deb>0){valor=deb;tipo="saida";}
+    }
+
+    if(valor>0) txns.push({desc, valor, tipo, data, categoria:guessCat(desc)});
+  }
+  return txns;
+}
+
+function ImportacaoModal({open, onClose, onImport, cats}) {
+  const [step, setStep] = useState(1); // 1=upload 2=review
+  const [banco, setBanco] = useState("auto");
+  const [txns, setTxns] = useState([]);
+  const [erro, setErro] = useState("");
+
+  const CATS_DESP = (cats?.despesa||[]).map(c=>`${c.emoji} ${c.nome}`);
+  const CATS_REC  = (cats?.receita||[]).map(c=>`${c.emoji} ${c.nome}`);
+
+  const handleFile = e => {
+    const file = e.target.files[0];
+    if(!file){return;}
+    setErro("");
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const text = ev.target.result;
+      let parsed = [];
+      try {
+        if(file.name.toLowerCase().endsWith(".ofx")||text.includes("<OFX>")||text.includes("<STMTTRN>")) {
+          parsed = parseOFX(text);
+        } else {
+          parsed = parseCSV(text, banco);
+        }
+        if(parsed.length===0){setErro("Não foi possível ler o arquivo. Tente exportar no formato OFX ou CSV.");return;}
+        setTxns(parsed.map((t,i)=>({...t,id:i,selected:true})));
+        setStep(2);
+      } catch(err) {
+        setErro("Erro ao processar arquivo: "+err.message);
+      }
+    };
+    reader.readAsText(file, "UTF-8");
+  };
+
+  const toggleAll = sel => setTxns(txns.map(t=>({...t,selected:sel})));
+  const total = txns.filter(t=>t.selected).length;
+  const totalEnt = txns.filter(t=>t.selected&&t.tipo==="entrada").reduce((s,t)=>s+t.valor,0);
+  const totalSai = txns.filter(t=>t.selected&&t.tipo==="saida").reduce((s,t)=>s+t.valor,0);
+
+  const confirmar = () => {
+    const selecionados = txns.filter(t=>t.selected).map(t=>({
+      id: Date.now()+Math.random(),
+      tipo: t.tipo,
+      descricao: t.desc,
+      valor: t.valor,
+      categoria: t.categoria,
+      data: t.data || today(),
+    }));
+    onImport(selecionados);
+    setStep(1);setTxns([]);
+    onClose();
+  };
+
+  if(!open) return null;
+
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.65)",backdropFilter:"blur(8px)",zIndex:200,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#F5F0E8",borderRadius:"24px 24px 0 0",width:"100%",maxWidth:520,padding:"28px 22px 40px",maxHeight:"92vh",overflowY:"auto",boxShadow:"0 -12px 60px rgba(0,0,0,.2)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+          <div style={{fontSize:16,fontWeight:700,color:"#1A1209"}}>📥 Importar Extrato</div>
+          <button onClick={()=>{setStep(1);setTxns([]);onClose();}} style={{background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)",color:"#5A4A3A",borderRadius:10,width:32,height:32,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+        </div>
+
+        {step===1&&(
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+              Exporte o extrato do seu banco no formato <strong>OFX</strong> ou <strong>CSV</strong> e importe aqui. As transações serão categorizadas automaticamente.
+            </div>
+            <div>
+              <div style={{fontSize:11,fontWeight:600,color:"#5A4A3A",letterSpacing:".06em",textTransform:"uppercase",marginBottom:6}}>Banco (opcional)</div>
+              <div style={{display:"flex",gap:6}}>
+                {[["auto","🏦 Detectar auto"],["c6","C6 Bank"],["itau","Itaú"]].map(([v,l])=>(
+                  <button key={v} onClick={()=>setBanco(v)} style={{flex:1,background:banco===v?"#E8205F":"rgba(0,0,0,0.06)",border:`1px solid ${banco===v?"#E8205F":"rgba(0,0,0,0.12)"}`,borderRadius:10,padding:"8px 4px",fontSize:11,fontWeight:700,color:banco===v?"#fff":"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
+                ))}
+              </div>
+            </div>
+            <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(232,32,95,0.06)",border:"2px dashed rgba(232,32,95,0.3)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
+              <span style={{fontSize:32}}>📂</span>
+              <span style={{fontSize:13,fontWeight:600,color:"#E8205F",fontFamily:"'DM Sans',sans-serif"}}>Clique para selecionar arquivo</span>
+              <span style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>OFX, CSV — C6 Bank e Itaú</span>
+              <input type="file" accept=".ofx,.csv,.txt" onChange={handleFile} style={{display:"none"}}/>
+            </label>
+            {erro&&<div style={{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.3)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#C0392B",fontFamily:"'DM Sans',sans-serif"}}>⚠ {erro}</div>}
+          </div>
+        )}
+
+        {step===2&&(
+          <div>
+            {/* Resumo */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
+              {[[`${total} transações`,"selecionadas","#1A1209"],[`+ ${R(totalEnt)}`,"entradas","#2D5A10"],[`- ${R(totalSai)}`,"saídas","#8B1A1A"]].map(([v,l,c])=>(
+                <div key={l} style={{background:"rgba(0,0,0,0.05)",borderRadius:12,padding:"10px",textAlign:"center"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:c,fontFamily:"'DM Sans',sans-serif"}}>{v}</div>
+                  <div style={{fontSize:9,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>{l}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Controles */}
+            <div style={{display:"flex",gap:6,marginBottom:10}}>
+              <button onClick={()=>toggleAll(true)} style={{flex:1,background:"rgba(45,90,16,0.1)",border:"1px solid rgba(45,90,16,0.25)",borderRadius:8,padding:"6px",fontSize:11,fontWeight:700,color:"#2D5A10",cursor:"pointer",fontFamily:"inherit"}}>Selecionar tudo</button>
+              <button onClick={()=>toggleAll(false)} style={{flex:1,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px",fontSize:11,fontWeight:700,color:"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>Desmarcar tudo</button>
+              <button onClick={()=>setStep(1)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 10px",fontSize:11,color:"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>← Voltar</button>
+            </div>
+
+            {/* Lista de transações */}
+            <div style={{maxHeight:340,overflowY:"auto",display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
+              {txns.map((t,i)=>(
+                <div key={t.id} style={{background:t.selected?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.04)",border:`1px solid ${t.selected?"rgba(0,0,0,0.1)":"rgba(0,0,0,0.06)"}`,borderRadius:12,padding:"10px 12px",opacity:t.selected?1:0.5}}>
+                  <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
+                    <input type="checkbox" checked={t.selected} onChange={()=>setTxns(txns.map((x,j)=>j===i?{...x,selected:!x.selected}:x))} style={{marginTop:2,cursor:"pointer",accentColor:"#E8205F"}}/>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{t.desc}</span>
+                        <span style={{fontSize:12,fontWeight:700,color:t.tipo==="entrada"?"#2D5A10":"#8B1A1A",fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>{t.tipo==="entrada"?"+":"-"}{R(t.valor)}</span>
+                      </div>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                        <span style={{fontSize:10,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>{t.data||"—"}</span>
+                        <select value={t.tipo} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,tipo:e.target.value}:x))}
+                          style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:t.tipo==="entrada"?"#2D5A10":"#8B1A1A",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                          <option value="entrada">↑ Entrada</option>
+                          <option value="saida">↓ Saída</option>
+                        </select>
+                        <select value={t.categoria} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,categoria:e.target.value}:x))}
+                          style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:"#1A1209",cursor:"pointer",fontFamily:"inherit",flex:1,minWidth:0}}>
+                          <optgroup label="Despesas">{CATS_DESP.map(c=><option key={c} value={c}>{c}</option>)}</optgroup>
+                          <optgroup label="Receitas">{CATS_REC.map(c=><option key={c} value={c}>{c}</option>)}</optgroup>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={confirmar} disabled={total===0} style={{width:"100%",background:total===0?"rgba(0,0,0,0.1)":"#E8205F",border:"none",borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,color:"#fff",cursor:total===0?"default":"pointer",fontFamily:"inherit"}}>
+              ✓ Importar {total} transação{total!==1?"ões":""}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Login Screen ─────────────────────────────────────────────────────────────
 function LoginScreen({onLogin}) {
   const [mode, setMode]       = useState("login"); // login | signup
@@ -938,6 +1174,7 @@ function AppMain({user, onLogout}) {
   const [selMes,setSelMes]=useState(today().slice(0,7));
   const [sideOpen,setSideOpen]=useState(false);
   const [alocExpanded,setAlocExpanded]=useState(false);
+  const [importOpen,setImportOpen]=useState(false);
   const [pltDist,setPltDist]=useState(null);
 
   const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
@@ -970,6 +1207,7 @@ function AppMain({user, onLogout}) {
   const upsert=(list,setList,item)=>{if(edit)setList(list.map(i=>i.id===edit.id?{...item,id:edit.id}:i));else setList([{...item,id:uid()},...list]);closeM();};
   const remove=(list,setList,id)=>setList(list.filter(i=>i.id!==id));
 
+  const importarMovs=items=>{setMovs(prev=>[...items,...prev]);};
   const saveMov=()=>{if(!fMov.descricao||!fMov.valor)return;upsert(movs,setMovs,{...fMov,valor:+String(fMov.valor).replace(",",".")});};
   const saveEmp=()=>{if(!fEmp.nome)return;upsert(empresas,setEmpresas,fEmp);};
   const savePlt=()=>{if(!fPlt.empresa||!fPlt.data||!fPlt.valorTotal)return;upsert(plantoes,setPlantoes,{...fPlt,valorTotal:+fPlt.valorTotal});};
@@ -1215,6 +1453,9 @@ function AppMain({user, onLogout}) {
         {/* ══ DASHBOARD ══ */}
         {tab==="dashboard"&&(
           <div className="fade">
+            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
+              <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>📥 Importar Extrato</button>
+            </div>
 
             {/* ── Linha 1: Cards resumo ── */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
@@ -1443,7 +1684,10 @@ function AppMain({user, onLogout}) {
                 <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:12,padding:"10px 16px",textAlign:"center",border:"1px solid rgba(143,196,58,0.4)"}}><div style={{fontSize:9,color:"#2D5A10",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>ENTRADAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#2D5A10"}}>{R(entradas)}</div></div>
                 <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:12,padding:"10px 16px",textAlign:"center",border:"1px solid rgba(224,82,82,0.4)"}}><div style={{fontSize:9,color:"#8B1A1A",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>SAÍDAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#8B1A1A"}}>{R(saidas)}</div></div>
               </div>
-              <Btn variant="primary" style={{padding:"9px 14px",fontSize:12,boxShadow:"0 2px 10px rgba(232,32,95,0.3)"}} onClick={()=>openM("mov")}>+ Lançamento</Btn>
+              <div style={{display:"flex",gap:7}}>
+                <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"9px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6}}>📥 Importar</button>
+                <Btn variant="primary" style={{padding:"9px 14px",fontSize:12,boxShadow:"0 2px 10px rgba(232,32,95,0.3)"}} onClick={()=>openM("mov")}>+ Lançamento</Btn>
+              </div>
             </div>
             {movsDoMes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum lançamento em {monthLabel(selMes)}</div>
               :[...movsDoMes].sort((a,b)=>b.data.localeCompare(a.data)).map(m=>(
@@ -1930,6 +2174,7 @@ function AppMain({user, onLogout}) {
         </div>
       </Modal>
 
+      <ImportacaoModal open={importOpen} onClose={()=>setImportOpen(false)} onImport={importarMovs} cats={cats}/>
       <RegrasModal open={modal==="regras"} onClose={closeM} regras={regras} setRegras={setRegras} invests={invests} objetivos={objetivos} dividas={dividas}/>
       <AlocacaoModal open={!!pltDist} onClose={()=>setPltDist(null)} plantao={pltDist} regras={regras} invests={invests} objetivos={objetivos} dividas={dividas} onConfirm={confirmarDistribuicao}/>
     </div>
