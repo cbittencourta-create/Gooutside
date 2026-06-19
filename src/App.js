@@ -821,19 +821,18 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
 
 // ── Importação de Extrato ────────────────────────────────────────────────────
 const KEYWORD_CATS = [
-  {cat:"🍔 Alimentação", keys:["ifood","rappi","uber eat","delivery","restaur","lanchon","mcdonalds","burger","subway","pizza","padaria","mercado","supermercado","pao de acucar","carrefour","extra ","atacadao","hortifruti","sacolao","açougue","acougue","sushi","churrasco","pastel","coxinha"]},
-  {cat:"🚗 Transporte",  keys:["uber","99app","taxi","táxi","gasolina","combustiv","posto ","shell","ipiranga","br distribu","estacionam","pedágio","pedagio","metro","ônibus","onibus","passagem","trem","brt","carro"]},
+  {cat:"🍔 Alimentação", keys:["ifood","rappi","uber eat","delivery","restaur","lanchon","mcdonalds","burger","subway","pizza","padaria","mercado","supermercado","pao de acucar","carrefour","atacadao","hortifruti","acougue","sushi","churrasco"]},
+  {cat:"🚗 Transporte",  keys:["uber","99app","taxi","táxi","gasolina","combustiv","posto ","shell","ipiranga","br distribu","estacionam","pedágio","pedagio","metro","ônibus","onibus","trem","brt"]},
   {cat:"🏠 Moradia",     keys:["aluguel","condomin","iptu","água","agua","sabesp","celesc","copel","cemig","coelba","energia","luz ","esgoto"]},
-  {cat:"💊 Saúde",       keys:["farmácia","farmacia","drogaria","droga raia","droga","hospital","clínica","clinica","médico","medico","plano de saude","unimed","hapvida","amil","sulamerica","bradesco saude","academia","smart fit","bio ritmo","bodytech","consultorio"]},
-  {cat:"🎭 Lazer",       keys:["netflix","spotify","amazon prime","disney","hbo","deezer","youtube","cinema","teatro","show ","ingresso","viagem","hotel","airbnb","booking","passagem aérea","passagem aerea"]},
-  {cat:"👕 Vestuário",   keys:["renner","riachuelo","c&a","zara","h&m","hm ","roupas","calçados","calcados","sapatos","americanas","marisa"]},
+  {cat:"💊 Saúde",       keys:["farmácia","farmacia","drogaria","droga raia","hospital","clínica","clinica","médico","medico","plano de saude","unimed","hapvida","amil","sulamerica","academia","smart fit","bio ritmo","bodytech","consultorio"]},
+  {cat:"🎭 Lazer",       keys:["netflix","spotify","amazon prime","disney","hbo","deezer","youtube","cinema","teatro","ingresso","airbnb","booking"]},
+  {cat:"👕 Vestuário",   keys:["renner","riachuelo","c&a","zara","h&m","roupas","calçados","calcados","sapatos","americanas","marisa"]},
   {cat:"📚 Educação",    keys:["escola","faculdade","universidade","curso","livro","saraiva","estácio","estacio","anhanguera","unip"]},
-  {cat:"💡 Contas",      keys:["claro","vivo","tim ","oi ","net ","giga","internet","celular","telefone","streaming","google ","apple ","icloud","microsoft","recarga"]},
-  {cat:"🍔 Alimentação", keys:["supermercado","hortifruti"]},
+  {cat:"💡 Contas",      keys:["claro","vivo","tim ","oi ","net ","giga","internet","celular","telefone","google ","apple ","icloud","microsoft","recarga"]},
 ];
 
 function guessCat(desc) {
-  const d = desc.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+  const d = (desc||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   for(const {cat, keys} of KEYWORD_CATS) {
     if(keys.some(k=>d.includes(k))) return cat;
   }
@@ -844,7 +843,7 @@ function parseOFX(text) {
   const txns = [];
   const blocks = text.split(/<STMTTRN>/i).slice(1);
   blocks.forEach(block => {
-    const get = tag => { const m=block.match(new RegExp(`<${tag}>([^<\n]+)`,'i')); return m?m[1].trim():""; };
+    const get = tag => { const m=block.match(new RegExp(`<${tag}>([^<\\n]+)`,"i")); return m?m[1].trim():""; };
     const amt = parseFloat(get("TRNAMT")||"0");
     const memo = get("MEMO")||get("NAME")||"Sem descrição";
     const dtRaw = get("DTPOSTED")||get("DTAVAIL")||"";
@@ -855,111 +854,192 @@ function parseOFX(text) {
   return txns;
 }
 
-function parseCSV(text, banco) {
+function parseCSV(text) {
   const txns = [];
   const linhas = text.split(/\r?\n/).filter(l=>l.trim());
   if(linhas.length<2) return txns;
-
-  // Detectar separador
   const sep = linhas[0].includes(";") ? ";" : ",";
-  const header = linhas[0].toLowerCase();
-
-  // C6: Data;Identificador;Descrição;Valor
-  // Itaú: Data;Histórico;Docto.;Crédito;Débito;Saldo
-  // Nubank: date,transaction_type,title,amount
-  // Genérico
-
   const cols = linhas[0].split(sep).map(c=>c.trim().toLowerCase().replace(/"/g,""));
-
-  const iData   = cols.findIndex(c=>c.includes("data")||c==="date");
-  const iDesc   = cols.findIndex(c=>c.includes("descri")||c.includes("histór")||c.includes("histor")||c.includes("title")||c.includes("memo")||c.includes("lançamento")||c.includes("lancamento"));
-  const iValor  = cols.findIndex(c=>c==="valor"||c==="amount"||c.includes("vlr"));
-  const iCred   = cols.findIndex(c=>c.includes("crédit")||c.includes("credit"));
-  const iDeb    = cols.findIndex(c=>c.includes("débit")||c.includes("debit"));
-
+  const iData  = cols.findIndex(c=>c.includes("data")||c==="date");
+  const iDesc  = cols.findIndex(c=>c.includes("descri")||c.includes("histór")||c.includes("histor")||c.includes("title")||c.includes("memo")||c.includes("lançamento")||c.includes("lancamento"));
+  const iValor = cols.findIndex(c=>c==="valor"||c==="amount"||c.includes("vlr"));
+  const iCred  = cols.findIndex(c=>c.includes("crédit")||c.includes("credit"));
+  const iDeb   = cols.findIndex(c=>c.includes("débit")||c.includes("debit"));
   for(let i=1;i<linhas.length;i++){
     const parts = linhas[i].split(sep).map(p=>p.trim().replace(/^"|"$/g,""));
     if(parts.length<2) continue;
-
-    let desc = iDesc>=0 ? parts[iDesc] : parts[1] || "";
-    if(!desc || desc.toLowerCase().includes("saldo")) continue;
-
-    // Data
-    let data = "";
-    if(iData>=0){
-      const raw=parts[iData]||"";
-      if(raw.includes("/")){const[d,m,y]=raw.split("/");data=`${y.length===2?"20"+y:y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;}
-      else if(raw.includes("-")){data=raw.slice(0,10);}
-    }
-
-    // Valor
-    let valor=0, tipo="saida";
-    if(iValor>=0){
-      const v=(parts[iValor]||"").replace(/[R$\s]/g,"").replace(".","").replace(",",".");
-      valor=Math.abs(parseFloat(v)||0);
-      tipo=parseFloat(v)>0?"entrada":"saida";
-    } else if(iCred>=0||iDeb>=0){
-      const cred=parseFloat((parts[iCred]||"").replace(".","").replace(",","."))||0;
-      const deb =parseFloat((parts[iDeb] ||"").replace(".","").replace(",","."))||0;
-      if(cred>0){valor=cred;tipo="entrada";}
-      else if(deb>0){valor=deb;tipo="saida";}
-    }
-
-    if(valor>0) txns.push({desc, valor, tipo, data, categoria:guessCat(desc)});
+    let desc = iDesc>=0 ? parts[iDesc] : parts[1]||"";
+    if(!desc||desc.toLowerCase().includes("saldo")) continue;
+    let data="";
+    if(iData>=0){const raw=parts[iData]||"";if(raw.includes("/")){const[d,m,y]=raw.split("/");data=`${y.length===2?"20"+y:y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;}else if(raw.includes("-")){data=raw.slice(0,10);}}
+    let valor=0,tipo="saida";
+    if(iValor>=0){const v=(parts[iValor]||"").replace(/[R$\s]/g,"").replace(".","").replace(",",".");valor=Math.abs(parseFloat(v)||0);tipo=parseFloat(v)>0?"entrada":"saida";}
+    else if(iCred>=0||iDeb>=0){const cred=parseFloat((parts[iCred]||"").replace(".","").replace(",","."))||0;const deb=parseFloat((parts[iDeb]||"").replace(".","").replace(",","."))||0;if(cred>0){valor=cred;tipo="entrada";}else if(deb>0){valor=deb;tipo="saida";}}
+    if(valor>0) txns.push({desc,valor,tipo,data,categoria:guessCat(desc)});
   }
   return txns;
 }
 
+async function loadPDFJS() {
+  if(window.pdfjsLib) return window.pdfjsLib;
+  return new Promise((resolve,reject)=>{
+    const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+    s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";resolve(window.pdfjsLib);};
+    s.onerror=reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function extractPDFText(arrayBuffer, password) {
+  const pdfjs = await loadPDFJS();
+  const pdf = await pdfjs.getDocument({data:arrayBuffer, password:password||undefined}).promise;
+  let text = "";
+  for(let i=1;i<=pdf.numPages;i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(it=>it.str).join(" ") + "\n";
+  }
+  return text;
+}
+
+async function extractFromImage(base64, mediaType) {
+  const resp = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      model:"claude-sonnet-4-6",
+      max_tokens:1500,
+      messages:[{role:"user",content:[
+        {type:"image",source:{type:"base64",media_type:mediaType,data:base64}},
+        {type:"text",text:`Analise este extrato bancário brasileiro e extraia TODAS as transações visíveis.
+Retorne SOMENTE um array JSON válido, sem markdown, sem explicações, no formato:
+[{"desc":"descrição da transação","valor":0.00,"tipo":"entrada","data":"YYYY-MM-DD"}]
+Regras:
+- tipo deve ser "entrada" para créditos/depósitos/PIX recebido
+- tipo deve ser "saida" para débitos/compras/pagamentos/PIX enviado
+- valor sempre positivo
+- data no formato YYYY-MM-DD, se não visível use null
+- inclua TODAS as transações, não pule nenhuma`}
+      ]}]
+    })
+  });
+  const data = await resp.json();
+  const txt = (data.content||[]).map(c=>c.text||"").join("").replace(/\`\`\`json|\`\`\`/g,"").trim();
+  return JSON.parse(txt);
+}
+
+async function parsePDFText(text) {
+  const resp = await fetch("https://api.anthropic.com/v1/messages",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      model:"claude-sonnet-4-6",
+      max_tokens:1500,
+      messages:[{role:"user",content:`Analise este texto extraído de um extrato bancário brasileiro e identifique TODAS as transações.
+Retorne SOMENTE um array JSON válido, sem markdown, sem explicações:
+[{"desc":"descrição","valor":0.00,"tipo":"entrada","data":"YYYY-MM-DD"}]
+tipo: "entrada" para créditos, "saida" para débitos. valor sempre positivo.
+
+TEXTO DO EXTRATO:
+${text.slice(0,4000)}`}]
+    })
+  });
+  const data = await resp.json();
+  const txt = (data.content||[]).map(c=>c.text||"").join("").replace(/\`\`\`json|\`\`\`/g,"").trim();
+  return JSON.parse(txt);
+}
+
 function ImportacaoModal({open, onClose, onImport, cats}) {
-  const [step, setStep] = useState(1); // 1=upload 2=review
-  const [banco, setBanco] = useState("auto");
-  const [txns, setTxns] = useState([]);
-  const [erro, setErro] = useState("");
+  const [step,     setStep]     = useState(1);
+  const [modo,     setModo]     = useState("arquivo"); // arquivo | foto
+  const [loading,  setLoading]  = useState(false);
+  const [loadMsg,  setLoadMsg]  = useState("");
+  const [pdfBuf,   setPdfBuf]   = useState(null);
+  const [pdfSenha, setPdfSenha] = useState("");
+  const [pedeSenha,setPedeSenha]= useState(false);
+  const [txns,     setTxns]     = useState([]);
+  const [erro,     setErro]     = useState("");
 
   const CATS_DESP = (cats?.despesa||[]).map(c=>`${c.emoji} ${c.nome}`);
   const CATS_REC  = (cats?.receita||[]).map(c=>`${c.emoji} ${c.nome}`);
 
-  const handleFile = e => {
-    const file = e.target.files[0];
-    if(!file){return;}
-    setErro("");
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const text = ev.target.result;
-      let parsed = [];
-      try {
-        if(file.name.toLowerCase().endsWith(".ofx")||text.includes("<OFX>")||text.includes("<STMTTRN>")) {
-          parsed = parseOFX(text);
-        } else {
-          parsed = parseCSV(text, banco);
+  const reset = () => {setStep(1);setTxns([]);setErro("");setLoading(false);setPdfBuf(null);setPdfSenha("");setPedeSenha(false);};
+
+  const applyTxns = parsed => {
+    setTxns(parsed.map((t,i)=>({...t,id:i,selected:true,categoria:t.categoria||guessCat(t.desc||"")})));
+    setStep(2);
+  };
+
+  const handleFile = async e => {
+    const file = e.target.files[0]; if(!file) return;
+    setErro(""); setLoading(true);
+    try {
+      const name = file.name.toLowerCase();
+      if(name.endsWith(".png")||name.endsWith(".jpg")||name.endsWith(".jpeg")||name.endsWith(".webp")) {
+        setLoadMsg("📸 Claude está lendo o print...");
+        const b64 = await new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result.split(",")[1]);r.readAsDataURL(file);});
+        const mt = name.endsWith(".png")?"image/png":"image/jpeg";
+        const parsed = await extractFromImage(b64, mt);
+        applyTxns(parsed);
+      } else if(name.endsWith(".pdf")) {
+        setLoadMsg("📄 Lendo PDF...");
+        const buf = await file.arrayBuffer();
+        setPdfBuf(buf);
+        try {
+          const text = await extractPDFText(buf, "");
+          setLoadMsg("🤖 Claude está analisando...");
+          const parsed = await parsePDFText(text);
+          applyTxns(parsed);
+        } catch(err) {
+          if(err.name==="PasswordException"||err.message?.includes("password")||err.message?.includes("Password")) {
+            setPedeSenha(true); setLoading(false); return;
+          }
+          throw err;
         }
-        if(parsed.length===0){setErro("Não foi possível ler o arquivo. Tente exportar no formato OFX ou CSV.");return;}
-        setTxns(parsed.map((t,i)=>({...t,id:i,selected:true})));
-        setStep(2);
-      } catch(err) {
-        setErro("Erro ao processar arquivo: "+err.message);
+      } else if(name.endsWith(".ofx")||name.endsWith(".txt")) {
+        const text = await file.text();
+        const parsed = parseOFX(text);
+        if(parsed.length===0){setErro("Arquivo OFX sem transações.");setLoading(false);return;}
+        applyTxns(parsed);
+      } else {
+        const text = await file.text();
+        const parsed = parseCSV(text);
+        if(parsed.length===0){setErro("Não foi possível ler o CSV. Tente OFX ou print.");setLoading(false);return;}
+        applyTxns(parsed);
       }
-    };
-    reader.readAsText(file, "UTF-8");
+    } catch(err) {
+      setErro("Erro: "+err.message);
+    }
+    setLoading(false);
+  };
+
+  const handleSenha = async () => {
+    if(!pdfBuf||!pdfSenha) return;
+    setLoading(true); setLoadMsg("🔓 Desbloqueando PDF...");
+    try {
+      const text = await extractPDFText(pdfBuf, pdfSenha);
+      setLoadMsg("🤖 Claude está analisando...");
+      const parsed = await parsePDFText(text);
+      setPedeSenha(false);
+      applyTxns(parsed);
+    } catch(err) {
+      if(err.name==="PasswordException"||err.message?.includes("password")) setErro("Senha incorreta. Tente novamente.");
+      else setErro("Erro ao ler PDF: "+err.message);
+    }
+    setLoading(false);
   };
 
   const toggleAll = sel => setTxns(txns.map(t=>({...t,selected:sel})));
-  const total = txns.filter(t=>t.selected).length;
+  const total    = txns.filter(t=>t.selected).length;
   const totalEnt = txns.filter(t=>t.selected&&t.tipo==="entrada").reduce((s,t)=>s+t.valor,0);
   const totalSai = txns.filter(t=>t.selected&&t.tipo==="saida").reduce((s,t)=>s+t.valor,0);
 
   const confirmar = () => {
     const selecionados = txns.filter(t=>t.selected).map(t=>({
-      id: Date.now()+Math.random(),
-      tipo: t.tipo,
-      descricao: t.desc,
-      valor: t.valor,
-      categoria: t.categoria,
-      data: t.data || today(),
+      id:Date.now()+Math.random(), tipo:t.tipo, descricao:t.desc, valor:t.valor, categoria:t.categoria, data:t.data||today(),
     }));
-    onImport(selecionados);
-    setStep(1);setTxns([]);
-    onClose();
+    onImport(selecionados); reset(); onClose();
   };
 
   if(!open) return null;
@@ -969,35 +1049,79 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
       <div onClick={e=>e.stopPropagation()} style={{background:"#F5F0E8",borderRadius:"24px 24px 0 0",width:"100%",maxWidth:520,padding:"28px 22px 40px",maxHeight:"92vh",overflowY:"auto",boxShadow:"0 -12px 60px rgba(0,0,0,.2)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
           <div style={{fontSize:16,fontWeight:700,color:"#1A1209"}}>📥 Importar Extrato</div>
-          <button onClick={()=>{setStep(1);setTxns([]);onClose();}} style={{background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)",color:"#5A4A3A",borderRadius:10,width:32,height:32,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+          <button onClick={()=>{reset();onClose();}} style={{background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)",color:"#5A4A3A",borderRadius:10,width:32,height:32,cursor:"pointer",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
         </div>
 
-        {step===1&&(
+        {step===1&&!loading&&!pedeSenha&&(
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
-              Exporte o extrato do seu banco no formato <strong>OFX</strong> ou <strong>CSV</strong> e importe aqui. As transações serão categorizadas automaticamente.
+            {/* Tipo de importação */}
+            <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:3}}>
+              {[["arquivo","📄 Arquivo"],["foto","📸 Print/Foto"]].map(([v,l])=>(
+                <button key={v} onClick={()=>setModo(v)} style={{flex:1,background:modo===v?"#E8205F":"transparent",color:modo===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{l}</button>
+              ))}
             </div>
-            <div>
-              <div style={{fontSize:11,fontWeight:600,color:"#5A4A3A",letterSpacing:".06em",textTransform:"uppercase",marginBottom:6}}>Banco (opcional)</div>
-              <div style={{display:"flex",gap:6}}>
-                {[["auto","🏦 Detectar auto"],["c6","C6 Bank"],["itau","Itaú"]].map(([v,l])=>(
-                  <button key={v} onClick={()=>setBanco(v)} style={{flex:1,background:banco===v?"#E8205F":"rgba(0,0,0,0.06)",border:`1px solid ${banco===v?"#E8205F":"rgba(0,0,0,0.12)"}`,borderRadius:10,padding:"8px 4px",fontSize:11,fontWeight:700,color:banco===v?"#fff":"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
-                ))}
-              </div>
-            </div>
-            <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(232,32,95,0.06)",border:"2px dashed rgba(232,32,95,0.3)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
-              <span style={{fontSize:32}}>📂</span>
-              <span style={{fontSize:13,fontWeight:600,color:"#E8205F",fontFamily:"'DM Sans',sans-serif"}}>Clique para selecionar arquivo</span>
-              <span style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>OFX, CSV — C6 Bank e Itaú</span>
-              <input type="file" accept=".ofx,.csv,.txt" onChange={handleFile} style={{display:"none"}}/>
-            </label>
+
+            {modo==="arquivo"&&(
+              <>
+                <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                  Aceita <strong>PDF</strong> (com ou sem senha), <strong>OFX</strong> e <strong>CSV</strong> do C6 Bank e Itaú.
+                </div>
+                <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(232,32,95,0.06)",border:"2px dashed rgba(232,32,95,0.3)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
+                  <span style={{fontSize:36}}>📂</span>
+                  <span style={{fontSize:13,fontWeight:600,color:"#E8205F",fontFamily:"'DM Sans',sans-serif"}}>Clique para selecionar arquivo</span>
+                  <span style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>PDF · OFX · CSV</span>
+                  <input type="file" accept=".pdf,.ofx,.csv,.txt" onChange={handleFile} style={{display:"none"}}/>
+                </label>
+              </>
+            )}
+
+            {modo==="foto"&&(
+              <>
+                <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                  Tire um <strong>print do app</strong> do seu banco ou foto do extrato. O Claude AI lê e extrai todas as transações automaticamente. 🤖
+                </div>
+                <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(91,163,212,0.08)",border:"2px dashed rgba(91,163,212,0.4)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
+                  <span style={{fontSize:36}}>📸</span>
+                  <span style={{fontSize:13,fontWeight:600,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif"}}>Clique para enviar print ou foto</span>
+                  <span style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>PNG · JPG — qualquer banco</span>
+                  <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={handleFile} style={{display:"none"}}/>
+                </label>
+              </>
+            )}
+
             {erro&&<div style={{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.3)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#C0392B",fontFamily:"'DM Sans',sans-serif"}}>⚠ {erro}</div>}
+          </div>
+        )}
+
+        {loading&&(
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"40px 20px",gap:16}}>
+            <div style={{fontSize:40,animation:"spin 1s linear infinite"}}>⏳</div>
+            <div style={{fontSize:14,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>{loadMsg}</div>
+            <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+          </div>
+        )}
+
+        {pedeSenha&&!loading&&(
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{textAlign:"center",padding:"16px 0"}}>
+              <div style={{fontSize:40,marginBottom:10}}>🔒</div>
+              <div style={{fontSize:15,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>PDF protegido por senha</div>
+              <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>Digite a senha para desbloquear o extrato</div>
+            </div>
+            <input type="password" placeholder="Senha do PDF" value={pdfSenha} onChange={e=>setPdfSenha(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&handleSenha()}
+              autoFocus
+              style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"12px 14px",fontSize:14,color:"#1A1209",outline:"none",width:"100%",fontFamily:"inherit"}}/>
+            {erro&&<div style={{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.3)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#C0392B",fontFamily:"'DM Sans',sans-serif"}}>⚠ {erro}</div>}
+            <div style={{display:"flex",gap:8}}>
+              <button onClick={()=>{setPedeSenha(false);setErro("");}} style={{flex:1,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"12px",fontSize:14,fontWeight:600,color:"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>Cancelar</button>
+              <button onClick={handleSenha} style={{flex:2,background:"#E8205F",border:"none",borderRadius:12,padding:"12px",fontSize:14,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>🔓 Desbloquear</button>
+            </div>
           </div>
         )}
 
         {step===2&&(
           <div>
-            {/* Resumo */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:14}}>
               {[[`${total} transações`,"selecionadas","#1A1209"],[`+ ${R(totalEnt)}`,"entradas","#2D5A10"],[`- ${R(totalSai)}`,"saídas","#8B1A1A"]].map(([v,l,c])=>(
                 <div key={l} style={{background:"rgba(0,0,0,0.05)",borderRadius:12,padding:"10px",textAlign:"center"}}>
@@ -1006,15 +1130,11 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
                 </div>
               ))}
             </div>
-
-            {/* Controles */}
             <div style={{display:"flex",gap:6,marginBottom:10}}>
               <button onClick={()=>toggleAll(true)} style={{flex:1,background:"rgba(45,90,16,0.1)",border:"1px solid rgba(45,90,16,0.25)",borderRadius:8,padding:"6px",fontSize:11,fontWeight:700,color:"#2D5A10",cursor:"pointer",fontFamily:"inherit"}}>Selecionar tudo</button>
               <button onClick={()=>toggleAll(false)} style={{flex:1,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px",fontSize:11,fontWeight:700,color:"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>Desmarcar tudo</button>
-              <button onClick={()=>setStep(1)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 10px",fontSize:11,color:"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>← Voltar</button>
+              <button onClick={reset} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 10px",fontSize:11,color:"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>← Voltar</button>
             </div>
-
-            {/* Lista de transações */}
             <div style={{maxHeight:340,overflowY:"auto",display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
               {txns.map((t,i)=>(
                 <div key={t.id} style={{background:t.selected?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.04)",border:`1px solid ${t.selected?"rgba(0,0,0,0.1)":"rgba(0,0,0,0.06)"}`,borderRadius:12,padding:"10px 12px",opacity:t.selected?1:0.5}}>
@@ -1025,7 +1145,7 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
                         <span style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{t.desc}</span>
                         <span style={{fontSize:12,fontWeight:700,color:t.tipo==="entrada"?"#2D5A10":"#8B1A1A",fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>{t.tipo==="entrada"?"+":"-"}{R(t.valor)}</span>
                       </div>
-                      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                         <span style={{fontSize:10,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>{t.data||"—"}</span>
                         <select value={t.tipo} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,tipo:e.target.value}:x))}
                           style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:t.tipo==="entrada"?"#2D5A10":"#8B1A1A",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
@@ -1043,7 +1163,6 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
                 </div>
               ))}
             </div>
-
             <button onClick={confirmar} disabled={total===0} style={{width:"100%",background:total===0?"rgba(0,0,0,0.1)":"#E8205F",border:"none",borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,color:"#fff",cursor:total===0?"default":"pointer",fontFamily:"inherit"}}>
               ✓ Importar {total} transação{total!==1?"ões":""}
             </button>
