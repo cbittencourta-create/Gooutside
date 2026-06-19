@@ -937,6 +937,7 @@ function AppMain({user, onLogout}) {
   const [extra,setExtra]=useState(null);
   const [selMes,setSelMes]=useState(today().slice(0,7));
   const [sideOpen,setSideOpen]=useState(false);
+  const [alocExpanded,setAlocExpanded]=useState(false);
   const [pltDist,setPltDist]=useState(null);
 
   const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
@@ -1016,6 +1017,8 @@ function AppMain({user, onLogout}) {
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
   const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
   const saldo=entradas-saidas;
+  const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
+  const saldoReal=entradas-saidas-totalAlocadoMes;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
@@ -1196,6 +1199,7 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:12,color:"#2D6E20",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▲ {R(entradas)}</div>
               <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>⏳ {R(totalPendPlant)}</div>}
+              <div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:700}}>💵 {R(saldoReal)} disponível</div>
             </div>
           </div>
           <div className="scr" style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:2}}>
@@ -1359,19 +1363,46 @@ function AppMain({user, onLogout}) {
             <div className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${C.magenta}`}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <SL>Alocação de receita</SL>
-                <button onClick={()=>setModal("regras")} style={{background:C.magentaGlass,border:`1px solid ${C.magenta}55`,borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>⚙ Regras</button>
+                <div style={{display:"flex",gap:6}}>
+                  {alocacoes.length>0&&<button onClick={()=>setAlocExpanded(!alocExpanded)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{alocExpanded?"▲ Fechar":"▼ Extrato"}</button>}
+                  <button onClick={()=>setModal("regras")} style={{background:"#E8205F",border:"none",borderRadius:8,color:"#fff",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>⚙ Regras</button>
+                </div>
               </div>
               {alocacoes.length>0 ? (
                 <>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:10}}>
                     {Object.entries(resumoAloc).filter(([,v])=>v>0).map(([tipo,val])=>{const dc=DEST_COLORS[tipo];return <div key={tipo} style={{background:dc.bg,border:`1px solid ${dc.color}30`,borderRadius:10,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:700,color:dc.color,fontFamily:"'DM Sans',sans-serif",marginBottom:2}}>{dc.icon} {tipo.toUpperCase()}</div><div className="num" style={{fontSize:13,fontWeight:700,color:dc.color}}>{R(val)}</div></div>;})}
                   </div>
-                  {alocacoes.slice(0,2).map(a=>(
-                    <div key={a.id} style={{background:"rgba(0,0,0,0.05)",borderRadius:10,border:"1px solid rgba(0,0,0,0.07)",padding:"9px 11px",marginBottom:6}}>
-                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{a.empresa}</span><span className="num" style={{fontSize:12,fontWeight:700,color:C.green}}>{R(a.totalRecebido)}</span></div>
-                      {a.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;return <div key={j} style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{dc.icon} {it.destinoNome}</span><span className="num" style={{fontSize:10,fontWeight:700,color:dc.color}}>{R(it.valor)}</span></div>;})}
+                  {alocExpanded ? (
+                    <div style={{borderTop:"1px solid rgba(0,0,0,0.07)",paddingTop:10}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Extrato de distribuições</div>
+                      {alocacoes.map(a=>(
+                        <div key={a.id} style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:8,border:"1px solid rgba(0,0,0,0.06)"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                            <div><div style={{fontSize:12,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{a.empresa}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>{a.data?new Date(a.data+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}):"—"}</div></div>
+                            <div className="num" style={{fontSize:13,fontWeight:700,color:"#2D5A10"}}>{R(a.totalRecebido)}</div>
+                          </div>
+                          {a.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;const inv=it.tipo==="investimento"?invests.find(x=>x.id===it.destinoId):null;return(
+                            <div key={j} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderTop:"1px solid rgba(0,0,0,0.04)"}}>
+                              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                                <span>{dc.icon}</span>
+                                <div><div style={{fontSize:11,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{it.destinoNome}</div>
+                                <div style={{fontSize:9,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif"}}>{it.banco&&<span>{it.banco}</span>}{inv?.taxa&&<span style={{color:"#2D5A10",fontWeight:700}}> · {inv.taxa}% a.a.</span>}{!it.banco&&!inv?.taxa&&<span>{it.tipo}</span>}</div></div>
+                              </div>
+                              <div className="num" style={{fontSize:12,fontWeight:700,color:dc.color}}>{R(it.valor)}</div>
+                            </div>
+                          );})}
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  ) : (
+                    alocacoes.slice(0,1).map(a=>(
+                      <div key={a.id} style={{background:"rgba(0,0,0,0.03)",borderRadius:10,border:"1px solid rgba(0,0,0,0.06)",padding:"9px 11px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:"#1A1209"}}>{a.empresa}</span><span className="num" style={{fontSize:12,fontWeight:700,color:"#2D5A10"}}>{R(a.totalRecebido)}</span></div>
+                        {a.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;return <div key={j} style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif"}}>{dc.icon} {it.destinoNome}</span><span className="num" style={{fontSize:10,fontWeight:700,color:dc.color}}>{R(it.valor)}</span></div>;})}
+                      </div>
+                    ))
+                  )}
                 </>
               ):(
                 <div style={{textAlign:"center",padding:"10px 0",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",fontSize:12}}>
