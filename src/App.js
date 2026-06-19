@@ -165,8 +165,9 @@ function Badge({label,color,bg}) {
 }
 
 // ── Calendário 6 meses ────────────────────────────────────────────────────────
-function MultiCalendar({plantoes}) {
-  const [selMonth, setSelMonth] = useState(0); // offset from now
+function MultiCalendar({plantoes, movs, onAddWithDate}) {
+  const [selMonth, setSelMonth] = useState(0);
+  const [selDay, setSelDay] = useState(null);
   const now = new Date();
   const base = new Date(now.getFullYear(), now.getMonth()+selMonth, 1);
   const year = base.getFullYear(), month = base.getMonth();
@@ -218,9 +219,11 @@ function MultiCalendar({plantoes}) {
             const isToday=d===todayD&&month===todayM&&year===todayY;
             const isPay=payDays.has(d), isRec=recDays.has(d), isAtr=atrasoDays.has(d);
             const dotColor=isAtr?C.red:isRec?C.green:isPay?C.gold:null;
+            const ds=`${year}-${String(month+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+            const isSel=selDay===ds;
             return (
-              <div key={di} style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"2px 0"}}>
-                <div style={{width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontFamily:"'DM Sans',sans-serif",fontWeight:isToday?700:400,background:isToday?C.magenta:"transparent",color:"#1A1209",border:isToday?`1px solid ${C.magenta}`:dotColor?`1px solid ${dotColor}44`:"none"}}>{d}</div>
+              <div key={di} onClick={()=>setSelDay(selDay===ds?null:ds)} style={{display:"flex",flexDirection:"column",alignItems:"center",padding:"2px 0",cursor:"pointer"}}>
+                <div style={{width:22,height:22,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,fontFamily:"'DM Sans',sans-serif",fontWeight:isToday||isSel?700:400,background:isToday?C.magenta:isSel?"rgba(232,32,95,0.15)":"transparent",color:isToday?"#fff":"#1A1209",border:isSel&&!isToday?`1.5px solid ${C.magenta}`:dotColor?`1px solid ${dotColor}44`:"none"}}>{d}</div>
                 {dotColor&&<div style={{width:4,height:4,borderRadius:"50%",background:dotColor,marginTop:1}}/>}
               </div>
             );
@@ -229,9 +232,28 @@ function MultiCalendar({plantoes}) {
       ))}
       <div style={{display:"flex",gap:10,marginTop:8,flexWrap:"wrap"}}>
         {[[C.gold,"Pgto previsto"],[C.green,"Recebido"],[C.red,"Atrasado"]].map(([c,l])=>(
-          <div key={l} style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:6,height:6,borderRadius:"50%",background:c}}/><span style={{fontSize:8,color:C.textSub,fontFamily:"'DM Sans',sans-serif"}}>{l}</span></div>
+          <div key={l} style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:6,height:6,borderRadius:"50%",background:c}}/><span style={{fontSize:8,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>{l}</span></div>
         ))}
       </div>
+      {selDay&&(()=>{
+        const MNAMES=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+        const [,dm]=selDay.split("-");
+        const pltDia=plantoes.filter(p=>p.data===selDay||p.previsao===selDay||p.dataRecebimento===selDay);
+        const movDia=(movs||[]).filter(m=>m.data===selDay);
+        return(
+          <div style={{marginTop:10,background:"rgba(0,0,0,0.04)",borderRadius:12,padding:"10px 12px",border:"1px solid rgba(0,0,0,0.08)"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>{selDay.slice(8)} de {MNAMES[+dm-1]}</div>
+            {pltDia.map(p=><div key={p.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid rgba(0,0,0,0.05)"}}><span style={{fontSize:11,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>🏥 {p.empresa}</span><span style={{fontSize:11,fontWeight:700,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif"}}>{R(p.valorTotal)}</span></div>)}
+            {movDia.map(m=><div key={m.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid rgba(0,0,0,0.05)"}}><span style={{fontSize:11,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{m.categoria.split(" ")[0]} {m.descricao}</span><span style={{fontSize:11,fontWeight:700,color:m.tipo==="entrada"?"#2D5A10":"#8B1A1A",fontFamily:"'DM Sans',sans-serif"}}>{m.tipo==="entrada"?"+":"-"}{R(m.valor)}</span></div>)}
+            {pltDia.length===0&&movDia.length===0&&<div style={{fontSize:11,color:"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>Nenhum registro neste dia</div>}
+            <div style={{display:"flex",gap:5,marginTop:8}}>
+              <button onClick={()=>onAddWithDate&&onAddWithDate("entrada",selDay)} style={{flex:1,background:"rgba(45,90,16,0.1)",border:"1px solid rgba(45,90,16,0.25)",borderRadius:8,padding:"6px",fontSize:10,fontWeight:700,color:"#2D5A10",cursor:"pointer",fontFamily:"inherit"}}>+ Entrada</button>
+              <button onClick={()=>onAddWithDate&&onAddWithDate("saida",selDay)} style={{flex:1,background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.25)",borderRadius:8,padding:"6px",fontSize:10,fontWeight:700,color:"#8B1A1A",cursor:"pointer",fontFamily:"inherit"}}>+ Saída</button>
+              <button onClick={()=>onAddWithDate&&onAddWithDate("plantao",selDay)} style={{flex:1,background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.25)",borderRadius:8,padding:"6px",fontSize:10,fontWeight:700,color:"#E8205F",cursor:"pointer",fontFamily:"inherit"}}>+ Plantão</button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1276,7 +1298,7 @@ function AppMain({user, onLogout}) {
             {/* ── Linha 3: Calendário + Próximos recebimentos ── */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
               <div className={CARD} style={{padding:12}}>
-                <MultiCalendar plantoes={plantoes}/>
+                <MultiCalendar plantoes={plantoes} movs={movs} onAddWithDate={(tipo,data)=>{if(tipo==="plantao"){openM("plt");setFPlt(f=>({...f,data}));}else{openM("mov");setFMov(f=>({...f,tipo,data}));}}}/>
               </div>
               <div className={CARD} style={{padding:14}}>
                 <SL>Recebimentos</SL>
