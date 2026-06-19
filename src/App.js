@@ -859,7 +859,7 @@ function LoginScreen({onLogin}) {
 
   return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Cormorant Garamond','Georgia',serif",position:"relative"}}>
-      <div className="wallpaper-bg" style={bgStyle(BG_OPTIONS.find(b=>b.id===bgId)?.css||BG_OPTIONS[0].css)}/>
+      <div className="wallpaper-bg" style={bgStyle(BG_OPTIONS[0].css)}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
