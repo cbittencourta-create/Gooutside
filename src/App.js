@@ -904,50 +904,53 @@ async function extractPDFText(arrayBuffer, password) {
 }
 
 async function extractFromImage(base64, mediaType) {
+  const apiKey = localStorage.getItem("velara_api_key")||"";
+  if(!apiKey) throw new Error("SEM_CHAVE");
   const resp = await fetch("https://api.anthropic.com/v1/messages",{
     method:"POST",
-    headers:{"Content-Type":"application/json"},
+    headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},
     body:JSON.stringify({
       model:"claude-sonnet-4-6",
       max_tokens:1500,
       messages:[{role:"user",content:[
         {type:"image",source:{type:"base64",media_type:mediaType,data:base64}},
-        {type:"text",text:`Analise este extrato bancário brasileiro e extraia TODAS as transações visíveis.
-Retorne SOMENTE um array JSON válido, sem markdown, sem explicações, no formato:
-[{"desc":"descrição da transação","valor":0.00,"tipo":"entrada","data":"YYYY-MM-DD"}]
-Regras:
-- tipo deve ser "entrada" para créditos/depósitos/PIX recebido
-- tipo deve ser "saida" para débitos/compras/pagamentos/PIX enviado
-- valor sempre positivo
-- data no formato YYYY-MM-DD, se não visível use null
-- inclua TODAS as transações, não pule nenhuma`}
+        {type:"text",text:"Analise este extrato bancário brasileiro. Retorne SOMENTE um array JSON: [{"desc":"descrição","valor":0.00,"tipo":"entrada","data":"YYYY-MM-DD"}]. tipo: entrada=crédito/PIX recebido, saida=débito/compra. valor sempre positivo."}
       ]}]
     })
   });
   const data = await resp.json();
-  const txt = (data.content||[]).map(c=>c.text||"").join("").replace(/\`\`\`json|\`\`\`/g,"").trim();
+  if(data.error) throw new Error(data.error.message||"Erro na API");
+  const txt=(data.content||[]).map(c=>c.text||"").join("").replace(/```json|```/g,"").trim();
   return JSON.parse(txt);
 }
 
-async function parsePDFText(text) {
-  const resp = await fetch("https://api.anthropic.com/v1/messages",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      model:"claude-sonnet-4-6",
-      max_tokens:1500,
-      messages:[{role:"user",content:`Analise este texto extraído de um extrato bancário brasileiro e identifique TODAS as transações.
-Retorne SOMENTE um array JSON válido, sem markdown, sem explicações:
-[{"desc":"descrição","valor":0.00,"tipo":"entrada","data":"YYYY-MM-DD"}]
-tipo: "entrada" para créditos, "saida" para débitos. valor sempre positivo.
-
-TEXTO DO EXTRATO:
-${text.slice(0,4000)}`}]
-    })
+function parseTextoBancario(text) {
+  // Parser para texto extraído de PDF de extratos brasileiros
+  const txns = [];
+  const lines = text.split(/\n/).filter(l=>l.trim().length>4);
+  lines.forEach(line=>{
+    // Buscar data DD/MM/YYYY ou DD/MM/YY
+    const dateMatch = line.match(/(\d{2})[\/-](\d{2})[\/-](\d{2,4})/);
+    if(!dateMatch) return;
+    const [,dd,mm,yy] = dateMatch;
+    const year = yy.length===2?"20"+yy:yy;
+    const data = `${year}-${mm}-${dd}`;
+    // Buscar valores monetários
+    const vals = [...line.matchAll(/[\-+]?\s*R?\$?\s*(\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2})/g)];
+    if(!vals.length) return;
+    const lastVal = vals[vals.length-1];
+    const raw = lastVal[1].replace(/\./g,"").replace(",",".");
+    const valor = Math.abs(parseFloat(raw)||0);
+    if(valor<0.01) return;
+    // Descrição = linha sem data e sem valores
+    let desc = line.replace(dateMatch[0],"").replace(/[\-+]?\s*R?\$?\s*\d{1,3}(?:\.\d{3})*,\d{2}/g,"").replace(/\s+/g," ").trim();
+    if(desc.length<2) return;
+    // Tipo: crédito ou débito
+    const credKeys = /pix receb|crédito|credit|depósit|salário|pagamento receb|transferência receb/i;
+    const tipo = credKeys.test(line)?"entrada":"saida";
+    txns.push({desc,valor,tipo,data,categoria:guessCat(desc)});
   });
-  const data = await resp.json();
-  const txt = (data.content||[]).map(c=>c.text||"").join("").replace(/\`\`\`json|\`\`\`/g,"").trim();
-  return JSON.parse(txt);
+  return txns;
 }
 
 function ImportacaoModal({open, onClose, onImport, cats}) {
@@ -955,7 +958,7 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
   const [modo,     setModo]     = useState("arquivo"); // arquivo | foto
   const [loading,  setLoading]  = useState(false);
   const [loadMsg,  setLoadMsg]  = useState("");
-  const [pdfBuf,   setPdfBuf]   = useState(null);
+  const [pdfFile,  setPdfFile]  = useState(null);
   const [pdfSenha, setPdfSenha] = useState("");
   const [pedeSenha,setPedeSenha]= useState(false);
   const [txns,     setTxns]     = useState([]);
@@ -964,7 +967,7 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
   const CATS_DESP = (cats?.despesa||[]).map(c=>`${c.emoji} ${c.nome}`);
   const CATS_REC  = (cats?.receita||[]).map(c=>`${c.emoji} ${c.nome}`);
 
-  const reset = () => {setStep(1);setTxns([]);setErro("");setLoading(false);setPdfBuf(null);setPdfSenha("");setPedeSenha(false);};
+  const reset = () => {setStep(1);setTxns([]);setErro("");setLoading(false);setPdfFile(null);setPdfSenha("");setPedeSenha(false);};
 
   const applyTxns = parsed => {
     setTxns(parsed.map((t,i)=>({...t,id:i,selected:true,categoria:t.categoria||guessCat(t.desc||"")})));
@@ -984,12 +987,13 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
         applyTxns(parsed);
       } else if(name.endsWith(".pdf")) {
         setLoadMsg("📄 Lendo PDF...");
-        const buf = await file.arrayBuffer();
-        setPdfBuf(buf);
+        setPdfFile(file);
         try {
+          const buf = await file.arrayBuffer();
           const text = await extractPDFText(buf, "");
-          setLoadMsg("🤖 Claude está analisando...");
-          const parsed = await parsePDFText(text);
+          setLoadMsg("📊 Analisando transações...");
+          const parsed = parseTextoBancario(text);
+          if(parsed.length===0) throw new Error("Não encontrei transações. Tente CSV ou OFX.");
           applyTxns(parsed);
         } catch(err) {
           if(err.name==="PasswordException"||err.message?.includes("password")||err.message?.includes("Password")) {
@@ -1009,20 +1013,24 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
         applyTxns(parsed);
       }
     } catch(err) {
-      setErro("Erro: "+err.message);
+      if(err.message==="SEM_CHAVE") setErro("Adicione sua chave API do Claude para importar prints.");
+      else setErro("Erro: "+err.message);
     }
     setLoading(false);
   };
 
   const handleSenha = async () => {
-    if(!pdfBuf||!pdfSenha) return;
+    if(!pdfFile||!pdfSenha) return;
     setLoading(true); setLoadMsg("🔓 Desbloqueando PDF...");
     try {
-      const text = await extractPDFText(pdfBuf, pdfSenha);
-      setLoadMsg("🤖 Claude está analisando...");
-      const parsed = await parsePDFText(text);
+      const buf = await pdfFile.arrayBuffer();
+      const text = await extractPDFText(buf, pdfSenha);
+      setLoadMsg("📊 Analisando transações...");
+      const parsed = parseTextoBancario(text);
+      if(parsed.length===0) throw new Error("Não encontrei transações. Tente CSV ou OFX.");
+      const parsed2 = parsed;
       setPedeSenha(false);
-      applyTxns(parsed);
+      applyTxns(parsed2||parsed);
     } catch(err) {
       if(err.name==="PasswordException"||err.message?.includes("password")) setErro("Senha incorreta. Tente novamente.");
       else setErro("Erro ao ler PDF: "+err.message);
@@ -1078,14 +1086,26 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
             {modo==="foto"&&(
               <>
                 <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
-                  Tire um <strong>print do app</strong> do seu banco ou foto do extrato. O Claude AI lê e extrai todas as transações automaticamente. 🤖
+                  Tire um <strong>print do app</strong> do C6 ou Itaú. O Claude AI extrai todas as transações automaticamente. 🤖
                 </div>
-                <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(91,163,212,0.08)",border:"2px dashed rgba(91,163,212,0.4)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
+                {!localStorage.getItem("velara_api_key")&&(
+                  <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:12,padding:"12px 14px"}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#8B6000",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>🔑 Chave API necessária</div>
+                    <div style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Para ler prints você precisa de uma chave da API do Claude (anthropic.com).</div>
+                    <div style={{display:"flex",gap:6}}>
+                      <input placeholder="sk-ant-..." onBlur={e=>{if(e.target.value.startsWith("sk-ant")){localStorage.setItem("velara_api_key",e.target.value);setErro("");}}}
+                        style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
+                      <button onClick={()=>setErro("")} style={{background:"#E8205F",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+                    </div>
+                  </div>
+                )}
+                <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(91,163,212,0.08)",border:"2px dashed rgba(91,163,212,0.4)",borderRadius:16,padding:"28px 20px",cursor:"pointer",opacity:localStorage.getItem("velara_api_key")?1:0.5}}>
                   <span style={{fontSize:36}}>📸</span>
                   <span style={{fontSize:13,fontWeight:600,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif"}}>Clique para enviar print ou foto</span>
                   <span style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>PNG · JPG — qualquer banco</span>
                   <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={handleFile} style={{display:"none"}}/>
                 </label>
+                {localStorage.getItem("velara_api_key")&&<div style={{textAlign:"right"}}><button onClick={()=>{localStorage.removeItem("velara_api_key");setErro("");}} style={{background:"none",border:"none",color:"#aaa",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>× Remover chave</button></div>}
               </>
             )}
 
