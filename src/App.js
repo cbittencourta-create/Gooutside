@@ -904,14 +904,18 @@ async function extractPDFText(arrayBuffer, password) {
 }
 
 async function extractFromImage(base64, mediaType) {
-  const resp = await fetch("/api/extract-image",{
+  const apiKey = localStorage.getItem("velara_gemini_key")||"";
+  if(!apiKey) throw new Error("SEM_CHAVE");
+  const prompt = `Analise este extrato bancário brasileiro. Extraia TODAS as transações visíveis. Retorne SOMENTE array JSON sem markdown: [{"desc":"descrição","valor":25.90,"tipo":"saida","data":"2025-06-01"}]. tipo: entrada=credito/PIX recebido, saida=debito/compra/PIX enviado. valor positivo. data YYYY-MM-DD ou null.`;
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({base64, mediaType})
+    body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mediaType,data:base64}},{text:prompt}]}]})
   });
   const data = await resp.json();
-  if(data.error) throw new Error(data.error);
-  return data.transactions;
+  if(data.error) throw new Error(data.error.message||"Erro na API Gemini");
+  const txt = data.candidates?.[0]?.content?.parts?.[0]?.text||"[]";
+  return JSON.parse(txt.replace(/```json|```/g,"").trim());
 }
 
 function parseTextoBancario(text) {
@@ -1003,7 +1007,7 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
         applyTxns(parsed);
       }
     } catch(err) {
-      if(err.message==="SEM_CHAVE") setErro("Serviço de leitura de imagens não configurado. Contate o suporte.");
+      if(err.message==="SEM_CHAVE") setErro("Salve sua chave Gemini gratuita acima para importar prints.");
       else setErro("Erro: "+err.message);
     }
     setLoading(false);
@@ -1078,6 +1082,16 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
                 <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
                   Tire um <strong>print do app</strong> do C6 ou Itaú. O Claude AI extrai todas as transações automaticamente. 🤖
                 </div>
+                {!localStorage.getItem("velara_gemini_key")&&(
+                  <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:12,padding:"12px 14px"}}>
+                    <div style={{fontSize:12,fontWeight:700,color:"#8B6000",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>🔑 Chave Gemini (gratuita)</div>
+                    <div style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Acesse <strong>aistudio.google.com</strong> → Get API Key → criar chave gratuita (sem cartão).</div>
+                    <div style={{display:"flex",gap:6}}>
+                      <input id="gemini_key_input" placeholder="AIza..." style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
+                      <button onClick={()=>{const v=document.getElementById("gemini_key_input").value;if(v.length>10){localStorage.setItem("velara_gemini_key",v);setErro("");}}} style={{background:"#E8205F",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+                    </div>
+                  </div>
+                )}
                 <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(91,163,212,0.08)",border:"2px dashed rgba(91,163,212,0.4)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
                   <span style={{fontSize:36}}>📸</span>
                   <span style={{fontSize:13,fontWeight:600,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif"}}>Clique para enviar print ou foto</span>
