@@ -1377,6 +1377,7 @@ function AppMain({user, onLogout}) {
   const [ccMovs,    setCCMovs]    = useLS("v4_ccm",    [], userId);
   const [regras,    setRegras]    = useLS("v4_regras", [], userId);
   const [alocacoes, setAlocacoes] = useLS("v4_aloc",   [], userId);
+  const [saldoIni,  setSaldoIni]  = useLS("v4_saldo_ini", {valor:0, data:today().slice(0,7)}, userId);
 
   const [tab,setTab]=useState("dashboard");
   const [modal,setModal]=useState(null);
@@ -1469,12 +1470,12 @@ function AppMain({user, onLogout}) {
   const saldo=entradas-saidas; // mensal (para exibir no resumo do mês)
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
 
-  // Saldo ACUMULADO até o mês selecionado (para exibir no topo)
-  const saldoAcumulado=movs
-    .filter(m=>m.data&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
+  // Saldo ACUMULADO a partir do saldo inicial definido pelo usuário
+  const saldoAcumulado=(+saldoIni.valor||0)+movs
+    .filter(m=>m.data&&monthKey(m.data)>=saldoIni.data&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
     .reduce((s,m)=>m.tipo==="entrada"?s+m.valor:s-m.valor,0);
   const totalAlocadoAcumulado=alocacoes
-    .filter(a=>a.data&&monthKey(a.data)<=selMes)
+    .filter(a=>a.data&&monthKey(a.data)>=saldoIni.data&&monthKey(a.data)<=selMes)
     .reduce((s,a)=>s+a.totalRecebido,0);
   const saldoReal=saldoAcumulado-totalAlocadoAcumulado;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
@@ -1650,7 +1651,10 @@ function AppMain({user, onLogout}) {
               <div>
                 <div style={{fontSize:10,fontWeight:600,letterSpacing:".15em",textTransform:"uppercase",color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:1}}>{TABS.find(t=>t.id===tab)?.label||"Velara Finance"}</div>
                 <div style={{fontSize:24,fontWeight:300,letterSpacing:"-.03em",lineHeight:1,color:"#1A1209"}}>{R(saldoAcumulado)}</div>
-                <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",marginTop:1,fontFamily:"'DM Sans',sans-serif"}}>saldo acumulado até {monthLabel(selMes)}</div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif"}}>saldo acumulado até {monthLabel(selMes)}</div>
+                  <button onClick={()=>setModal("saldoini")} style={{background:"rgba(0,0,0,0.07)",border:"none",borderRadius:6,padding:"1px 6px",fontSize:9,color:"rgba(0,0,0,0.5)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>⚙ inicial</button>
+                </div>
               </div>
             </div>
             <div style={{textAlign:"right"}}>
@@ -2402,6 +2406,26 @@ function AppMain({user, onLogout}) {
       </Modal>
 
       <ImportacaoModal open={importOpen} onClose={()=>setImportOpen(false)} onImport={importarMovs} cats={cats}/>
+      <Modal open={modal==="saldoini"} onClose={closeM} title="Saldo Inicial">
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+            Defina a data e o valor que você tinha na conta naquele momento. O app vai calcular tudo a partir daí.
+          </div>
+          <G2>
+            <div>
+              <div style={{fontSize:11,fontWeight:600,color:"#5A4A3A",letterSpacing:".06em",textTransform:"uppercase",marginBottom:5}}>Mês de referência</div>
+              <input type="month" value={saldoIni.data} onChange={e=>setSaldoIni({...saldoIni,data:e.target.value})}
+                style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"11px 13px",color:"#1A1209",fontSize:14,outline:"none",width:"100%",fontFamily:"inherit"}}/>
+            </div>
+            <Inp label="Valor que tinha (R$)" type="number" placeholder="0,00" value={saldoIni.valor}
+              onChange={e=>setSaldoIni({...saldoIni,valor:e.target.value})}/>
+          </G2>
+          <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+            💡 Exemplo: se em março você tinha R$500 no banco, coloque Mês = Mar 2026 e Valor = 500. O app soma esse valor com tudo que entrou e saiu a partir de março.
+          </div>
+          <Btn variant="primary" onClick={closeM}>Salvar</Btn>
+        </div>
+      </Modal>
       <RegrasModal open={modal==="regras"} onClose={closeM} regras={regras} setRegras={setRegras} invests={invests} objetivos={objetivos} dividas={dividas}/>
       <AlocacaoModal open={!!pltDist} onClose={()=>setPltDist(null)} plantao={pltDist} regras={regras} invests={invests} objetivos={objetivos} dividas={dividas} onConfirm={confirmarDistribuicao}/>
     </div>
