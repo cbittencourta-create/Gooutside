@@ -812,6 +812,67 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
         </div>
       )}
 
+      {/* ── Gráfico de subcategorias ── */}
+      {(()=>{
+        // Montar mapa: categoria pai → {total, subs: {nome→valor}}
+        const mapa = {};
+        movsM.filter(m=>m.tipo==="saida"&&m.categoria.includes("·")).forEach(m=>{
+          const [pai, sub] = m.categoria.split("·").map(s=>s.trim());
+          if(!mapa[pai]) mapa[pai] = {total:0, subs:{}};
+          mapa[pai].total += m.valor;
+          mapa[pai].subs[sub] = (mapa[pai].subs[sub]||0) + m.valor;
+        });
+        const cats = Object.entries(mapa).sort((a,b)=>b[1].total-a[1].total);
+        if(!cats.length) return null;
+        return (
+          <div className="card" style={{marginBottom:12}}>
+            <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".07em",textTransform:"uppercase",marginBottom:14}}>Detalhamento por subcategoria · {monthLabel(selMes)}</div>
+            {cats.map(([pai, {total, subs}])=>{
+              const subList = Object.entries(subs).sort((a,b)=>b[1]-a[1]);
+              const maxSub = subList[0]?.[1]||1;
+              return (
+                <div key={pai} style={{marginBottom:16}}>
+                  {/* Header categoria pai */}
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8,paddingBottom:6,borderBottom:"1px solid rgba(0,0,0,0.07)"}}>
+                    <span style={{fontSize:13,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{pai}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:"#8B1A1A",fontFamily:"'DM Sans',sans-serif"}}>{R(total)}</span>
+                  </div>
+                  {/* Subcategorias */}
+                  {subList.map(([sub, val],idx)=>{
+                    const pct = total>0 ? val/total*100 : 0;
+                    const alerta = pct >= 60;
+                    const color = alerta ? "#C0392B" : idx===0 ? "#E8205F" : "#5BA3D4";
+                    return (
+                      <div key={sub} style={{marginBottom:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            {alerta&&<span style={{fontSize:12}}>🔴</span>}
+                            <span style={{fontSize:12,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:alerta?700:400}}>{sub}</span>
+                          </div>
+                          <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                            <span style={{fontSize:11,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif"}}>{R(val)}</span>
+                            <span style={{fontSize:11,fontWeight:700,color,fontFamily:"'DM Sans',sans-serif",minWidth:35,textAlign:"right"}}>{pct.toFixed(0)}%</span>
+                          </div>
+                        </div>
+                        <div style={{background:"rgba(0,0,0,0.08)",borderRadius:99,height:5,overflow:"hidden"}}>
+                          <div style={{width:`${pct}%`,height:"100%",background:color,borderRadius:99,transition:"width .5s",boxShadow:alerta?`0 0 8px ${color}66`:"none"}}/>
+                        </div>
+                        {alerta&&<div style={{fontSize:10,color:"#C0392B",fontFamily:"'DM Sans',sans-serif",marginTop:2,fontWeight:600}}>⚠ Representa {pct.toFixed(0)}% de todos os gastos com {pai.split(" ").slice(1).join(" ")}</div>}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+            {/* Legenda de alertas */}
+            <div style={{background:"rgba(192,57,43,0.07)",border:"1px solid rgba(192,57,43,0.2)",borderRadius:10,padding:"8px 12px",marginTop:4}}>
+              <div style={{fontSize:11,fontWeight:700,color:"#C0392B",fontFamily:"'DM Sans',sans-serif",marginBottom:2}}>🔴 Como interpretar os alertas</div>
+              <div style={{fontSize:10,color:"rgba(26,18,9,0.6)",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>Uma subcategoria em vermelho significa que ela concentra mais de 60% dos gastos da categoria. Pode indicar um padrão de consumo que merece atenção.</div>
+            </div>
+          </div>
+        );
+      })()}
+
       {catData.length===0&&cartaoData.length===0&&(
         <div className="card" style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.4)",fontSize:14,fontFamily:"'DM Sans',sans-serif"}}>
           Nenhum gasto registrado em {monthLabel(selMes)}
@@ -1357,7 +1418,7 @@ function AppMain({user, onLogout}) {
   const upsert=(list,setList,item)=>{if(edit)setList(list.map(i=>i.id===edit.id?{...item,id:edit.id}:i));else setList([{...item,id:uid()},...list]);closeM();};
   const remove=(list,setList,id)=>setList(list.filter(i=>i.id!==id));
 
-  const importarMovs=items=>{setMovs(prev=>[...items,...prev]);};
+  const importarMovs=items=>{setMovs([...items,...movs]);};
   const saveMov=()=>{if(!fMov.descricao||!fMov.valor)return;upsert(movs,setMovs,{...fMov,valor:+String(fMov.valor).replace(",",".")});};
   const saveEmp=()=>{if(!fEmp.nome)return;upsert(empresas,setEmpresas,fEmp);};
   const savePlt=()=>{if(!fPlt.empresa||!fPlt.data||!fPlt.valorTotal)return;upsert(plantoes,setPlantoes,{...fPlt,valorTotal:+fPlt.valorTotal});};
@@ -1376,14 +1437,14 @@ function AppMain({user, onLogout}) {
     if(regras.length>0){setPltDist(p);}
     else{
       setPlantoes(plantoes.map(x=>x.id===id?{...x,status:"recebido",dataRecebimento:today()}:x));
-      setMovs(prev=>[{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:today()},...prev]);
+      setMovs([{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:today()},...movs]);
     }
   };
 
   const confirmarDistribuicao=alocs=>{
     const p=pltDist;
     setPlantoes(plantoes.map(x=>x.id===p.id?{...x,status:"recebido",dataRecebimento:today()}:x));
-    setMovs(prev=>[{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:today()},...prev]);
+    setMovs([{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:today()},...movs]);
     let nInv=[...invests],nObj=[...objetivos],nDiv=[...dividas];
     const reg={id:uid(),plantaoId:p.id,data:today(),empresa:p.empresa,totalRecebido:p.valorTotal,itens:[]};
     alocs.forEach(a=>{
