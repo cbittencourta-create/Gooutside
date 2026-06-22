@@ -1467,11 +1467,11 @@ function AppMain({user, onLogout}) {
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
   const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
   const transferencias=movsDoMes.filter(m=>m.tipo==="transferencia").reduce((s,m)=>s+m.valor,0);
-  // Saldo do mês = entradas - saídas - transferências
-  // Transferência reduz o saldo disponível mas NÃO conta como despesa
-  const saldo=entradas-saidas-transferencias;
+  // Saldo = entradas - saidas apenas
+  // Transferências são investimentos — não são despesas nem afetam o saldo
+  const saldo=entradas-saidas;
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
-  const saldoAcumulado=saldo; // alias para o topbar
+  const saldoAcumulado=saldo;
   const saldoReal=saldo-totalAlocadoMes;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
