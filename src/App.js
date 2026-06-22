@@ -907,7 +907,7 @@ async function extractFromImage(base64, mediaType) {
   const apiKey = localStorage.getItem("velara_gemini_key")||"";
   if(!apiKey) throw new Error("SEM_CHAVE");
   const prompt = `Analise este extrato bancário brasileiro. Extraia TODAS as transações visíveis. Retorne SOMENTE array JSON sem markdown: [{"desc":"descrição","valor":25.90,"tipo":"saida","data":"2025-06-01"}]. tipo: entrada=credito/PIX recebido, saida=debito/compra/PIX enviado. valor positivo. data YYYY-MM-DD ou null.`;
-  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,{
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mediaType,data:base64}},{text:prompt}]}]})
