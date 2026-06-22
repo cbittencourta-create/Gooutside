@@ -893,7 +893,7 @@ async function loadPDFJS() {
 
 async function extractPDFText(arrayBuffer, password) {
   const pdfjs = await loadPDFJS();
-  const pdf = await pdfjs.getDocument({data:arrayBuffer, password:password||undefined}).promise;
+  const pdf = await pdfjs.getDocument({data:arrayBuffer.slice(0), password:password||undefined}).promise;
   let text = "";
   for(let i=1;i<=pdf.numPages;i++){
     const page = await pdf.getPage(i);
