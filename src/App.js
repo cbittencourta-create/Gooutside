@@ -1466,9 +1466,17 @@ function AppMain({user, onLogout}) {
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
   const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
   const transferencias=movsDoMes.filter(m=>m.tipo==="transferencia").reduce((s,m)=>s+m.valor,0);
-  const saldo=entradas-saidas;
+  const saldo=entradas-saidas; // mensal (para exibir no resumo do mês)
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
-  const saldoReal=entradas-saidas-totalAlocadoMes;
+
+  // Saldo ACUMULADO até o mês selecionado (para exibir no topo)
+  const saldoAcumulado=movs
+    .filter(m=>m.data&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
+    .reduce((s,m)=>m.tipo==="entrada"?s+m.valor:s-m.valor,0);
+  const totalAlocadoAcumulado=alocacoes
+    .filter(a=>a.data&&monthKey(a.data)<=selMes)
+    .reduce((s,a)=>s+a.totalRecebido,0);
+  const saldoReal=saldoAcumulado-totalAlocadoAcumulado;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
@@ -1641,8 +1649,8 @@ function AppMain({user, onLogout}) {
               </button>
               <div>
                 <div style={{fontSize:10,fontWeight:600,letterSpacing:".15em",textTransform:"uppercase",color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:1}}>{TABS.find(t=>t.id===tab)?.label||"Velara Finance"}</div>
-                <div style={{fontSize:24,fontWeight:300,letterSpacing:"-.03em",lineHeight:1,color:"#1A1209"}}>{R(saldo)}</div>
-                <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",marginTop:1,fontFamily:"'DM Sans',sans-serif"}}>saldo · {monthLabel(selMes)}</div>
+                <div style={{fontSize:24,fontWeight:300,letterSpacing:"-.03em",lineHeight:1,color:"#1A1209"}}>{R(saldoAcumulado)}</div>
+                <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",marginTop:1,fontFamily:"'DM Sans',sans-serif"}}>saldo acumulado até {monthLabel(selMes)}</div>
               </div>
             </div>
             <div style={{textAlign:"right"}}>
