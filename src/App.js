@@ -574,7 +574,8 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
 
   const gastosPorCat = {};
   movsM.filter(m=>m.tipo==="saida").forEach(m=>{
-    const cat = m.categoria;
+    // Agrupa pela categoria pai (antes do "·") para bater com o orçamento
+    const cat = m.categoria.includes("·") ? m.categoria.split("·")[0].trim() : m.categoria;
     gastosPorCat[cat] = (gastosPorCat[cat]||0)+m.valor;
   });
 
@@ -703,7 +704,10 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
   // Gastos por categoria do mês selecionado
   const movsM = movs.filter(m=>monthKey(m.data)===selMes&&m.tipo==="saida");
   const byCat = {};
-  movsM.forEach(m=>{byCat[m.categoria]=(byCat[m.categoria]||0)+m.valor;});
+  movsM.forEach(m=>{
+    const cat = m.categoria.includes("·") ? m.categoria.split("·")[0].trim() : m.categoria;
+    byCat[cat]=(byCat[cat]||0)+m.valor;
+  });
   const catData = Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
   const totalGastos = catData.reduce((s,[,v])=>s+v,0);
   const maxCat = catData.length ? catData[0][1] : 1;
@@ -2225,7 +2229,7 @@ function AppMain({user, onLogout}) {
                 : (cats?.despesa||DEFAULT_CATS.despesa).map(c=>(
                     <optgroup key={c.id} label={`${c.emoji} ${c.nome}`}>
                       <option value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>
-                      {c.subcats.map(s=><option key={s.id} value={`${c.emoji} ${s.nome}`}>{c.emoji} {s.nome}</option>)}
+                      {c.subcats.map(s=><option key={s.id} value={`${c.emoji} ${c.nome} · ${s.nome}`}>{c.emoji} {c.nome} · {s.nome}</option>)}
                     </optgroup>
                   ))
               }
