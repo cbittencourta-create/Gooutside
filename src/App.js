@@ -914,7 +914,7 @@ async function extractFromImage(base64, mediaType) {
       max_tokens:1500,
       messages:[{role:"user",content:[
         {type:"image",source:{type:"base64",media_type:mediaType,data:base64}},
-        {type:"text",text:"Analise este extrato bancário brasileiro. Retorne SOMENTE um array JSON: [{"desc":"descrição","valor":0.00,"tipo":"entrada","data":"YYYY-MM-DD"}]. tipo: entrada=crédito/PIX recebido, saida=débito/compra. valor sempre positivo."}
+        {type:"text",text:'Analise este extrato bancário brasileiro. Retorne SOMENTE um array JSON: [{desc:"descrição",valor:0.00,tipo:"entrada",data:"YYYY-MM-DD"}]. tipo: entrada=crédito/PIX recebido, saida=débito/compra. valor sempre positivo.'}
       ]}]
     })
   });
