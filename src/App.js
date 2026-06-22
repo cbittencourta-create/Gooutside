@@ -904,24 +904,14 @@ async function extractPDFText(arrayBuffer, password) {
 }
 
 async function extractFromImage(base64, mediaType) {
-  const apiKey = localStorage.getItem("velara_api_key")||"";
-  if(!apiKey) throw new Error("SEM_CHAVE");
-  const resp = await fetch("https://api.anthropic.com/v1/messages",{
+  const resp = await fetch("/api/extract-image",{
     method:"POST",
-    headers:{"Content-Type":"application/json","x-api-key":apiKey,"anthropic-version":"2023-06-01"},
-    body:JSON.stringify({
-      model:"claude-sonnet-4-6",
-      max_tokens:1500,
-      messages:[{role:"user",content:[
-        {type:"image",source:{type:"base64",media_type:mediaType,data:base64}},
-        {type:"text",text:'Analise este extrato bancário brasileiro. Retorne SOMENTE um array JSON: [{desc:"descrição",valor:0.00,tipo:"entrada",data:"YYYY-MM-DD"}]. tipo: entrada=crédito/PIX recebido, saida=débito/compra. valor sempre positivo.'}
-      ]}]
-    })
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({base64, mediaType})
   });
   const data = await resp.json();
-  if(data.error) throw new Error(data.error.message||"Erro na API");
-  const txt=(data.content||[]).map(c=>c.text||"").join("").replace(/```json|```/g,"").trim();
-  return JSON.parse(txt);
+  if(data.error) throw new Error(data.error);
+  return data.transactions;
 }
 
 function parseTextoBancario(text) {
@@ -1013,7 +1003,7 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
         applyTxns(parsed);
       }
     } catch(err) {
-      if(err.message==="SEM_CHAVE") setErro("Adicione sua chave API do Claude para importar prints.");
+      if(err.message==="SEM_CHAVE") setErro("Serviço de leitura de imagens não configurado. Contate o suporte.");
       else setErro("Erro: "+err.message);
     }
     setLoading(false);
@@ -1088,24 +1078,13 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
                 <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
                   Tire um <strong>print do app</strong> do C6 ou Itaú. O Claude AI extrai todas as transações automaticamente. 🤖
                 </div>
-                {!localStorage.getItem("velara_api_key")&&(
-                  <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:12,padding:"12px 14px"}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#8B6000",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>🔑 Chave API necessária</div>
-                    <div style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Para ler prints você precisa de uma chave da API do Claude (anthropic.com).</div>
-                    <div style={{display:"flex",gap:6}}>
-                      <input placeholder="sk-ant-..." onBlur={e=>{if(e.target.value.startsWith("sk-ant")){localStorage.setItem("velara_api_key",e.target.value);setErro("");}}}
-                        style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
-                      <button onClick={()=>setErro("")} style={{background:"#E8205F",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
-                    </div>
-                  </div>
-                )}
-                <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(91,163,212,0.08)",border:"2px dashed rgba(91,163,212,0.4)",borderRadius:16,padding:"28px 20px",cursor:"pointer",opacity:localStorage.getItem("velara_api_key")?1:0.5}}>
+                <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(91,163,212,0.08)",border:"2px dashed rgba(91,163,212,0.4)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
                   <span style={{fontSize:36}}>📸</span>
                   <span style={{fontSize:13,fontWeight:600,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif"}}>Clique para enviar print ou foto</span>
                   <span style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>PNG · JPG — qualquer banco</span>
                   <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={handleFile} style={{display:"none"}}/>
                 </label>
-                {localStorage.getItem("velara_api_key")&&<div style={{textAlign:"right"}}><button onClick={()=>{localStorage.removeItem("velara_api_key");setErro("");}} style={{background:"none",border:"none",color:"#aaa",fontSize:10,cursor:"pointer",fontFamily:"inherit"}}>× Remover chave</button></div>}
+                
               </>
             )}
 
