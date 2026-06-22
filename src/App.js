@@ -831,6 +831,13 @@ const KEYWORD_CATS = [
   {cat:"💡 Contas",      keys:["claro","vivo","tim ","oi ","net ","giga","internet","celular","telefone","google ","apple ","icloud","microsoft","recarga"]},
 ];
 
+const TRANSFER_KEYS = ["aplicação em fundo","aplicacao em fundo","aplicacao fundo","invest","resgate fundo","cdb","lci","lca","tesouro","poupança","poupanca","fundo de invest","pagamento fatura","pagamento de fatura","fatura cartao","fatura cartão","transferencia entre contas","transferência entre contas"];
+
+function isTransfer(desc) {
+  const d = (desc||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  return TRANSFER_KEYS.some(k=>d.includes(k));
+}
+
 function guessCat(desc) {
   const d = (desc||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
   for(const {cat, keys} of KEYWORD_CATS) {
@@ -849,7 +856,7 @@ function parseOFX(text) {
     const dtRaw = get("DTPOSTED")||get("DTAVAIL")||"";
     let data = "";
     if(dtRaw.length>=8) data=`${dtRaw.slice(0,4)}-${dtRaw.slice(4,6)}-${dtRaw.slice(6,8)}`;
-    if(amt!==0) txns.push({desc:memo, valor:Math.abs(amt), tipo:amt>0?"entrada":"saida", data, categoria:guessCat(memo)});
+    if(amt!==0) txns.push({desc:memo, valor:Math.abs(amt), tipo:isTransfer(memo)?"transferencia":amt>0?"entrada":"saida", data, categoria:isTransfer(memo)?"🔄 Transferência":guessCat(memo)});
   });
   return txns;
 }
@@ -875,7 +882,7 @@ function parseCSV(text) {
     let valor=0,tipo="saida";
     if(iValor>=0){const v=(parts[iValor]||"").replace(/[R$\s]/g,"").replace(".","").replace(",",".");valor=Math.abs(parseFloat(v)||0);tipo=parseFloat(v)>0?"entrada":"saida";}
     else if(iCred>=0||iDeb>=0){const cred=parseFloat((parts[iCred]||"").replace(".","").replace(",","."))||0;const deb=parseFloat((parts[iDeb]||"").replace(".","").replace(",","."))||0;if(cred>0){valor=cred;tipo="entrada";}else if(deb>0){valor=deb;tipo="saida";}}
-    if(valor>0) txns.push({desc,valor,tipo,data,categoria:guessCat(desc)});
+    if(valor>0) txns.push({desc,valor,tipo:isTransfer(desc)?"transferencia":tipo,data,categoria:isTransfer(desc)?"🔄 Transferência":guessCat(desc)});
   }
   return txns;
 }
@@ -942,7 +949,7 @@ function parseTextoBancario(text) {
     // Tipo: crédito ou débito
     const credKeys = /pix receb|crédito|credit|depósit|salário|pagamento receb|transferência receb/i;
     const tipo = credKeys.test(line)?"entrada":"saida";
-    txns.push({desc,valor,tipo,data,categoria:guessCat(desc)});
+    txns.push({desc,valor,tipo:isTransfer(desc)?"transferencia":tipo,data,categoria:isTransfer(desc)?"🔄 Transferência":guessCat(desc)});
   });
   return txns;
 }
@@ -1167,9 +1174,10 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
                       <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                         <span style={{fontSize:10,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>{t.data||"—"}</span>
                         <select value={t.tipo} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,tipo:e.target.value}:x))}
-                          style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:t.tipo==="entrada"?"#2D5A10":"#8B1A1A",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                          style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:t.tipo==="entrada"?"#2D5A10":t.tipo==="transferencia"?"#5BA3D4":"#8B1A1A",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                           <option value="entrada">↑ Entrada</option>
                           <option value="saida">↓ Saída</option>
+                          <option value="transferencia">🔄 Transfer.</option>
                         </select>
                         <select value={t.categoria} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,categoria:e.target.value}:x))}
                           style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:"#1A1209",cursor:"pointer",fontFamily:"inherit",flex:1,minWidth:0}}>
@@ -1392,6 +1400,7 @@ function AppMain({user, onLogout}) {
   const movsDoMes=useMemo(()=>movs.filter(m=>monthKey(m.data)===selMes),[movs,selMes]);
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
   const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
+  const transferencias=movsDoMes.filter(m=>m.tipo==="transferencia").reduce((s,m)=>s+m.valor,0);
   const saldo=entradas-saidas;
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
   const saldoReal=entradas-saidas-totalAlocadoMes;
@@ -1403,7 +1412,7 @@ function AppMain({user, onLogout}) {
 
   // Donut gastos
   const donutGastos=useMemo(()=>{
-    const byCat={};movsDoMes.filter(m=>m.tipo==="saida").forEach(m=>{byCat[m.categoria]=(byCat[m.categoria]||0)+m.valor;});
+    const byCat={};movsDoMes.filter(m=>m.tipo==="saida"&&m.tipo!=="transferencia").forEach(m=>{byCat[m.categoria]=(byCat[m.categoria]||0)+m.valor;});
     return Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>({label:k,v,color:CHART_COLORS[i%CHART_COLORS.length]}));
   },[movsDoMes]);
   const totalGastos=donutGastos.reduce((s,d)=>s+d.v,0);
@@ -1575,6 +1584,7 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:12,color:"#2D6E20",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▲ {R(entradas)}</div>
               <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>⏳ {R(totalPendPlant)}</div>}
+              {transferencias>0&&<div style={{fontSize:10,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>🔄 {R(transferencias)} transfer.</div>}
               <div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:700}}>💵 {R(saldoReal)} disponível</div>
             </div>
           </div>
@@ -1832,7 +1842,7 @@ function AppMain({user, onLogout}) {
                 <div key={m.id} className={CARD} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7,padding:"11px 14px"}}>
                   <div style={{width:34,height:34,borderRadius:10,background:m.tipo==="entrada"?"rgba(0,0,0,0.3)":"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,border:`1px solid ${m.tipo==="entrada"?C.green:C.red}44`}}>{m.categoria.split(" ")[0]}</div>
                   <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>{fd(m.data)} · {m.categoria.split(" ").slice(1).join(" ")}</div></div>
-                  <div className="num" style={{fontSize:14,fontWeight:700,color:m.tipo==="entrada"?C.green:C.red,flexShrink:0}}>{m.tipo==="entrada"?"+":"-"}{R(m.valor)}</div>
+                  <div className="num" style={{fontSize:14,fontWeight:700,color:m.tipo==="entrada"?C.green:m.tipo==="transferencia"?"#5BA3D4":C.red,flexShrink:0}}>{m.tipo==="entrada"?"+":m.tipo==="transferencia"?"🔄":"-"}{R(m.valor)}</div>
                   <button onClick={()=>remove(movs,setMovs,m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.55)",fontSize:17,cursor:"pointer",padding:"0 3px",lineHeight:1}}>×</button>
                 </div>
               ))
@@ -2197,24 +2207,30 @@ function AppMain({user, onLogout}) {
       {/* ══ MODAIS ══ */}
       <Modal open={modal==="mov"} onClose={closeM} title="Novo Lançamento">
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:4}}>
-            {["saida","entrada"].map(t=>(
-              <button key={t} onClick={()=>setFMov({...fMov,tipo:t,categoria:t==="entrada"?CATS_IN[0]:CATS_OUT[0]})} style={{flex:1,background:fMov.tipo===t?(t==="entrada"?"rgba(143,196,58,0.7)":C.magentaDark):"transparent",color:fMov.tipo===t?"#fff":C.modalSub,border:"none",borderRadius:10,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>{t==="entrada"?"▲ Entrada":"▼ Saída"}</button>
-            ))}
+          <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:4,gap:3}}>
+            <button onClick={()=>setFMov({...fMov,tipo:"saida",categoria:CATS_OUT[0]})} style={{flex:1,background:fMov.tipo==="saida"?C.magentaDark:"transparent",color:fMov.tipo==="saida"?"#fff":C.modalSub,border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>▼ Saída</button>
+            <button onClick={()=>setFMov({...fMov,tipo:"entrada",categoria:CATS_IN[0]})} style={{flex:1,background:fMov.tipo==="entrada"?"rgba(143,196,58,0.7)":"transparent",color:fMov.tipo==="entrada"?"#fff":C.modalSub,border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>▲ Entrada</button>
+            <button onClick={()=>setFMov({...fMov,tipo:"transferencia",categoria:"🔄 Transferência"})} style={{flex:1,background:fMov.tipo==="transferencia"?"rgba(91,163,212,0.7)":"transparent",color:fMov.tipo==="transferencia"?"#fff":C.modalSub,border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s"}}>🔄 Transfer.</button>
           </div>
           <Inp label="Descrição" placeholder="Ex: Salário, Aluguel..." value={fMov.descricao} onChange={e=>setFMov({...fMov,descricao:e.target.value})}/>
           <G2><Inp label="Valor (R$)" placeholder="0,00" value={fMov.valor} onChange={e=>setFMov({...fMov,valor:e.target.value})}/><Inp label="Data" type="date" value={fMov.data} onChange={e=>setFMov({...fMov,data:e.target.value})}/></G2>
-          <Sel label="Categoria" value={fMov.categoria} onChange={e=>setFMov({...fMov,categoria:e.target.value})}>
-            {fMov.tipo==="entrada"
-              ? (cats?.receita||DEFAULT_CATS.receita).map(c=><option key={c.id} value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>)
-              : (cats?.despesa||DEFAULT_CATS.despesa).map(c=>(
-                  <optgroup key={c.id} label={`${c.emoji} ${c.nome}`}>
-                    <option value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>
-                    {c.subcats.map(s=><option key={s.id} value={`${c.emoji} ${s.nome}`}>{c.emoji} {s.nome}</option>)}
-                  </optgroup>
-                ))
-            }
-          </Sel>
+          {fMov.tipo==="transferencia" ? (
+            <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,padding:"11px 13px",fontSize:13,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif"}}>
+              🔄 Transferência — não conta como gasto nem como receita
+            </div>
+          ) : (
+            <Sel label="Categoria" value={fMov.categoria} onChange={e=>setFMov({...fMov,categoria:e.target.value})}>
+              {fMov.tipo==="entrada"
+                ? (cats?.receita||DEFAULT_CATS.receita).map(c=><option key={c.id} value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>)
+                : (cats?.despesa||DEFAULT_CATS.despesa).map(c=>(
+                    <optgroup key={c.id} label={`${c.emoji} ${c.nome}`}>
+                      <option value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>
+                      {c.subcats.map(s=><option key={s.id} value={`${c.emoji} ${s.nome}`}>{c.emoji} {s.nome}</option>)}
+                    </optgroup>
+                  ))
+              }
+            </Sel>
+          )}
           <Btn variant="primary" style={{marginTop:4}} onClick={saveMov}>Salvar lançamento</Btn>
         </div>
       </Modal>
