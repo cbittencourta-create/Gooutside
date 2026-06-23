@@ -1467,6 +1467,10 @@ function AppMain({user, onLogout}) {
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
   const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
   const transferencias=movsDoMes.filter(m=>m.tipo==="transferencia").reduce((s,m)=>s+m.valor,0);
+  // Transferências acumuladas até o mês selecionado (total investido)
+  const transferenciasAcumuladas=movs
+    .filter(m=>m.tipo==="transferencia"&&m.data&&monthKey(m.data)<=selMes)
+    .reduce((s,m)=>s+m.valor,0);
   // Saldo = entradas - saidas apenas
   // Transferências são investimentos — não são despesas nem afetam o saldo
   const saldo=entradas-saidas;
@@ -1656,7 +1660,7 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:12,color:"#2D6E20",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▲ {R(entradas)}</div>
               <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>⏳ {R(totalPendPlant)}</div>}
-              {transferencias>0&&<div style={{fontSize:10,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>🔄 {R(transferencias)} transfer.</div>}
+              {transferenciasAcumuladas>0&&<div style={{fontSize:10,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>📈 {R(transferenciasAcumuladas)} investido</div>}
               <div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:700}}>💵 {R(saldoReal)} disponível</div>
             </div>
           </div>
