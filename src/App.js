@@ -1471,12 +1471,18 @@ function AppMain({user, onLogout}) {
   const transferenciasAcumuladas=movs
     .filter(m=>m.tipo==="transferencia"&&m.data&&monthKey(m.data)<=selMes)
     .reduce((s,m)=>s+m.valor,0);
-  // Saldo = entradas - saidas apenas
-  // Transferências são investimentos — não são despesas nem afetam o saldo
+  // Saldo mensal = entradas - saidas (transferências não afetam)
   const saldo=entradas-saidas;
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
-  const saldoAcumulado=saldo;
-  const saldoReal=saldo-totalAlocadoMes;
+
+  // Saldo acumulado a partir do saldo inicial definido pelo usuário
+  // Soma o valor inicial + todos os movimentos (exceto transferências) desde a data inicial
+  const saldoIniValor=+saldoIni.valor||0;
+  const saldoIniData=saldoIni.data||(today().slice(0,7));
+  const saldoAcumulado=saldoIniValor+movs
+    .filter(m=>m.data&&monthKey(m.data)>=saldoIniData&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
+    .reduce((s,m)=>m.tipo==="entrada"?s+m.valor:s-m.valor,0);
+  const saldoReal=saldoAcumulado-totalAlocadoMes;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
