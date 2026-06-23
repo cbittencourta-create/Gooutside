@@ -1489,7 +1489,12 @@ function AppMain({user, onLogout}) {
         .filter(m=>m.data&&monthKey(m.data)>=saldoIniData&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
         .reduce((s,m)=>m.tipo==="entrada"?s+m.valor:s-m.valor,0)
     : saldo;
-  const saldoReal=saldoAcumulado-totalAlocadoMes;
+  // Saldo livre = acumulado menos o que foi alocado para não-livre
+  const totalNaoLivre=alocacoes
+    .filter(a=>a.data&&monthKey(a.data)>=saldoIniData&&monthKey(a.data)<=selMes)
+    .flatMap(a=>a.itens.filter(it=>it.tipo!=="livre"))
+    .reduce((s,it)=>s+it.valor,0);
+  const saldoReal=saldoAcumulado-totalNaoLivre;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
@@ -1674,7 +1679,7 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>⏳ {R(totalPendPlant)}</div>}
               {transferenciasAcumuladas>0&&<div style={{fontSize:10,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>📈 {R(transferenciasAcumuladas)} investido</div>}
-              <div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:700}}>💵 {R(saldoReal)} disponível</div>
+              <div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:700}}>💵 {R(saldoReal)} livre</div>
             </div>
           </div>
           <div className="scr" style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:2}}>
