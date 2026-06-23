@@ -96,10 +96,11 @@ const C = {
 };
 
 const DEST_COLORS = {
-  investimento:{color:"#A8E063", bg:"rgba(0,0,0,0.3)", icon:"📈"},
-  objetivo:    {color:"#7BC8F0", bg:"rgba(0,0,0,0.3)", icon:"🎯"},
-  divida:      {color:"#FF8A80", bg:"rgba(0,0,0,0.3)", icon:"◷"},
-  livre:       {color:"#FFD580", bg:"rgba(0,0,0,0.3)", icon:"💰"},
+  investimento: {color:"#A8E063", bg:"rgba(168,224,99,0.15)",  icon:"📈"},
+  objetivo:     {color:"#7BC8F0", bg:"rgba(123,200,240,0.15)", icon:"🎯"},
+  divida:       {color:"#FF8A80", bg:"rgba(255,138,128,0.15)", icon:"💳"},
+  fundo_divida: {color:"#FFB347", bg:"rgba(255,179,71,0.15)",  icon:"🏦"},
+  livre:        {color:"#FFD580", bg:"rgba(255,213,128,0.15)", icon:"💰"},
 };
 
 const CHART_COLORS = ["#E8205F","#8FC43A","#5BA3D4","#D4A843","#A07BC8","#E05252","#38B2AC","#ED8936","#48BB78"];
@@ -363,7 +364,7 @@ function RegrasModal({open,onClose,regras,setRegras,invests,objetivos,dividas}) 
   const [local,setLocal]=useState([]);
   useEffect(()=>{if(open)setLocal(JSON.parse(JSON.stringify(regras)));},[open,regras]);
   const totalPct=local.reduce((s,r)=>s+parseFloat(r.pct||0),0);
-  const getOpts=tipo=>tipo==="investimento"?invests.map(i=>({id:i.id,nome:`${i.nome}${i.banco?" · "+i.banco:""}`})):tipo==="objetivo"?objetivos.map(o=>({id:o.id,nome:o.nome})):tipo==="divida"?dividas.map(d=>({id:d.id,nome:d.credor})):[];
+  const getOpts=tipo=>tipo==="investimento"?invests.map(i=>({id:i.id,nome:`${i.nome}${i.banco?" · "+i.banco:""}`})):tipo==="objetivo"?objetivos.map(o=>({id:o.id,nome:o.nome})):tipo==="divida"||tipo==="fundo_divida"?dividas.map(d=>({id:d.id,nome:d.credor})):[];
   const save=()=>{setRegras(local);onClose();};
   return (
     <Modal open={open} onClose={onClose} title="Regras de Alocação">
@@ -376,7 +377,8 @@ function RegrasModal({open,onClose,regras,setRegras,invests,objetivos,dividas}) 
               <Sel label="Tipo" value={r.tipo} onChange={e=>{const l=[...local];l[i]={...l[i],tipo:e.target.value,destinoId:""};setLocal(l);}} style={{flex:1}}>
                 <option value="investimento">📈 Investimento</option>
                 <option value="objetivo">🎯 Objetivo</option>
-                <option value="divida">◷ Dívida</option>
+                <option value="fundo_divida">🏦 Fundo de Dívida</option>
+                <option value="divida">💳 Dívida Ativa</option>
                 <option value="livre">💰 Livre</option>
               </Sel>
               <div style={{width:75}}>
@@ -1388,6 +1390,7 @@ function AppMain({user, onLogout}) {
   const [alocExpanded,setAlocExpanded]=useState(false);
   const [importOpen,setImportOpen]=useState(false);
   const [pltDist,setPltDist]=useState(null);
+  const [movDist,setMovDist]=useState(null);
 
   const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
   const [fEmp,setFEmp]=useState({nome:"",contato:"",prazo:"30",cor:"#E8205F"});
@@ -1425,7 +1428,7 @@ function AppMain({user, onLogout}) {
   const savePlt=()=>{if(!fPlt.empresa||!fPlt.data||!fPlt.valorTotal)return;upsert(plantoes,setPlantoes,{...fPlt,valorTotal:+fPlt.valorTotal});};
   const saveInv=()=>{if(!fInv.nome||!fInv.aporte)return;upsert(invests,setInvests,{...fInv,aporte:+String(fInv.aporte).replace(",",".")});};
   const saveObj=()=>{if(!fObj.nome||!fObj.meta)return;upsert(objetivos,setObjetivos,{...fObj,meta:+String(fObj.meta).replace(",","."),atual:+String(fObj.atual||0).replace(",",".")});};
-  const saveDiv=()=>{if(!fDiv.credor||!fDiv.total)return;upsert(dividas,setDividas,{...fDiv,total:+String(fDiv.total).replace(",","."),pago:+String(fDiv.pago||0).replace(",",".")});};
+  const saveDiv=()=>{if(!fDiv.credor||!fDiv.total)return;upsert(dividas,setDividas,{...fDiv,tipo:fDiv.tipo||"ativa",total:+String(fDiv.total).replace(",","."),pago:+String(fDiv.pago||0).replace(",",".")});};
   const saveCart=()=>{if(!fCart.nome||!fCart.limite)return;upsert(cartoes,setCartoes,{...fCart,limite:+String(fCart.limite).replace(",",".")});};
   const saveCCMov=()=>{if(!fCCMov.descricao||!fCCMov.valor||!fCCMov.cartao)return;upsert(ccMovs,setCCMovs,{...fCCMov,valor:+String(fCCMov.valor).replace(",",".")});};
   const saveAporte=()=>{if(!fAporte.valor||!extra)return;const v=+String(fAporte.valor).replace(",",".");setObjetivos(objetivos.map(o=>o.id===extra?{...o,atual:+o.atual+v}:o));closeM();};
@@ -1442,10 +1445,11 @@ function AppMain({user, onLogout}) {
     }
   };
 
-  const confirmarDistribuicao=alocs=>{
-    const p=pltDist;
-    setPlantoes(plantoes.map(x=>x.id===p.id?{...x,status:"recebido",dataRecebimento:today()}:x));
-    setMovs([{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:today()},...movs]);
+  const confirmarDistribuicao=(p,alocs,isMov=false)=>{
+    if(!isMov){
+      setPlantoes(plantoes.map(x=>x.id===p.id?{...x,status:"recebido",dataRecebimento:today()}:x));
+      setMovs([{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:today()},...movs]);
+    }
     let nInv=[...invests],nObj=[...objetivos],nDiv=[...dividas];
     const reg={id:uid(),plantaoId:p.id,data:today(),empresa:p.empresa,totalRecebido:p.valorTotal,itens:[]};
     alocs.forEach(a=>{
@@ -1458,7 +1462,8 @@ function AppMain({user, onLogout}) {
       if(a.tipo==="divida"&&a.destinoId)nDiv=nDiv.map(d=>d.id===a.destinoId?{...d,pago:Math.min(+d.pago+val,+d.total)}:d);
     });
     setInvests(nInv);setObjetivos(nObj);setDividas(nDiv);
-    setAlocacoes([reg,...alocacoes]);setPltDist(null);
+    setAlocacoes([reg,...alocacoes]);
+    if(!isMov) setPltDist(null);
   };
 
   // ── Derived ────────────────────────────────────────────────────────────────
@@ -1926,7 +1931,10 @@ function AppMain({user, onLogout}) {
                 <div key={m.id} className={CARD} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7,padding:"11px 14px"}}>
                   <div style={{width:34,height:34,borderRadius:10,background:m.tipo==="entrada"?"rgba(0,0,0,0.3)":"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,border:`1px solid ${m.tipo==="entrada"?C.green:C.red}44`}}>{m.categoria.split(" ")[0]}</div>
                   <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>{fd(m.data)} · {m.categoria.split(" ").slice(1).join(" ")}</div></div>
-                  <div className="num" style={{fontSize:14,fontWeight:700,color:m.tipo==="entrada"?C.green:m.tipo==="transferencia"?"#5BA3D4":C.red,flexShrink:0}}>{m.tipo==="entrada"?"+":m.tipo==="transferencia"?"🔄":"-"}{R(m.valor)}</div>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3,flexShrink:0}}>
+                    <div className="num" style={{fontSize:14,fontWeight:700,color:m.tipo==="entrada"?C.green:m.tipo==="transferencia"?"#5BA3D4":C.red}}>{m.tipo==="entrada"?"+":m.tipo==="transferencia"?"🔄":"-"}{R(m.valor)}</div>
+                    {m.tipo==="entrada"&&regras.length>0&&<button onClick={()=>setMovDist(m)} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:6,color:"#E8205F",fontSize:9,fontWeight:700,padding:"2px 6px",cursor:"pointer",fontFamily:"inherit"}}>distribuir</button>}
+                  </div>
                   <button onClick={()=>remove(movs,setMovs,m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.55)",fontSize:17,cursor:"pointer",padding:"0 3px",lineHeight:1}}>×</button>
                 </div>
               ))
@@ -2157,18 +2165,56 @@ function AppMain({user, onLogout}) {
               <div><div style={{fontSize:22,fontWeight:300,color:TXT}}>Dívidas</div><div className="num" style={{fontSize:12,color:C.red,fontWeight:600}}>{R(totalDividas)} em aberto</div></div>
               <Btn variant="primary" style={{fontSize:12,padding:"9px 14px"}} onClick={()=>openM("div")}>+ Dívida</Btn>
             </div>
-            {dividas.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhuma dívida registrada 🎉</div>
-              :dividas.map(d=>{const s=statusDiv(d);const pct=+d.total>0?Math.min(+d.pago/+d.total*100,100):0;
+
+            {/* ── Fundo de Dívidas ── */}
+            {dividas.filter(d=>d.tipo==="fundo").length>0&&(
+              <div style={{marginBottom:18}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#8B6000",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>🏦 Fundo de Dívidas — acumulando para quitar</div>
+                {dividas.filter(d=>d.tipo==="fundo").map(d=>{
+                  const pct=+d.total>0?Math.min(+d.pago/+d.total*100,100):0;
+                  const falta=Math.max(+d.total-+d.pago,0);
+                  return <div key={d.id} className={CARD} style={{marginBottom:10,borderLeft:"3px solid #FFB347"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                      <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{d.credor}</div>
+                        {d.obs&&<div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>{d.obs}</div>}
+                      </div>
+                      <div style={{textAlign:"right"}}>
+                        <div className="num" style={{fontSize:15,fontWeight:700,color:"#FFB347"}}>{R(+d.pago)}</div>
+                        <div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>de {R(+d.total)}</div>
+                      </div>
+                    </div>
+                    <Bar value={+d.pago} max={+d.total} color="#FFB347" h={6}/>
+                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}>
+                      <span>{pct.toFixed(0)}% acumulado</span>
+                      <span>Falta {R(falta)}</span>
+                    </div>
+                    {pct>=100&&<div style={{background:"rgba(143,196,58,0.15)",border:"1px solid rgba(143,196,58,0.4)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginBottom:8,fontWeight:600}}>✅ Pronto para quitar!</div>}
+                    <div style={{display:"flex",gap:6}}>
+                      <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("div",d)}>Editar</Btn>
+                      {pct>=100&&<Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>{setDividas(dividas.map(x=>x.id===d.id?{...x,quitada:true}:x));}}>Quitar agora</Btn>}
+                      <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(dividas,setDividas,d.id)}>Excluir</Btn>
+                    </div>
+                  </div>;
+                })}
+              </div>
+            )}
+
+            {/* ── Dívidas Ativas ── */}
+            <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>💳 Dívidas Ativas — pagamento mensal</div>
+            {dividas.filter(d=>!d.tipo||d.tipo==="ativa").length===0
+              ?<div className={CARD} style={{textAlign:"center",padding:24,color:TMUT,fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>Nenhuma dívida ativa 🎉</div>
+              :dividas.filter(d=>!d.tipo||d.tipo==="ativa").map(d=>{
+                const s=statusDiv(d);const pct=+d.total>0?Math.min(+d.pago/+d.total*100,100):0;
                 return <div key={d.id} className={CARD} style={{marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                     <div><div style={{display:"flex",alignItems:"center",gap:7,marginBottom:2}}><span style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{d.credor}</span><Badge label={s.label} color={s.color} bg={s.bg}/></div>
-                      {d.prazo&&<div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>Prazo: {fdFull(d.prazo)}</div>}
-                      {d.parcelas&&<div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{d.parcelas}</div>}
+                      {d.prazo&&<div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>Prazo: {fdFull(d.prazo)}</div>}
+                      {d.parcelas&&<div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>{d.parcelas}</div>}
                     </div>
-                    <div style={{textAlign:"right"}}><div className="num" style={{fontSize:15,fontWeight:700,color:C.red}}>{R(+d.total-+d.pago)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>restante</div></div>
+                    <div style={{textAlign:"right"}}><div className="num" style={{fontSize:15,fontWeight:700,color:C.red}}>{R(+d.total-+d.pago)}</div><div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>restante</div></div>
                   </div>
                   <Bar value={+d.pago} max={+d.total} color={C.green} h={5}/>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>Pago: {R(+d.pago)}</span><span>{pct.toFixed(0)}%</span><span>Total: {R(+d.total)}</span></div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>Pago: {R(+d.pago)}</span><span>{pct.toFixed(0)}%</span><span>Total: {R(+d.total)}</span></div>
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("pgto",null,d.id)}>+ Pagamento</Btn>
                     <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("div",d)}>Editar</Btn>
@@ -2179,8 +2225,6 @@ function AppMain({user, onLogout}) {
             }
           </div>
         )}
-
-        {/* ══ CARTÕES ══ */}
         {tab==="cartoes"&&(
           <div className="fade">
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
@@ -2376,6 +2420,11 @@ function AppMain({user, onLogout}) {
 
       <Modal open={modal==="div"} onClose={closeM} title={edit?"Editar Dívida":"Nova Dívida"}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:4}}>
+            {[["ativa","💳 Dívida Ativa"],["fundo","🏦 Fundo de Dívida"]].map(([v,l])=>(
+              <button key={v} onClick={()=>setFDiv({...fDiv,tipo:v})} style={{flex:1,background:(fDiv.tipo||"ativa")===v?(v==="fundo"?"rgba(255,179,71,0.8)":"#E8205F"):"transparent",color:(fDiv.tipo||"ativa")===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{l}</button>
+            ))}
+          </div>
           <Inp label="Credor" placeholder="Ex: Banco Itaú..." value={fDiv.credor} onChange={e=>setFDiv({...fDiv,credor:e.target.value})}/>
           <G2><Inp label="Total (R$)" placeholder="0,00" value={fDiv.total} onChange={e=>setFDiv({...fDiv,total:e.target.value})}/><Inp label="Já pago (R$)" placeholder="0,00" value={fDiv.pago} onChange={e=>setFDiv({...fDiv,pago:e.target.value})}/></G2>
           <G2><Inp label="Prazo" type="date" value={fDiv.prazo} onChange={e=>setFDiv({...fDiv,prazo:e.target.value})}/><Inp label="Parcelas" placeholder="Ex: 12x de R$500" value={fDiv.parcelas} onChange={e=>setFDiv({...fDiv,parcelas:e.target.value})}/></G2>
@@ -2433,8 +2482,15 @@ function AppMain({user, onLogout}) {
           <Btn variant="primary" onClick={closeM}>Salvar</Btn>
         </div>
       </Modal>
+      <AlocacaoModal open={!!movDist} onClose={()=>setMovDist(null)}
+        plantao={movDist?{...movDist,empresa:movDist.descricao,valorTotal:movDist.valor}:null}
+        regras={regras} invests={invests} objetivos={objetivos} dividas={dividas}
+        onConfirm={alocs=>{
+          confirmarDistribuicao({...movDist,empresa:movDist.descricao,valorTotal:movDist.valor,id:movDist.id+"_dist"},alocs,true);
+          setMovDist(null);
+        }}/>
       <RegrasModal open={modal==="regras"} onClose={closeM} regras={regras} setRegras={setRegras} invests={invests} objetivos={objetivos} dividas={dividas}/>
-      <AlocacaoModal open={!!pltDist} onClose={()=>setPltDist(null)} plantao={pltDist} regras={regras} invests={invests} objetivos={objetivos} dividas={dividas} onConfirm={confirmarDistribuicao}/>
+      <AlocacaoModal open={!!pltDist} onClose={()=>setPltDist(null)} plantao={pltDist} regras={regras} invests={invests} objetivos={objetivos} dividas={dividas} onConfirm={(alocs)=>confirmarDistribuicao(pltDist,alocs,false)}/>
     </div>
   );
 }
