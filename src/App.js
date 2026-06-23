@@ -1455,11 +1455,11 @@ function AppMain({user, onLogout}) {
     alocs.forEach(a=>{
       const val=parseFloat(a.valorEdit||0); if(val<=0)return;
       const inv=a.tipo==="investimento"?invests.find(x=>x.id===a.destinoId):null;
-      const getNome=()=>{if(a.tipo==="investimento"){const i=invests.find(x=>x.id===a.destinoId);return i?`${i.nome}${i.banco?" · "+i.banco:""}`:a.destinoNome||"—";}if(a.tipo==="objetivo")return objetivos.find(x=>x.id===a.destinoId)?.nome||a.destinoNome||"—";if(a.tipo==="divida")return dividas.find(x=>x.id===a.destinoId)?.credor||a.destinoNome||"—";return"Livre";};
+      const getNome=()=>{if(a.tipo==="investimento"){const i=invests.find(x=>x.id===a.destinoId);return i?`${i.nome}${i.banco?" · "+i.banco:""}`:a.destinoNome||"—";}if(a.tipo==="objetivo")return objetivos.find(x=>x.id===a.destinoId)?.nome||a.destinoNome||"—";if(a.tipo==="divida"||a.tipo==="fundo_divida")return dividas.find(x=>x.id===a.destinoId)?.credor||a.destinoNome||"—";return"Livre";};
       reg.itens.push({tipo:a.tipo,destinoId:a.destinoId,destinoNome:a.tipo==="livre"?"Livre":getNome(),banco:inv?.banco||"",valor:val});
       if(a.tipo==="investimento"&&a.destinoId)nInv=nInv.map(i=>i.id===a.destinoId?{...i,aporte:i.aporte+val}:i);
       if(a.tipo==="objetivo"&&a.destinoId)nObj=nObj.map(o=>o.id===a.destinoId?{...o,atual:+o.atual+val}:o);
-      if(a.tipo==="divida"&&a.destinoId)nDiv=nDiv.map(d=>d.id===a.destinoId?{...d,pago:Math.min(+d.pago+val,+d.total)}:d);
+      if((a.tipo==="divida"||a.tipo==="fundo_divida")&&a.destinoId)nDiv=nDiv.map(d=>d.id===a.destinoId?{...d,pago:Math.min(+d.pago+val,+d.total)}:d);
     });
     setInvests(nInv);setObjetivos(nObj);setDividas(nDiv);
     setAlocacoes([reg,...alocacoes]);
@@ -1496,6 +1496,8 @@ function AppMain({user, onLogout}) {
     .reduce((s,it)=>s+it.valor,0);
   const saldoReal=saldoAcumulado-totalNaoLivre;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
+  const totalFundoDivida=dividas.filter(d=>d.tipo==="fundo").reduce((s,d)=>s+(+d.pago||0),0);
+  const totalPatrimonio=totalInvestido+totalFundoDivida;
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
   const empNome=n=>empresas.find(e=>e.nome===n)||{nome:n,cor:C.magenta};
@@ -1678,7 +1680,7 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:12,color:"#2D6E20",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▲ {R(entradas)}</div>
               <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>⏳ {R(totalPendPlant)}</div>}
-              {transferenciasAcumuladas>0&&<div style={{fontSize:10,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>📈 {R(transferenciasAcumuladas)} investido</div>}
+              {totalPatrimonio>0&&<div style={{fontSize:10,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>📈 {R(totalPatrimonio)} patrimônio</div>}
               <div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:700}}>💵 {R(saldoReal)} livre</div>
             </div>
           </div>
@@ -1703,7 +1705,7 @@ function AppMain({user, onLogout}) {
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
               {[
                 {label:"A Receber", val:totalPendPlant, color:"#FFD580",  bg:"rgba(0,0,0,0.35)", bdr:"rgba(212,168,67,0.5)"},
-                {label:"Investido",  val:totalInvestido, color:"#2D5A10", bg:"rgba(143,196,58,0.18)", bdr:"rgba(143,196,58,0.4)"},
+                {label:"Patrimônio", val:totalPatrimonio, color:"#2D5A10", bg:"rgba(143,196,58,0.18)", bdr:"rgba(143,196,58,0.4)"},
                 {label:"Em Dívidas", val:totalDividas,   color:"#8B1A1A",  bg:"rgba(224,82,82,0.15)", bdr:"rgba(224,82,82,0.4)"},
               ].map(c=>(
                 <div key={c.label} className={CARD} style={{padding:"10px 10px",background:c.bg,border:`1px solid ${c.bdr}`,textAlign:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",borderRadius:12}}>
