@@ -1377,7 +1377,7 @@ function AppMain({user, onLogout}) {
   const [ccMovs,    setCCMovs]    = useLS("v4_ccm",    [], userId);
   const [regras,    setRegras]    = useLS("v4_regras", [], userId);
   const [alocacoes, setAlocacoes] = useLS("v4_aloc",   [], userId);
-  const [saldoIni,  setSaldoIni]  = useLS("v4_saldo_ini", {valor:0, data:today().slice(0,7)}, userId);
+  const [saldoIni,  setSaldoIni]  = useLS("v4_saldo_ini2", {valor:"0", data:today().slice(0,7)}, userId);
 
   const [tab,setTab]=useState("dashboard");
   const [modal,setModal]=useState(null);
@@ -1471,17 +1471,19 @@ function AppMain({user, onLogout}) {
   const transferenciasAcumuladas=movs
     .filter(m=>m.tipo==="transferencia"&&m.data&&monthKey(m.data)<=selMes)
     .reduce((s,m)=>s+m.valor,0);
-  // Saldo mensal = entradas - saidas (transferências não afetam)
+  // Saldo mensal puro
   const saldo=entradas-saidas;
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
 
-  // Saldo acumulado a partir do saldo inicial definido pelo usuário
-  // Soma o valor inicial + todos os movimentos (exceto transferências) desde a data inicial
-  const saldoIniValor=+saldoIni.valor||0;
-  const saldoIniData=saldoIni.data||(today().slice(0,7));
-  const saldoAcumulado=saldoIniValor+movs
-    .filter(m=>m.data&&monthKey(m.data)>=saldoIniData&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
-    .reduce((s,m)=>m.tipo==="entrada"?s+m.valor:s-m.valor,0);
+  // Saldo acumulado: saldo inicial + tudo desde a data inicial até o mês selecionado
+  // Se o mês for ANTES da data inicial: mostra só o saldo do mês (sem fantasmas)
+  const saldoIniValor=parseFloat(String(saldoIni.valor||0).replace(",","."))||0;
+  const saldoIniData=saldoIni.data||today().slice(0,7);
+  const saldoAcumulado=selMes>=saldoIniData
+    ? saldoIniValor+movs
+        .filter(m=>m.data&&monthKey(m.data)>=saldoIniData&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
+        .reduce((s,m)=>m.tipo==="entrada"?s+m.valor:s-m.valor,0)
+    : saldo;
   const saldoReal=saldoAcumulado-totalAlocadoMes;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
@@ -2422,8 +2424,8 @@ function AppMain({user, onLogout}) {
               <input type="month" value={saldoIni.data} onChange={e=>setSaldoIni({...saldoIni,data:e.target.value})}
                 style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"11px 13px",color:"#1A1209",fontSize:14,outline:"none",width:"100%",fontFamily:"inherit"}}/>
             </div>
-            <Inp label="Valor que tinha (R$)" type="number" placeholder="0,00" value={saldoIni.valor}
-              onChange={e=>setSaldoIni({...saldoIni,valor:e.target.value})}/>
+            <Inp label="Valor que tinha (R$)" type="text" inputMode="decimal" placeholder="0,00" value={saldoIni.valor}
+              onChange={e=>setSaldoIni({...saldoIni,valor:e.target.value.replace(",",".")})}/>
           </G2>
           <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
             💡 Exemplo: se em março você tinha R$500 no banco, coloque Mês = Mar 2026 e Valor = 500. O app soma esse valor com tudo que entrou e saiu a partir de março.
