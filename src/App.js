@@ -694,8 +694,7 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
   const dataLinha = meses.map(ym=>({
     ym,
     label: monthLabel(ym).split(" ")[0],
-    ent: movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)
-        + plantoes.filter(p=>monthKey(p.dataRecebimento)===ym&&p.status==="recebido").reduce((s,p)=>s+p.valorTotal,0),
+    ent: movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
     sai: movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)
         + ccMovs.filter(m=>monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
   }));
@@ -1489,15 +1488,19 @@ function AppMain({user, onLogout}) {
         .filter(m=>m.data&&monthKey(m.data)>=saldoIniData&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
         .reduce((s,m)=>m.tipo==="entrada"?s+m.valor:s-m.valor,0)
     : saldo;
-  // Saldo livre = acumulado menos o que foi alocado para não-livre
-  const totalNaoLivre=alocacoes
+  // Saldo livre = saldo inicial + livre alocado - despesas reais
+  const totalLivreAlocado=alocacoes
     .filter(a=>a.data&&monthKey(a.data)>=saldoIniData&&monthKey(a.data)<=selMes)
-    .flatMap(a=>a.itens.filter(it=>it.tipo!=="livre"))
+    .flatMap(a=>a.itens.filter(it=>it.tipo==="livre"))
     .reduce((s,it)=>s+it.valor,0);
-  const saldoReal=saldoAcumulado-totalNaoLivre;
+  const totalSaidasPeriodo=movs
+    .filter(m=>m.tipo==="saida"&&m.data&&monthKey(m.data)>=saldoIniData&&monthKey(m.data)<=selMes)
+    .reduce((s,m)=>s+m.valor,0);
+  const saldoReal=saldoIniValor+totalLivreAlocado-totalSaidasPeriodo;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalFundoDivida=dividas.filter(d=>d.tipo==="fundo").reduce((s,d)=>s+(+d.pago||0),0);
-  const totalPatrimonio=totalInvestido+totalFundoDivida;
+  const totalObjetivos=objetivos.reduce((s,o)=>s+(+o.atual||0),0);
+  const totalPatrimonio=totalInvestido+totalFundoDivida+totalObjetivos;
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
   const empNome=n=>empresas.find(e=>e.nome===n)||{nome:n,cor:C.magenta};
