@@ -1278,31 +1278,35 @@ function LoginScreen({onLogin}) {
   const submit = async () => {
     setError(""); setLoading(true);
     if (!email || !password) { setError("Preencha e-mail e senha."); setLoading(false); return; }
-    if (mode === "signup") {
-      if (INVITED_EMAILS.length > 0 && !INVITED_EMAILS.includes(email.toLowerCase())) {
-        setError("Este e-mail não está na lista de convidados."); setLoading(false); return;
+    try {
+      if (mode === "signup") {
+        if (INVITED_EMAILS.length > 0 && !INVITED_EMAILS.includes(email.toLowerCase())) {
+          setError("Este e-mail não está na lista de convidados."); setLoading(false); return;
+        }
+        const r = await supaAuth.signUp(email, password, name);
+        if (r.error) { setError(r.error.message||r.error_description||"Erro ao criar conta."); setLoading(false); return; }
+        setError("Conta criada! Faça login agora."); setMode("login"); setLoading(false); return;
       }
-      const r = await supaAuth.signUp(email, password, name);
-      if (r.error) { setError(r.error.message); setLoading(false); return; }
-      setError("Conta criada! Faça login agora."); setMode("login"); setLoading(false); return;
+      const r = await supaAuth.signIn(email, password);
+      if (r.error || r.error_description) { setError(r.error_description||r.error?.message||"E-mail ou senha incorretos."); setLoading(false); return; }
+      const token = r.access_token;
+      if (!token) { setError("Erro ao conectar. Tente novamente."); setLoading(false); return; }
+      let userId = r.user?.id || r.id;
+      if (!userId && token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          userId = payload.sub;
+        } catch(e) {}
+      }
+      const userName = r.user?.user_metadata?.name || email.split("@")[0];
+      localStorage.setItem("velara_token", token);
+      localStorage.setItem("velara_user_id", userId || email);
+      localStorage.setItem("velara_user_name", userName);
+      onLogin({token, id: userId || email, name: userName, email});
+      setLoading(false);
+    } catch(err) {
+      setError("Erro de conexão: "+(err.message||"tente novamente")); setLoading(false);
     }
-    const r = await supaAuth.signIn(email, password);
-    if (r.error) { setError(r.error.message || "E-mail ou senha incorretos."); setLoading(false); return; }
-    // Decode user id from JWT token
-    const token = r.access_token;
-    let userId = r.user?.id || r.id;
-    if (!userId && token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        userId = payload.sub;
-      } catch(e) {}
-    }
-    const userName = r.user?.user_metadata?.name || email.split("@")[0];
-    localStorage.setItem("velara_token", token);
-    localStorage.setItem("velara_user_id", userId || email);
-    localStorage.setItem("velara_user_name", userName);
-    onLogin({token, id: userId || email, name: userName, email});
-    setLoading(false);
   };
 
   return (
