@@ -1488,6 +1488,8 @@ function AppMain({user, onLogout}) {
   const [alocExpanded,setAlocExpanded]=useState(false);
   const [importOpen,setImportOpen]=useState(false);
   const [notas,setNotas]=useLS("v4_notas","",userId);
+  const [objExpandido,setObjExpandido]=useState(null);
+  const [fParte,setFParte]=useState({descricao:"",valor:"",investId:""});
   const [pltDist,setPltDist]=useState(null);
   const [movDist,setMovDist]=useState(null);
 
@@ -1534,6 +1536,16 @@ function AppMain({user, onLogout}) {
   const saveDiv=()=>{if(!fDiv.credor||!fDiv.total)return;upsert(dividas,setDividas,{...fDiv,tipo:fDiv.tipo||"ativa",total:+String(fDiv.total).replace(",","."),pago:+String(fDiv.pago||0).replace(",",".")});};
   const saveCart=()=>{if(!fCart.nome||!fCart.limite)return;upsert(cartoes,setCartoes,{...fCart,limite:+String(fCart.limite).replace(",",".")});};
   const saveCCMov=()=>{if(!fCCMov.descricao||!fCCMov.valor||!fCCMov.cartao)return;upsert(ccMovs,setCCMovs,{...fCCMov,valor:+String(fCCMov.valor).replace(",",".")});};
+  const addParte=(objId)=>{
+    if(!fParte.descricao||!fParte.valor)return;
+    const val=+String(fParte.valor).replace(",",".");
+    const parte={id:uid(),descricao:fParte.descricao,valor:val,investId:fParte.investId||""};
+    setObjetivos(objetivos.map(o=>o.id===objId?{...o,partes:[...(o.partes||[]),parte]}:o));
+    setFParte({descricao:"",valor:"",investId:""});
+  };
+  const removeParte=(objId,parteId)=>{
+    setObjetivos(objetivos.map(o=>o.id===objId?{...o,partes:(o.partes||[]).filter(p=>p.id!==parteId)}:o));
+  };
   const saveAporte=()=>{
     if(!fAporte.valor||!extra)return;
     const v=+String(fAporte.valor).replace(",",".");
@@ -2310,9 +2322,12 @@ function AppMain({user, onLogout}) {
             {objetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Crie seus objetivos financeiros</div>
               :objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;const d=daysUntil(o.prazo);
                 const invVinc=o.investId?invests.find(i=>i.id===o.investId):null;
+                const partes=o.partes||[];
+                const totalPartes=partes.reduce((s,p)=>s+p.valor,0);
+                const isExp=objExpandido===o.id;
                 return <div key={o.id} className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${o.cor}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:9}}>
-                    <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{o.nome}</div>
+                  <div onClick={()=>setObjExpandido(isExp?null:o.id)} style={{display:"flex",justifyContent:"space-between",marginBottom:9,cursor:"pointer"}}>
+                    <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT,display:"flex",alignItems:"center",gap:6}}>{o.nome}<span style={{fontSize:10,color:TMUT}}>{isExp?"▲":"▼"}</span></div>
                       {invVinc&&<div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:2,fontWeight:600}}>📈 {invVinc.nome}{invVinc.banco?" · "+invVinc.banco:""}{invVinc.taxa?" · "+invVinc.taxa+"% a.a.":""}</div>}
                       {o.prazo&&<div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Prazo: {fdFull(o.prazo)}{d!==null&&<span style={{color:d<=30?C.gold:TSUB}}> · {d>0?`${d}d`:d===0?"Hoje":"Vencido"}</span>}</div>}
                       {o.obs&&<div style={{fontSize:10,color:"rgba(26,18,9,0.55)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>{o.obs}</div>}
@@ -2321,6 +2336,51 @@ function AppMain({user, onLogout}) {
                   </div>
                   <Bar value={o.atual} max={o.meta} color={o.cor} h={6}/>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>{pct.toFixed(1)}%</span><span>Falta {R(Math.max(o.meta-o.atual,0))}</span></div>
+
+                  {isExp&&(
+                    <div style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:10,border:"1px solid rgba(0,0,0,0.06)"}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Onde está esse dinheiro e para quê</div>
+                      {partes.length===0&&<div style={{fontSize:11,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Nenhum detalhamento ainda. Adicione abaixo.</div>}
+                      {partes.map(p=>{
+                        const pInv=p.investId?invests.find(i=>i.id===p.investId):null;
+                        return (
+                          <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
+                            <div>
+                              <div style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{p.descricao}</div>
+                              <div style={{fontSize:10,color:pInv?"#2D5A10":TMUT,fontFamily:"'DM Sans',sans-serif"}}>{pInv?`📈 ${pInv.nome}${pInv.banco?" · "+pInv.banco:""}`:"Sem vínculo"}</div>
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span className="num" style={{fontSize:12,fontWeight:700,color:o.cor}}>{R(p.valor)}</span>
+                              <button onClick={()=>removeParte(o.id,p.id)} style={{background:"none",border:"none",color:"#aaa",fontSize:15,cursor:"pointer",lineHeight:1}}>×</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {partes.length>0&&(
+                        <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>
+                          <span>Total detalhado</span>
+                          <span style={{fontWeight:700,color:totalPartes===o.atual?"#2D5A10":"#8B6000"}}>{R(totalPartes)} de {R(o.atual)}</span>
+                        </div>
+                      )}
+                      <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(0,0,0,0.06)"}}>
+                        <div style={{display:"flex",gap:6,marginBottom:6}}>
+                          <input placeholder="Finalidade (ex: Passagem aérea)" value={fParte.descricao} onChange={e=>setFParte({...fParte,descricao:e.target.value})}
+                            style={{flex:2,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 9px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
+                          <input placeholder="R$" value={fParte.valor} onChange={e=>setFParte({...fParte,valor:e.target.value})}
+                            style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 9px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
+                        </div>
+                        <div style={{display:"flex",gap:6}}>
+                          <select value={fParte.investId} onChange={e=>setFParte({...fParte,investId:e.target.value})}
+                            style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 9px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}>
+                            <option value="">Sem vínculo de investimento</option>
+                            {invests.map(i=><option key={i.id} value={i.id}>{i.nome}{i.banco?" · "+i.banco:""}</option>)}
+                          </select>
+                          <button onClick={()=>addParte(o.id)} style={{background:"#E8205F",border:"none",borderRadius:8,padding:"7px 14px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>+ Adicionar</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("aporte",null,o.id)}>+ Aporte</Btn>
                     <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("obj",o)}>Editar</Btn>
