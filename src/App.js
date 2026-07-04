@@ -107,15 +107,11 @@ const CHART_COLORS = ["#E8205F","#8FC43A","#5BA3D4","#D4A843","#A07BC8","#E05252
 
 const TARTAN_CSS = `background-color:#C4A96A;background-image:repeating-linear-gradient(0deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px),repeating-linear-gradient(90deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px);background-size:160px 160px;`;
 
-const LISTRAS_CSS = `background-color:#F3B8C4;background-image:repeating-linear-gradient(90deg,#F3B8C4 0px,#F3B8C4 26px,#B5182A 26px,#B5182A 52px);background-size:52px 100%;`;
-
-const SOL_STRIPES_CSS = `background-color:#FAF6ED;background-image:repeating-linear-gradient(90deg,#FAF6ED 0px,#FAF6ED 18px,#F0D89A 18px,#F0D89A 60px,#FAF6ED 60px,#FAF6ED 78px,#A9C4DE 78px,#A9C4DE 84px);background-size:84px 100%;`;
-
 const BG_OPTIONS = [
   { id:"tartan",    label:"Xadrez",   emoji:"🟫", isCss:true, css:TARTAN_CSS },
-  { id:"listras",   label:"Listras",  emoji:"🎀", isCss:true, css:LISTRAS_CSS },
-  { id:"sol",       label:"Sol",      emoji:"☀️", isCss:true, css:SOL_STRIPES_CSS },
-  { id:"cachorro",  label:"Dálmata",  emoji:"🐶", url:"/wallpapers/bg-cachorro-azul.jpg", contain:true, bgColor:"#2E4C82" },
+  { id:"listras",   label:"Listras",  emoji:"🎀", url:"/wallpapers/bg-listras-vermelhas.jpg" },
+  { id:"sol",       label:"Sol",      emoji:"☀️", url:"/wallpapers/bg-sol-amarelo.jpg" },
+  { id:"cachorro",  label:"Dálmata",  emoji:"🐶", url:"/wallpapers/bg-cachorro-azul.jpg", contain:true, bgColor:"#2E4C82", position:"left bottom", containSize:"auto 90%" },
 ];
 
 function bgToStyle(bg) {
@@ -125,9 +121,9 @@ function bgToStyle(bg) {
     return s;
   }
   if(bg.contain) {
-    return {backgroundColor:bg.bgColor||"#fff",backgroundImage:`url(${bg.url})`,backgroundSize:"contain",backgroundPosition:"center",backgroundRepeat:"no-repeat"};
+    return {backgroundColor:bg.bgColor||"#fff",backgroundImage:`url(${bg.url})`,backgroundSize:bg.containSize||"contain",backgroundPosition:bg.position||"center",backgroundRepeat:"no-repeat"};
   }
-  return {backgroundImage:`url(${bg.url})`,backgroundSize:"cover",backgroundPosition:bg.position||"center",backgroundRepeat:"no-repeat",backgroundAttachment:"fixed"};
+  return {backgroundImage:`url(${bg.url})`,backgroundSize:"cover",backgroundPosition:bg.position||"center",backgroundRepeat:"no-repeat"};
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
