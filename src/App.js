@@ -1288,9 +1288,14 @@ function LoginScreen({onLogin}) {
         setError("Conta criada! Faça login agora."); setMode("login"); setLoading(false); return;
       }
       const r = await supaAuth.signIn(email, password);
-      if (r.error || r.error_description) { setError(r.error_description||r.error?.message||"E-mail ou senha incorretos."); setLoading(false); return; }
       const token = r.access_token;
-      if (!token) { setError("Erro ao conectar. Tente novamente."); setLoading(false); return; }
+      if (!token) {
+        const msg = r.error_description || r.msg || r.error?.message || (typeof r.error==="string"?r.error:null) || r.message || "";
+        if(/confirm/i.test(msg)) setError("Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.");
+        else if(/invalid/i.test(msg)) setError("E-mail ou senha incorretos.");
+        else setError(msg ? "Erro: "+msg : "Erro ao conectar. Tente novamente.");
+        setLoading(false); return;
+      }
       let userId = r.user?.id || r.id;
       if (!userId && token) {
         try {
@@ -2507,4 +2512,4 @@ function AppMain({user, onLogout}) {
       <AlocacaoModal open={!!pltDist} onClose={()=>setPltDist(null)} plantao={pltDist} regras={regras} invests={invests} objetivos={objetivos} dividas={dividas} onConfirm={(alocs)=>confirmarDistribuicao(pltDist,alocs,false)}/>
     </div>
   );
-}
+}xx
