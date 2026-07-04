@@ -1314,17 +1314,19 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
 // ── Bloco de Notas (papel com clipe) ──────────────────────────────────────────
 function NotepadWidget({value, onChange}) {
   return (
-    <div style={{position:"relative",width:150,flexShrink:0}}>
-      <div style={{position:"absolute",top:8,left:14,width:126,height:96,background:"#A31621",transform:"rotate(-5deg)",borderRadius:3,boxShadow:"0 5px 14px rgba(0,0,0,0.22)"}}/>
-      <div style={{position:"relative",background:"linear-gradient(135deg,#EFE8DC,#E6DDCE)",borderRadius:"2px 2px 5px 5px",transform:"rotate(3deg)",boxShadow:"0 6px 16px rgba(0,0,0,0.2)",padding:"14px 9px 8px",minHeight:100}}>
-        <div style={{position:"absolute",top:-9,right:16,width:11,height:15,border:"2px solid #8a8580",borderRadius:"50% 50% 0 0",borderBottom:"none",background:"transparent",zIndex:2}}/>
-        <div style={{position:"absolute",top:-6,right:10,width:24,height:13,background:"linear-gradient(135deg,#C4202E,#8E1620)",borderRadius:2,boxShadow:"0 2px 5px rgba(0,0,0,0.35)",zIndex:3}}/>
-        <textarea
-          value={value}
-          onChange={e=>onChange(e.target.value)}
-          placeholder="Notas rápidas..."
-          style={{width:"100%",minHeight:82,background:"transparent",border:"none",outline:"none",resize:"none",fontFamily:"'DM Sans',sans-serif",fontSize:10.5,lineHeight:1.5,color:"#3A2F22"}}
-        />
+    <div style={{position:"fixed",top:180,right:24,width:170,zIndex:40,display:window.innerWidth>1300?"block":"none"}}>
+      <div style={{position:"relative"}}>
+        <div style={{position:"absolute",top:8,left:14,width:142,height:110,background:"#A31621",transform:"rotate(-5deg)",borderRadius:3,boxShadow:"0 6px 18px rgba(0,0,0,0.28)"}}/>
+        <div style={{position:"relative",background:"linear-gradient(135deg,#EFE8DC,#E6DDCE)",borderRadius:"2px 2px 5px 5px",transform:"rotate(3deg)",boxShadow:"0 8px 20px rgba(0,0,0,0.25)",padding:"16px 10px 10px",minHeight:114}}>
+          <div style={{position:"absolute",top:-10,right:20,width:12,height:16,border:"2px solid #8a8580",borderRadius:"50% 50% 0 0",borderBottom:"none",background:"transparent",zIndex:2}}/>
+          <div style={{position:"absolute",top:-7,right:13,width:26,height:14,background:"linear-gradient(135deg,#C4202E,#8E1620)",borderRadius:2,boxShadow:"0 2px 6px rgba(0,0,0,0.35)",zIndex:3}}/>
+          <textarea
+            value={value}
+            onChange={e=>onChange(e.target.value)}
+            placeholder="Notas rápidas..."
+            style={{width:"100%",minHeight:96,background:"transparent",border:"none",outline:"none",resize:"none",fontFamily:"'DM Sans',sans-serif",fontSize:11,lineHeight:1.5,color:"#3A2F22"}}
+          />
+        </div>
       </div>
     </div>
   );
@@ -1787,6 +1789,8 @@ function AppMain({user, onLogout}) {
         </div>
       </div>
 
+      <NotepadWidget value={notas} onChange={setNotas}/>
+
       {/* TOP BAR */}
       <div style={{background:"rgba(255,255,255,0.78)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",borderBottom:"1px solid rgba(0,0,0,0.08)",padding:"14px 16px 12px",position:"sticky",top:0,zIndex:50,boxShadow:"0 2px 20px rgba(0,0,0,0.1)"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
@@ -1827,9 +1831,8 @@ function AppMain({user, onLogout}) {
         {/* ══ DASHBOARD ══ */}
         {tab==="dashboard"&&(
           <div className="fade">
-            <div style={{display:"flex",justifyContent:"flex-end",alignItems:"flex-start",gap:14,marginBottom:16}}>
-              <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",marginTop:14}}>📥 Importar Extrato</button>
-              <NotepadWidget value={notas} onChange={setNotas}/>
+            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
+              <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>📥 Importar Extrato</button>
             </div>
 
             {/* ── Linha 1: Cards resumo ── */}
