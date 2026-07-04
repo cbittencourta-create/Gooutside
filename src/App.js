@@ -2538,4 +2538,4 @@ function AppMain({user, onLogout}) {
       <AlocacaoModal open={!!pltDist} onClose={()=>setPltDist(null)} plantao={pltDist} regras={regras} invests={invests} objetivos={objetivos} dividas={dividas} onConfirm={(alocs)=>confirmarDistribuicao(pltDist,alocs,false)}/>
     </div>
   );
-}xx
+}
