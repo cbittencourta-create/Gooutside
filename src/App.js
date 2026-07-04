@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 
 const SUPA_URL = "https://hbzldrnrbxvnkrbnntoe.supabase.co";
 const SUPA_KEY = "sb_publishable_Jr804JmMgoUU3x3pf5wW7g_yRPZaCYi";
@@ -1358,6 +1358,28 @@ function LoginScreen({onLogin}) {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props){super(props);this.state={hasError:false,error:null};}
+  static getDerivedStateFromError(error){return{hasError:true,error};}
+  componentDidCatch(error,info){console.error("Erro capturado:",error,info);}
+  render(){
+    if(this.state.hasError){
+      return (
+        <div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"#F5F0E8",padding:24,fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>
+          <div style={{fontSize:40,marginBottom:16}}>⚠️</div>
+          <div style={{fontSize:18,fontWeight:700,color:"#1A1209",marginBottom:10}}>Algo deu errado</div>
+          <div style={{fontSize:13,color:"#5A4A3A",marginBottom:20,maxWidth:400,wordBreak:"break-word"}}>{String(this.state.error?.message||this.state.error||"Erro desconhecido")}</div>
+          <button onClick={()=>{localStorage.clear();window.location.reload();}}
+            style={{background:"#E8205F",color:"#fff",border:"none",borderRadius:12,padding:"12px 24px",fontSize:14,fontWeight:700,cursor:"pointer"}}>
+            🔄 Limpar dados e recarregar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [user, setUser] = useState(() => {
     const token = localStorage.getItem("velara_token");
@@ -1370,7 +1392,11 @@ export default function App() {
 
   if (!user) return <LoginScreen onLogin={u=>{localStorage.setItem("velara_user_email",u.email);setUser(u);}}/>;
 
-  return <AppMain user={user} onLogout={()=>{supaAuth.signOut(user.token);localStorage.removeItem("velara_token");localStorage.removeItem("velara_user_id");localStorage.removeItem("velara_user_name");localStorage.removeItem("velara_user_email");setUser(null);}}/>;
+  return (
+    <ErrorBoundary>
+      <AppMain user={user} onLogout={()=>{supaAuth.signOut(user.token);localStorage.removeItem("velara_token");localStorage.removeItem("velara_user_id");localStorage.removeItem("velara_user_name");localStorage.removeItem("velara_user_email");setUser(null);}}/>
+    </ErrorBoundary>
+  );
 }
 
 function AppMain({user, onLogout}) {
