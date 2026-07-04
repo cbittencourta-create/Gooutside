@@ -1451,7 +1451,7 @@ function AppMain({user, onLogout}) {
   const [fEmp,setFEmp]=useState({nome:"",contato:"",prazo:"30",cor:"#E8205F"});
   const [fPlt,setFPlt]=useState({empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
   const [fInv,setFInv]=useState({nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",data:today(),obs:""});
-  const [fObj,setFObj]=useState({nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:""});
+  const [fObj,setFObj]=useState({nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
   const [fDiv,setFDiv]=useState({credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
   const [fCart,setFCart]=useState({nome:"",bandeira:"",limite:"",fechamento:"",vencimento:""});
   const [fCCMov,setFCCMov]=useState({cartao:"",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
@@ -1467,7 +1467,7 @@ function AppMain({user, onLogout}) {
     if(m==="emp")   setFEmp(item?{...item}:{nome:"",contato:"",prazo:"30",cor:"#E8205F"});
     if(m==="plt")   setFPlt(item?{...item}:{empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
     if(m==="inv")   setFInv(item?{...item}:{nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",data:today(),obs:""});
-    if(m==="obj")   setFObj(item?{...item}:{nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:""});
+    if(m==="obj")   setFObj(item?{...item}:{nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
     if(m==="div")   setFDiv(item?{...item}:{credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
     if(m==="cart")  setFCart(item?{...item}:{nome:"",bandeira:"",limite:"",fechamento:"",vencimento:""});
     if(m==="ccmov") setFCCMov(item?{...item}:{cartao:ex||"",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
@@ -1486,7 +1486,14 @@ function AppMain({user, onLogout}) {
   const saveDiv=()=>{if(!fDiv.credor||!fDiv.total)return;upsert(dividas,setDividas,{...fDiv,tipo:fDiv.tipo||"ativa",total:+String(fDiv.total).replace(",","."),pago:+String(fDiv.pago||0).replace(",",".")});};
   const saveCart=()=>{if(!fCart.nome||!fCart.limite)return;upsert(cartoes,setCartoes,{...fCart,limite:+String(fCart.limite).replace(",",".")});};
   const saveCCMov=()=>{if(!fCCMov.descricao||!fCCMov.valor||!fCCMov.cartao)return;upsert(ccMovs,setCCMovs,{...fCCMov,valor:+String(fCCMov.valor).replace(",",".")});};
-  const saveAporte=()=>{if(!fAporte.valor||!extra)return;const v=+String(fAporte.valor).replace(",",".");setObjetivos(objetivos.map(o=>o.id===extra?{...o,atual:+o.atual+v}:o));closeM();};
+  const saveAporte=()=>{
+    if(!fAporte.valor||!extra)return;
+    const v=+String(fAporte.valor).replace(",",".");
+    const obj=objetivos.find(o=>o.id===extra);
+    setObjetivos(objetivos.map(o=>o.id===extra?{...o,atual:+o.atual+v}:o));
+    if(obj?.investId) setInvests(invests.map(i=>i.id===obj.investId?{...i,aporte:i.aporte+v}:i));
+    closeM();
+  };
   const savePgto=()=>{if(!fPgto.valor||!extra)return;const v=+String(fPgto.valor).replace(",",".");setDividas(dividas.map(d=>d.id===extra?{...d,pago:Math.min(+d.pago+v,+d.total)}:d));closeM();};
 
   const getPltStatus=p=>{if(p.status==="recebido")return"recebido";if(p.status==="cancelado")return"cancelado";if(isPast(p.previsao))return"atrasado";return"pendente";};
@@ -1513,8 +1520,16 @@ function AppMain({user, onLogout}) {
       const getNome=()=>{if(a.tipo==="investimento"){const i=invests.find(x=>x.id===a.destinoId);return i?`${i.nome}${i.banco?" · "+i.banco:""}`:a.destinoNome||"—";}if(a.tipo==="objetivo")return objetivos.find(x=>x.id===a.destinoId)?.nome||a.destinoNome||"—";if(a.tipo==="divida"||a.tipo==="fundo_divida")return dividas.find(x=>x.id===a.destinoId)?.credor||a.destinoNome||"—";return"Livre";};
       reg.itens.push({tipo:a.tipo,destinoId:a.destinoId,destinoNome:a.tipo==="livre"?"Livre":getNome(),banco:inv?.banco||"",valor:val});
       if(a.tipo==="investimento"&&a.destinoId)nInv=nInv.map(i=>i.id===a.destinoId?{...i,aporte:i.aporte+val}:i);
-      if(a.tipo==="objetivo"&&a.destinoId)nObj=nObj.map(o=>o.id===a.destinoId?{...o,atual:+o.atual+val}:o);
-      if((a.tipo==="divida"||a.tipo==="fundo_divida")&&a.destinoId)nDiv=nDiv.map(d=>d.id===a.destinoId?{...d,pago:Math.min(+d.pago+val,+d.total)}:d);
+      if(a.tipo==="objetivo"&&a.destinoId){
+        nObj=nObj.map(o=>o.id===a.destinoId?{...o,atual:+o.atual+val}:o);
+        const objVinc=objetivos.find(o=>o.id===a.destinoId);
+        if(objVinc?.investId) nInv=nInv.map(i=>i.id===objVinc.investId?{...i,aporte:i.aporte+val}:i);
+      }
+      if((a.tipo==="divida"||a.tipo==="fundo_divida")&&a.destinoId){
+        nDiv=nDiv.map(d=>d.id===a.destinoId?{...d,pago:Math.min(+d.pago+val,+d.total)}:d);
+        const divVinc=dividas.find(d=>d.id===a.destinoId);
+        if(a.tipo==="fundo_divida"&&divVinc?.investId) nInv=nInv.map(i=>i.id===divVinc.investId?{...i,aporte:i.aporte+val}:i);
+      }
     });
     setInvests(nInv);setObjetivos(nObj);setDividas(nDiv);
     setAlocacoes([reg,...alocacoes]);
@@ -1554,8 +1569,8 @@ function AppMain({user, onLogout}) {
     .reduce((s,m)=>s+m.valor,0);
   const saldoReal=saldoIniValor+totalLivreAlocado-totalSaidasPeriodo;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
-  const totalFundoDivida=dividas.filter(d=>d.tipo==="fundo").reduce((s,d)=>s+(+d.pago||0),0);
-  const totalObjetivos=objetivos.reduce((s,o)=>s+(+o.atual||0),0);
+  const totalFundoDivida=dividas.filter(d=>d.tipo==="fundo"&&!d.investId).reduce((s,d)=>s+(+d.pago||0),0);
+  const totalObjetivos=objetivos.filter(o=>!o.investId).reduce((s,o)=>s+(+o.atual||0),0);
   const totalPatrimonio=totalInvestido+totalFundoDivida+totalObjetivos;
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
@@ -2182,7 +2197,12 @@ function AppMain({user, onLogout}) {
               <Btn variant="primary" style={{fontSize:12,padding:"9px 14px"}} onClick={()=>openM("inv")}>+ Investimento</Btn>
             </div>
             {invests.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum investimento registrado</div>
-              :invests.map(i=>{const rend=i.aporte*(parseFloat(i.taxa)||0)/100/12;
+              :invests.map(i=>{
+                const rend=i.aporte*(parseFloat(i.taxa)||0)/100/12;
+                const objsVinc=objetivos.filter(o=>o.investId===i.id);
+                const divsVinc=dividas.filter(d=>d.tipo==="fundo"&&d.investId===i.id);
+                const totalReservado=objsVinc.reduce((s,o)=>s+(+o.atual||0),0)+divsVinc.reduce((s,d)=>s+(+d.pago||0),0);
+                const livreNoInvest=i.aporte-totalReservado;
                 return <div key={i.id} className={CARD} style={{marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                     <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{i.nome}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>{i.tipo}{i.banco&&` · ${i.banco}`} · desde {fd(i.data)}</div></div>
@@ -2193,6 +2213,27 @@ function AppMain({user, onLogout}) {
                     <div style={{width:1,background:"rgba(255,255,255,0.2)"}}/>
                     <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>REND./MÊS</div><div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{R(rend)}</div></div>
                   </div>
+                  {(objsVinc.length>0||divsVinc.length>0)&&(
+                    <div style={{background:"rgba(91,163,212,0.08)",border:"1px solid rgba(91,163,212,0.25)",borderRadius:10,padding:"9px 11px",marginBottom:9}}>
+                      <div style={{fontSize:9,fontWeight:700,color:"#1A4A6E",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>Reservado para</div>
+                      {objsVinc.map(o=>(
+                        <div key={o.id} style={{display:"flex",justifyContent:"space-between",padding:"2px 0"}}>
+                          <span style={{fontSize:11,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>🎯 {o.nome}</span>
+                          <span className="num" style={{fontSize:11,fontWeight:700,color:"#1A4A6E"}}>{R(o.atual)}</span>
+                        </div>
+                      ))}
+                      {divsVinc.map(d=>(
+                        <div key={d.id} style={{display:"flex",justifyContent:"space-between",padding:"2px 0"}}>
+                          <span style={{fontSize:11,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>🏦 {d.credor}</span>
+                          <span className="num" style={{fontSize:11,fontWeight:700,color:"#1A4A6E"}}>{R(d.pago)}</span>
+                        </div>
+                      ))}
+                      <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0 0",marginTop:4,borderTop:"1px solid rgba(91,163,212,0.2)"}}>
+                        <span style={{fontSize:10,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Livre neste investimento</span>
+                        <span className="num" style={{fontSize:11,fontWeight:700,color:livreNoInvest>=0?"#2D5A10":"#8B1A1A"}}>{R(livreNoInvest)}</span>
+                      </div>
+                    </div>
+                  )}
                   {i.obs&&<div style={{fontSize:11,color:"rgba(26,18,9,0.55)",marginBottom:8,fontFamily:"'DM Sans',sans-serif"}}>{i.obs}</div>}
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("inv",i)}>Editar</Btn>
@@ -2213,9 +2254,11 @@ function AppMain({user, onLogout}) {
             </div>
             {objetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Crie seus objetivos financeiros</div>
               :objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;const d=daysUntil(o.prazo);
+                const invVinc=o.investId?invests.find(i=>i.id===o.investId):null;
                 return <div key={o.id} className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${o.cor}`}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:9}}>
                     <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{o.nome}</div>
+                      {invVinc&&<div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:2,fontWeight:600}}>📈 {invVinc.nome}{invVinc.banco?" · "+invVinc.banco:""}{invVinc.taxa?" · "+invVinc.taxa+"% a.a.":""}</div>}
                       {o.prazo&&<div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Prazo: {fdFull(o.prazo)}{d!==null&&<span style={{color:d<=30?C.gold:TSUB}}> · {d>0?`${d}d`:d===0?"Hoje":"Vencido"}</span>}</div>}
                       {o.obs&&<div style={{fontSize:10,color:"rgba(26,18,9,0.55)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>{o.obs}</div>}
                     </div>
@@ -2249,9 +2292,11 @@ function AppMain({user, onLogout}) {
                 {dividas.filter(d=>d.tipo==="fundo").map(d=>{
                   const pct=+d.total>0?Math.min(+d.pago/+d.total*100,100):0;
                   const falta=Math.max(+d.total-+d.pago,0);
+                  const invVinc=d.investId?invests.find(i=>i.id===d.investId):null;
                   return <div key={d.id} className={CARD} style={{marginBottom:10,borderLeft:"3px solid #FFB347"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                       <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{d.credor}</div>
+                        {invVinc&&<div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:2,fontWeight:600}}>📈 {invVinc.nome}{invVinc.banco?" · "+invVinc.banco:""}{invVinc.taxa?" · "+invVinc.taxa+"% a.a.":""}</div>}
                         {d.obs&&<div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>{d.obs}</div>}
                       </div>
                       <div style={{textAlign:"right"}}>
@@ -2477,8 +2522,13 @@ function AppMain({user, onLogout}) {
 
       <Modal open={modal==="obj"} onClose={closeM} title={edit?"Editar Objetivo":"Novo Objetivo"}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <Inp label="Nome" placeholder="Ex: Reserva de emergência..." value={fObj.nome} onChange={e=>setFObj({...fObj,nome:e.target.value})}/>
+          <Inp label="Nome" placeholder="Ex: Viagem França..." value={fObj.nome} onChange={e=>setFObj({...fObj,nome:e.target.value})}/>
           <G2><Inp label="Meta (R$)" placeholder="0,00" value={fObj.meta} onChange={e=>setFObj({...fObj,meta:e.target.value})}/><Inp label="Já tenho (R$)" placeholder="0,00" value={fObj.atual} onChange={e=>setFObj({...fObj,atual:e.target.value})}/></G2>
+          <Sel label="Guardado em qual investimento?" value={fObj.investId} onChange={e=>setFObj({...fObj,investId:e.target.value})}>
+            <option value="">Nenhum (sem vínculo)</option>
+            {invests.map(i=><option key={i.id} value={i.id}>{i.nome}{i.banco?" · "+i.banco:""}{i.taxa?" · "+i.taxa+"% a.a.":""}</option>)}
+          </Sel>
+          {invests.length===0&&<div style={{fontSize:11,color:C.modalSub,fontFamily:"'DM Sans',sans-serif"}}>Cadastre um investimento primeiro para vincular.</div>}
           <G2><Inp label="Prazo" type="date" value={fObj.prazo} onChange={e=>setFObj({...fObj,prazo:e.target.value})}/><div><div style={{fontSize:11,fontWeight:600,color:C.modalSub,letterSpacing:".06em",textTransform:"uppercase",marginBottom:5}}>Cor</div><input type="color" style={{background:C.inputBg,border:`1.5px solid ${C.inputBorder}`,borderRadius:10,padding:4,width:"100%",height:44,cursor:"pointer"}} value={fObj.cor} onChange={e=>setFObj({...fObj,cor:e.target.value})}/></div></G2>
           <Inp label="Observações" placeholder="Opcional" value={fObj.obs} onChange={e=>setFObj({...fObj,obs:e.target.value})}/>
           <Btn variant="primary" onClick={saveObj}>Salvar</Btn>
@@ -2503,6 +2553,15 @@ function AppMain({user, onLogout}) {
           </div>
           <Inp label="Credor" placeholder="Ex: Banco Itaú..." value={fDiv.credor} onChange={e=>setFDiv({...fDiv,credor:e.target.value})}/>
           <G2><Inp label="Total (R$)" placeholder="0,00" value={fDiv.total} onChange={e=>setFDiv({...fDiv,total:e.target.value})}/><Inp label="Já pago (R$)" placeholder="0,00" value={fDiv.pago} onChange={e=>setFDiv({...fDiv,pago:e.target.value})}/></G2>
+          {(fDiv.tipo||"ativa")==="fundo"&&(
+            <>
+              <Sel label="Guardado em qual investimento?" value={fDiv.investId||""} onChange={e=>setFDiv({...fDiv,investId:e.target.value})}>
+                <option value="">Nenhum (sem vínculo)</option>
+                {invests.map(i=><option key={i.id} value={i.id}>{i.nome}{i.banco?" · "+i.banco:""}{i.taxa?" · "+i.taxa+"% a.a.":""}</option>)}
+              </Sel>
+              {invests.length===0&&<div style={{fontSize:11,color:C.modalSub,fontFamily:"'DM Sans',sans-serif"}}>Cadastre um investimento primeiro para vincular.</div>}
+            </>
+          )}
           <G2><Inp label="Prazo" type="date" value={fDiv.prazo} onChange={e=>setFDiv({...fDiv,prazo:e.target.value})}/><Inp label="Parcelas" placeholder="Ex: 12x de R$500" value={fDiv.parcelas} onChange={e=>setFDiv({...fDiv,parcelas:e.target.value})}/></G2>
           <Inp label="Observações" placeholder="Opcional" value={fDiv.obs} onChange={e=>setFDiv({...fDiv,obs:e.target.value})}/>
           <Btn variant="primary" onClick={saveDiv}>Salvar</Btn>
