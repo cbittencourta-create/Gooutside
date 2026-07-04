@@ -1310,6 +1310,26 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
   );
 }
 
+
+// ── Bloco de Notas (papel com clipe) ──────────────────────────────────────────
+function NotepadWidget({value, onChange}) {
+  return (
+    <div style={{position:"relative",width:150,flexShrink:0}}>
+      <div style={{position:"absolute",top:8,left:14,width:126,height:96,background:"#A31621",transform:"rotate(-5deg)",borderRadius:3,boxShadow:"0 5px 14px rgba(0,0,0,0.22)"}}/>
+      <div style={{position:"relative",background:"linear-gradient(135deg,#EFE8DC,#E6DDCE)",borderRadius:"2px 2px 5px 5px",transform:"rotate(3deg)",boxShadow:"0 6px 16px rgba(0,0,0,0.2)",padding:"14px 9px 8px",minHeight:100}}>
+        <div style={{position:"absolute",top:-9,right:16,width:11,height:15,border:"2px solid #8a8580",borderRadius:"50% 50% 0 0",borderBottom:"none",background:"transparent",zIndex:2}}/>
+        <div style={{position:"absolute",top:-6,right:10,width:24,height:13,background:"linear-gradient(135deg,#C4202E,#8E1620)",borderRadius:2,boxShadow:"0 2px 5px rgba(0,0,0,0.35)",zIndex:3}}/>
+        <textarea
+          value={value}
+          onChange={e=>onChange(e.target.value)}
+          placeholder="Notas rápidas..."
+          style={{width:"100%",minHeight:82,background:"transparent",border:"none",outline:"none",resize:"none",fontFamily:"'DM Sans',sans-serif",fontSize:10.5,lineHeight:1.5,color:"#3A2F22"}}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ── Login Screen ─────────────────────────────────────────────────────────────
 function LoginScreen({onLogin}) {
   const [mode, setMode]       = useState("login"); // login | signup
@@ -1465,6 +1485,7 @@ function AppMain({user, onLogout}) {
   useEffect(()=>{fetchCDI().then(v=>{if(v)setCdiAtual(v);});},[]);
   const [alocExpanded,setAlocExpanded]=useState(false);
   const [importOpen,setImportOpen]=useState(false);
+  const [notas,setNotas]=useLS("v4_notas","",userId);
   const [pltDist,setPltDist]=useState(null);
   const [movDist,setMovDist]=useState(null);
 
@@ -1806,8 +1827,9 @@ function AppMain({user, onLogout}) {
         {/* ══ DASHBOARD ══ */}
         {tab==="dashboard"&&(
           <div className="fade">
-            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
-              <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>📥 Importar Extrato</button>
+            <div style={{display:"flex",justifyContent:"flex-end",alignItems:"flex-start",gap:14,marginBottom:16}}>
+              <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",marginTop:14}}>📥 Importar Extrato</button>
+              <NotepadWidget value={notas} onChange={setNotas}/>
             </div>
 
             {/* ── Linha 1: Cards resumo ── */}
