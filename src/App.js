@@ -1296,16 +1296,11 @@ function LoginScreen({onLogin}) {
         else setError(msg ? "Erro: "+msg : "Erro ao conectar. Tente novamente.");
         setLoading(false); return;
       }
-      let userId = r.user?.id || r.id;
-      if (!userId && token) {
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]));
-          userId = payload.sub;
-        } catch(e) {}
-      }
+      // Usar o e-mail como identificador (compatível com dados já salvos)
+      const userId = email;
       const userName = r.user?.user_metadata?.name || email.split("@")[0];
       localStorage.setItem("velara_token", token);
-      localStorage.setItem("velara_user_id", userId || email);
+      localStorage.setItem("velara_user_id", userId);
       localStorage.setItem("velara_user_name", userName);
       onLogin({token, id: userId || email, name: userName, email});
       setLoading(false);
