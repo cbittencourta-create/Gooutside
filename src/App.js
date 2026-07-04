@@ -105,11 +105,23 @@ const DEST_COLORS = {
 
 const CHART_COLORS = ["#E8205F","#8FC43A","#5BA3D4","#D4A843","#A07BC8","#E05252","#38B2AC","#ED8936","#48BB78"];
 
+const TARTAN_CSS = `background-color:#C4A96A;background-image:repeating-linear-gradient(0deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px),repeating-linear-gradient(90deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px);background-size:160px 160px;`;
+
 const BG_OPTIONS = [
+  { id:"tartan",    label:"Xadrez",   emoji:"🟫", isCss:true, css:TARTAN_CSS },
   { id:"listras",   label:"Listras",  emoji:"🎀", url:"/wallpapers/bg-listras-vermelhas.jpg" },
   { id:"sol",       label:"Sol",      emoji:"☀️", url:"/wallpapers/bg-sol-amarelo.jpg" },
   { id:"cachorro",  label:"Dálmata",  emoji:"🐶", url:"/wallpapers/bg-cachorro-azul.jpg" },
 ];
+
+function bgToStyle(bg) {
+  if(!bg) return {};
+  if(bg.isCss) {
+    const s={}; bg.css.split(";").filter(Boolean).forEach(r=>{const[k,...v]=r.split(":");if(k&&v.length)s[k.trim().replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]=v.join(":").trim();});
+    return s;
+  }
+  return {backgroundImage:`url(${bg.url})`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"};
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const R = v => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v||0);
@@ -1402,7 +1414,7 @@ export default function App() {
 
 function AppMain({user, onLogout}) {
   const userId = user.id;
-  const [bgId,      setBgId]      = useLS("v4_bg",     "listras", userId);
+  const [bgId,      setBgId]      = useLS("v4_bg",     "tartan", userId);
   const [cats,      setCats]      = useLS("v4_cats",   DEFAULT_CATS, userId);
   const [orcamento, setOrcamento] = useLS("v4_orc",    {}, userId);
   const [movs,      setMovs]      = useLS("v4_movs",   [], userId);
@@ -1611,7 +1623,7 @@ function AppMain({user, onLogout}) {
 
   return (
     <div style={{minHeight:"100vh",color:TXT,fontFamily:"'Cormorant Garamond','Georgia',serif",position:"relative"}}>
-      <div className="wallpaper-bg" style={{backgroundImage:`url(${BG_OPTIONS.find(b=>b.id===bgId)?.url||BG_OPTIONS[0].url})`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}}/>
+      <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -1697,7 +1709,7 @@ function AppMain({user, onLogout}) {
             {BG_OPTIONS.map(bg=>(
               <button key={bg.id} onClick={()=>setBgId(bg.id)}
                 style={{flex:1,background:bgId===bg.id?"rgba(232,32,95,0.5)":"rgba(255,255,255,0.08)",border:`2px solid ${bgId===bg.id?"#E8205F":"rgba(255,255,255,0.15)"}`,borderRadius:10,padding:0,cursor:"pointer",overflow:"hidden",display:"flex",flexDirection:"column",alignItems:"center"}}>
-                <div style={{width:"100%",height:36,backgroundImage:`url(${bg.url})`,backgroundSize:"cover",backgroundPosition:"center"}}/>
+                <div style={{width:"100%",height:36,...bgToStyle(bg)}}/>
                 <div style={{fontSize:8,fontWeight:600,color:"#fff",padding:"3px 0"}}>{bg.emoji} {bg.label}</div>
               </button>
             ))}
