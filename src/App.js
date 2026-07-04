@@ -146,6 +146,25 @@ const CATS_OUT = ["🍔 Alimentação","🚗 Transporte","🏠 Moradia","💊 Sa
 const CATS_IN  = ["🏥 Plantão","💼 Consultório","🎓 Ensino","💰 Investimento","🎁 Presente","📦 Outros"];
 const INVEST_T = ["CDB","LCI/LCA","Tesouro Direto","Ações","FIIs","Poupança","Previdência","Criptomoedas","Outro"];
 
+async function fetchCDI() {
+  try {
+    const cached = JSON.parse(localStorage.getItem("velara_cdi")||"null");
+    const hoje = today();
+    if(cached && cached.data===hoje) return cached.valor;
+    const r = await fetch("https://api.bcb.gov.br/dados/serie/bcdata.sgs.4389/dados/ultimos/1?formato=json");
+    const d = await r.json();
+    const valor = parseFloat(d?.[0]?.valor);
+    if(valor>0){
+      localStorage.setItem("velara_cdi", JSON.stringify({valor, data:hoje}));
+      return valor;
+    }
+    return cached?.valor || null;
+  } catch { 
+    const cached = JSON.parse(localStorage.getItem("velara_cdi")||"null");
+    return cached?.valor || null;
+  }
+}
+
 // ── SVG Donut ──────────────────────────────────────────────────────────────────
 function Donut({data,size=110,thick=15}) {
   const total=data.reduce((s,d)=>s+d.v,0);
@@ -1442,6 +1461,8 @@ function AppMain({user, onLogout}) {
   const [extra,setExtra]=useState(null);
   const [selMes,setSelMes]=useState(today().slice(0,7));
   const [sideOpen,setSideOpen]=useState(false);
+  const [cdiAtual,setCdiAtual]=useState(()=>{try{return JSON.parse(localStorage.getItem("velara_cdi")||"null")?.valor||null;}catch{return null;}});
+  useEffect(()=>{fetchCDI().then(v=>{if(v)setCdiAtual(v);});},[]);
   const [alocExpanded,setAlocExpanded]=useState(false);
   const [importOpen,setImportOpen]=useState(false);
   const [pltDist,setPltDist]=useState(null);
@@ -1450,7 +1471,7 @@ function AppMain({user, onLogout}) {
   const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
   const [fEmp,setFEmp]=useState({nome:"",contato:"",prazo:"30",cor:"#E8205F"});
   const [fPlt,setFPlt]=useState({empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
-  const [fInv,setFInv]=useState({nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",data:today(),obs:""});
+  const [fInv,setFInv]=useState({nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
   const [fObj,setFObj]=useState({nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
   const [fDiv,setFDiv]=useState({credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
   const [fCart,setFCart]=useState({nome:"",bandeira:"",limite:"",fechamento:"",vencimento:""});
@@ -1466,7 +1487,7 @@ function AppMain({user, onLogout}) {
     if(m==="mov")   setFMov(item?{...item}:{tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
     if(m==="emp")   setFEmp(item?{...item}:{nome:"",contato:"",prazo:"30",cor:"#E8205F"});
     if(m==="plt")   setFPlt(item?{...item}:{empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
-    if(m==="inv")   setFInv(item?{...item}:{nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",data:today(),obs:""});
+    if(m==="inv")   setFInv(item?{...item,taxaModo:item.taxaModo||"fixo"}:{nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
     if(m==="obj")   setFObj(item?{...item}:{nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
     if(m==="div")   setFDiv(item?{...item}:{credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
     if(m==="cart")  setFCart(item?{...item}:{nome:"",bandeira:"",limite:"",fechamento:"",vencimento:""});
@@ -1481,7 +1502,11 @@ function AppMain({user, onLogout}) {
   const saveMov=()=>{if(!fMov.descricao||!fMov.valor)return;upsert(movs,setMovs,{...fMov,valor:+String(fMov.valor).replace(",",".")});};
   const saveEmp=()=>{if(!fEmp.nome)return;upsert(empresas,setEmpresas,fEmp);};
   const savePlt=()=>{if(!fPlt.empresa||!fPlt.data||!fPlt.valorTotal)return;upsert(plantoes,setPlantoes,{...fPlt,valorTotal:+fPlt.valorTotal});};
-  const saveInv=()=>{if(!fInv.nome||!fInv.aporte)return;upsert(invests,setInvests,{...fInv,aporte:+String(fInv.aporte).replace(",",".")});};
+  const saveInv=()=>{
+    if(!fInv.nome||!fInv.aporte)return;
+    upsert(invests,setInvests,{...fInv,aporte:+String(fInv.aporte).replace(",","."),percCDI:fInv.taxaModo==="cdi"?+String(fInv.percCDI||0).replace(",","."):"",taxa:fInv.taxaModo==="fixo"?fInv.taxa:""});
+  };
+  const taxaEfetiva=inv=>inv.taxaModo==="cdi"&&inv.percCDI?(cdiAtual?cdiAtual*(+inv.percCDI)/100:0):(parseFloat(inv.taxa)||0);
   const saveObj=()=>{if(!fObj.nome||!fObj.meta)return;upsert(objetivos,setObjetivos,{...fObj,meta:+String(fObj.meta).replace(",","."),atual:+String(fObj.atual||0).replace(",",".")});};
   const saveDiv=()=>{if(!fDiv.credor||!fDiv.total)return;upsert(dividas,setDividas,{...fDiv,tipo:fDiv.tipo||"ativa",total:+String(fDiv.total).replace(",","."),pago:+String(fDiv.pago||0).replace(",",".")});};
   const saveCart=()=>{if(!fCart.nome||!fCart.limite)return;upsert(cartoes,setCartoes,{...fCart,limite:+String(fCart.limite).replace(",",".")});};
@@ -1616,7 +1641,7 @@ function AppMain({user, onLogout}) {
     ym,
     entradas:movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)+plantoes.filter(p=>monthKey(p.previsao)===ym).reduce((s,p)=>s+p.valorTotal,0),
     saidas:movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)+ccMovs.filter(m=>monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
-    rendimentos:invests.reduce((s,i)=>s+(i.aporte*(parseFloat(i.taxa)||0)/100/12),0),
+    rendimentos:invests.reduce((s,i)=>s+(i.aporte*taxaEfetiva(i)/100/12),0),
   })).map(f=>({...f,saldo:f.entradas-f.saidas+f.rendimentos})),[movs,plantoes,invests,ccMovs]);
   const maxFc=Math.max(...forecast.map(f=>Math.max(f.entradas,f.saidas,1)));
 
@@ -2198,7 +2223,8 @@ function AppMain({user, onLogout}) {
             </div>
             {invests.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum investimento registrado</div>
               :invests.map(i=>{
-                const rend=i.aporte*(parseFloat(i.taxa)||0)/100/12;
+                const txEf=taxaEfetiva(i);
+                const rend=i.aporte*txEf/100/12;
                 const objsVinc=objetivos.filter(o=>o.investId===i.id);
                 const divsVinc=dividas.filter(d=>d.tipo==="fundo"&&d.investId===i.id);
                 const totalReservado=objsVinc.reduce((s,o)=>s+(+o.atual||0),0)+divsVinc.reduce((s,d)=>s+(+d.pago||0),0);
@@ -2209,7 +2235,11 @@ function AppMain({user, onLogout}) {
                     <div className="num" style={{fontSize:16,fontWeight:700,color:C.green}}>{R(i.aporte)}</div>
                   </div>
                   <div style={{display:"flex",gap:8,background:"rgba(0,0,0,0.05)",borderRadius:10,border:"1px solid rgba(0,0,0,0.07)",padding:"9px 11px",marginBottom:9}}>
-                    <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>TAXA A.A.</div><div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{i.taxa||"—"}%</div></div>
+                    <div style={{flex:1,textAlign:"center"}}>
+                      <div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>TAXA A.A.</div>
+                      <div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{txEf?txEf.toFixed(2):"—"}%</div>
+                      {i.taxaModo==="cdi"&&i.percCDI&&<div style={{fontSize:8,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>{i.percCDI}% do CDI</div>}
+                    </div>
                     <div style={{width:1,background:"rgba(255,255,255,0.2)"}}/>
                     <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>REND./MÊS</div><div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{R(rend)}</div></div>
                   </div>
@@ -2511,9 +2541,24 @@ function AppMain({user, onLogout}) {
 
       <Modal open={modal==="inv"} onClose={closeM} title={edit?"Editar Investimento":"Novo Investimento"}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <Inp label="Nome" placeholder="Ex: CDB Banco Inter 115% CDI" value={fInv.nome} onChange={e=>setFInv({...fInv,nome:e.target.value})}/>
+          <Inp label="Nome" placeholder="Ex: CDB Banco C6" value={fInv.nome} onChange={e=>setFInv({...fInv,nome:e.target.value})}/>
           <G2><Sel label="Tipo" value={fInv.tipo} onChange={e=>setFInv({...fInv,tipo:e.target.value})}>{INVEST_T.map(t=><option key={t} value={t}>{t}</option>)}</Sel><Inp label="Banco / Corretora" placeholder="XP, Nu, Itaú..." value={fInv.banco} onChange={e=>setFInv({...fInv,banco:e.target.value})}/></G2>
-          <G2><Inp label="Aporte (R$)" placeholder="0,00" value={fInv.aporte} onChange={e=>setFInv({...fInv,aporte:e.target.value})}/><Inp label="Taxa a.a. (%)" placeholder="Ex: 12.5" value={fInv.taxa} onChange={e=>setFInv({...fInv,taxa:e.target.value})}/></G2>
+          <Inp label="Aporte (R$)" placeholder="0,00" value={fInv.aporte} onChange={e=>setFInv({...fInv,aporte:e.target.value})}/>
+          <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:4}}>
+            {[["fixo","Taxa Fixa"],["cdi","% do CDI"]].map(([v,l])=>(
+              <button key={v} onClick={()=>setFInv({...fInv,taxaModo:v})} style={{flex:1,background:fInv.taxaModo===v?"#E8205F":"transparent",color:fInv.taxaModo===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{l}</button>
+            ))}
+          </div>
+          {fInv.taxaModo==="cdi" ? (
+            <div>
+              <Inp label="% do CDI" placeholder="Ex: 102" value={fInv.percCDI} onChange={e=>setFInv({...fInv,percCDI:e.target.value})}/>
+              <div style={{fontSize:11,color:C.modalSub,fontFamily:"'DM Sans',sans-serif",marginTop:5}}>
+                {cdiAtual ? <>CDI hoje: <strong style={{color:"#2D5A10"}}>{cdiAtual.toFixed(2)}% a.a.</strong> · rende ≈ <strong style={{color:"#2D5A10"}}>{fInv.percCDI?(cdiAtual*(+fInv.percCDI)/100).toFixed(2):"—"}% a.a.</strong></> : "Buscando CDI atual..."}
+              </div>
+            </div>
+          ) : (
+            <Inp label="Taxa a.a. (%)" placeholder="Ex: 12.5" value={fInv.taxa} onChange={e=>setFInv({...fInv,taxa:e.target.value})}/>
+          )}
           <Inp label="Data início" type="date" value={fInv.data} onChange={e=>setFInv({...fInv,data:e.target.value})}/>
           <Inp label="Observações" placeholder="Opcional" value={fInv.obs} onChange={e=>setFInv({...fInv,obs:e.target.value})}/>
           <Btn variant="primary" onClick={saveInv}>Salvar</Btn>
