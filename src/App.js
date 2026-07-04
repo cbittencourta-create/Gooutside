@@ -105,6 +105,12 @@ const DEST_COLORS = {
 
 const CHART_COLORS = ["#E8205F","#8FC43A","#5BA3D4","#D4A843","#A07BC8","#E05252","#38B2AC","#ED8936","#48BB78"];
 
+const BG_OPTIONS = [
+  { id:"listras",   label:"Listras",  emoji:"🎀", url:"/wallpapers/bg-listras-vermelhas.jpg" },
+  { id:"sol",       label:"Sol",      emoji:"☀️", url:"/wallpapers/bg-sol-amarelo.jpg" },
+  { id:"cachorro",  label:"Dálmata",  emoji:"🐶", url:"/wallpapers/bg-cachorro-azul.jpg" },
+];
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const R = v => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v||0);
 const fd = d => d ? new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}) : "—";
@@ -1396,6 +1402,7 @@ export default function App() {
 
 function AppMain({user, onLogout}) {
   const userId = user.id;
+  const [bgId,      setBgId]      = useLS("v4_bg",     "listras", userId);
   const [cats,      setCats]      = useLS("v4_cats",   DEFAULT_CATS, userId);
   const [orcamento, setOrcamento] = useLS("v4_orc",    {}, userId);
   const [movs,      setMovs]      = useLS("v4_movs",   [], userId);
@@ -1604,7 +1611,7 @@ function AppMain({user, onLogout}) {
 
   return (
     <div style={{minHeight:"100vh",color:TXT,fontFamily:"'Cormorant Garamond','Georgia',serif",position:"relative"}}>
-      <div className="wallpaper-bg"/>
+      <div className="wallpaper-bg" style={{backgroundImage:`url(${BG_OPTIONS.find(b=>b.id===bgId)?.url||BG_OPTIONS[0].url})`,backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
@@ -1685,7 +1692,17 @@ function AppMain({user, onLogout}) {
           ))}
         </div>
         <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
-          <div style={{fontSize:11,color:"rgba(26,18,9,0.6)",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>👤 {user.name||user.email}</div>
+          <div style={{fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Sans',sans-serif",marginBottom:7}}>Fundo</div>
+          <div style={{display:"flex",gap:6,marginBottom:12}}>
+            {BG_OPTIONS.map(bg=>(
+              <button key={bg.id} onClick={()=>setBgId(bg.id)}
+                style={{flex:1,background:bgId===bg.id?"rgba(232,32,95,0.5)":"rgba(255,255,255,0.08)",border:`2px solid ${bgId===bg.id?"#E8205F":"rgba(255,255,255,0.15)"}`,borderRadius:10,padding:0,cursor:"pointer",overflow:"hidden",display:"flex",flexDirection:"column",alignItems:"center"}}>
+                <div style={{width:"100%",height:36,backgroundImage:`url(${bg.url})`,backgroundSize:"cover",backgroundPosition:"center"}}/>
+                <div style={{fontSize:8,fontWeight:600,color:"#fff",padding:"3px 0"}}>{bg.emoji} {bg.label}</div>
+              </button>
+            ))}
+          </div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>👤 {user.name||user.email}</div>
           <button onClick={onLogout} style={{background:"rgba(232,32,95,0.3)",border:"1px solid rgba(232,32,95,0.4)",borderRadius:10,color:"#fff",fontSize:12,fontWeight:600,padding:"8px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%"}}>Sair</button>
         </div>
       </div>
