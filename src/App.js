@@ -1489,6 +1489,11 @@ function AppMain({user, onLogout}) {
   const [importOpen,setImportOpen]=useState(false);
   const [notas,setNotas]=useLS("v4_notas","",userId);
   const [pltDist,setPltDist]=useState(null);
+  const [recebModal,setRecebModal]=useState(null);
+  const [recebData,setRecebData]=useState(today());
+  const [pltView,setPltView]=useState("tabela");
+  const [objExpandido,setObjExpandido]=useState(null);
+  const [fParte,setFParte]=useState({descricao:"",valor:"",investId:""});
   const [movDist,setMovDist]=useState(null);
 
   const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
@@ -1534,6 +1539,16 @@ function AppMain({user, onLogout}) {
   const saveDiv=()=>{if(!fDiv.credor||!fDiv.total)return;upsert(dividas,setDividas,{...fDiv,tipo:fDiv.tipo||"ativa",total:+String(fDiv.total).replace(",","."),pago:+String(fDiv.pago||0).replace(",",".")});};
   const saveCart=()=>{if(!fCart.nome||!fCart.limite)return;upsert(cartoes,setCartoes,{...fCart,limite:+String(fCart.limite).replace(",",".")});};
   const saveCCMov=()=>{if(!fCCMov.descricao||!fCCMov.valor||!fCCMov.cartao)return;upsert(ccMovs,setCCMovs,{...fCCMov,valor:+String(fCCMov.valor).replace(",",".")});};
+  const addParte=(objId)=>{
+    if(!fParte.descricao||!fParte.valor)return;
+    const val=+String(fParte.valor).replace(",",".");
+    const parte={id:uid(),descricao:fParte.descricao,valor:val,investId:fParte.investId||""};
+    setObjetivos(objetivos.map(o=>o.id===objId?{...o,partes:[...(o.partes||[]),parte]}:o));
+    setFParte({descricao:"",valor:"",investId:""});
+  };
+  const removeParte=(objId,parteId)=>{
+    setObjetivos(objetivos.map(o=>o.id===objId?{...o,partes:(o.partes||[]).filter(p=>p.id!==parteId)}:o));
+  };
   const saveAporte=()=>{
     if(!fAporte.valor||!extra)return;
     const v=+String(fAporte.valor).replace(",",".");
@@ -1546,22 +1561,30 @@ function AppMain({user, onLogout}) {
 
   const getPltStatus=p=>{if(p.status==="recebido")return"recebido";if(p.status==="cancelado")return"cancelado";if(isPast(p.previsao))return"atrasado";return"pendente";};
 
+  const updatePlantao=(id,patch)=>{setPlantoes(plantoes.map(p=>p.id===id?{...p,...patch}:p));};
   const marcarRecebido=id=>{
     const p=plantoes.find(x=>x.id===id); if(!p)return;
-    if(regras.length>0){setPltDist(p);}
+    setRecebData(today());
+    setRecebModal(p);
+  };
+  const confirmarDataRecebimento=()=>{
+    const p=recebModal; if(!p)return;
+    setRecebModal(null);
+    if(regras.length>0){ setPltDist({...p, _dataEscolhida:recebData}); }
     else{
-      setPlantoes(plantoes.map(x=>x.id===id?{...x,status:"recebido",dataRecebimento:today()}:x));
-      setMovs([{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:today()},...movs]);
+      setPlantoes(plantoes.map(x=>x.id===p.id?{...x,status:"recebido",dataRecebimento:recebData}:x));
+      setMovs([{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:recebData},...movs]);
     }
   };
 
   const confirmarDistribuicao=(p,alocs,isMov=false)=>{
+    const dataEsc=p._dataEscolhida||today();
     if(!isMov){
-      setPlantoes(plantoes.map(x=>x.id===p.id?{...x,status:"recebido",dataRecebimento:today()}:x));
-      setMovs([{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:today()},...movs]);
+      setPlantoes(plantoes.map(x=>x.id===p.id?{...x,status:"recebido",dataRecebimento:dataEsc}:x));
+      setMovs([{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:dataEsc},...movs]);
     }
     let nInv=[...invests],nObj=[...objetivos],nDiv=[...dividas];
-    const reg={id:uid(),plantaoId:p.id,data:today(),empresa:p.empresa,totalRecebido:p.valorTotal,itens:[]};
+    const reg={id:uid(),plantaoId:p.id,data:dataEsc,empresa:p.empresa,totalRecebido:p.valorTotal,itens:[]};
     alocs.forEach(a=>{
       const val=parseFloat(a.valorEdit||0); if(val<=0)return;
       const inv=a.tipo==="investimento"?invests.find(x=>x.id===a.destinoId):null;
@@ -2094,6 +2117,57 @@ function AppMain({user, onLogout}) {
               </div>
             </div>
             {empresas.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>{empresas.map(e=><span key={e.id} onClick={()=>openM("emp",e)} style={{fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:99,background:"rgba(255,255,255,0.9)",color:e.cor,border:`2px solid ${e.cor}`,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{e.nome}</span>)}</div>}
+            <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:3,marginBottom:14,maxWidth:220}}>
+              {[["tabela","📊 Tabela"],["cards","📋 Cards"]].map(([v,l])=>(
+                <button key={v} onClick={()=>setPltView(v)} style={{flex:1,background:pltView===v?"#E8205F":"transparent",color:pltView===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{l}</button>
+              ))}
+            </div>
+            {pltView==="tabela"&&(()=>{
+              const grupos={};
+              plantoes.forEach(p=>{
+                const key=monthKey(p.previsao||p.data)||"sem-data";
+                if(!grupos[key])grupos[key]=[];
+                grupos[key].push(p);
+              });
+              const mesesOrd=Object.keys(grupos).sort();
+              if(mesesOrd.length===0) return <div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Adicione plantões para ver a tabela</div>;
+              return mesesOrd.map(mk=>{
+                const grupo=[...grupos[mk]].sort((a,b)=>(a.previsao||a.data||"").localeCompare(b.previsao||b.data||""));
+                const totalMes=grupo.reduce((s,p)=>s+(+p.valorTotal||0),0);
+                return (
+                  <div key={mk} className={CARD} style={{marginBottom:14,padding:"14px 12px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,paddingBottom:8,borderBottom:"1px solid rgba(0,0,0,0.08)"}}>
+                      <div style={{fontSize:13,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{mk==="sem-data"?"Sem data":monthLabel(mk)}</div>
+                      <div className="num" style={{fontSize:13,fontWeight:700,color:C.magenta}}>{R(totalMes)}</div>
+                    </div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 100px 110px 32px",gap:6,marginBottom:6,padding:"0 2px"}}>
+                      <div style={{fontSize:9,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
+                      <div style={{fontSize:9,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Valor</div>
+                      <div style={{fontSize:9,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data prov.</div>
+                      <div/>
+                    </div>
+                    {grupo.map(p=>{
+                      const emp=empNome(p.empresa);
+                      return (
+                        <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 100px 110px 32px",gap:6,alignItems:"center",padding:"5px 2px",borderBottom:"1px solid rgba(0,0,0,0.04)"}}>
+                          <select value={p.empresa} onChange={e=>updatePlantao(p.id,{empresa:e.target.value})}
+                            style={{background:"transparent",border:"1px solid rgba(0,0,0,0.1)",borderRadius:6,padding:"5px 6px",fontSize:11,color:emp.cor||"#1A1209",fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%"}}>
+                            {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
+                            {!empresas.find(e=>e.nome===p.empresa)&&<option value={p.empresa}>{p.empresa}</option>}
+                          </select>
+                          <input type="number" value={p.valorTotal} onChange={e=>updatePlantao(p.id,{valorTotal:+e.target.value})}
+                            style={{background:"transparent",border:"1px solid rgba(0,0,0,0.1)",borderRadius:6,padding:"5px 6px",fontSize:11,color:"#1A1209",fontWeight:700,outline:"none",fontFamily:"inherit",width:"100%"}}/>
+                          <input type="date" value={p.previsao||""} onChange={e=>updatePlantao(p.id,{previsao:e.target.value})}
+                            style={{background:"transparent",border:"1px solid rgba(0,0,0,0.1)",borderRadius:6,padding:"5px 6px",fontSize:10,color:"#1A1209",outline:"none",fontFamily:"inherit",width:"100%"}}/>
+                          <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"none",border:"none",color:"#aaa",fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              });
+            })()}
+            {pltView==="cards"&&<>
             {plantoesEfetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Adicione empresas e plantões</div>
               :[...plantoesEfetivos].sort((a,b)=>b.data.localeCompare(a.data)).map(p=>{
                 const emp=empNome(p.empresa);const d=daysUntil(p.previsao);
@@ -2119,6 +2193,7 @@ function AppMain({user, onLogout}) {
                 );
               })
             }
+            </>}
           </div>
         )}
 
@@ -2310,9 +2385,12 @@ function AppMain({user, onLogout}) {
             {objetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Crie seus objetivos financeiros</div>
               :objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;const d=daysUntil(o.prazo);
                 const invVinc=o.investId?invests.find(i=>i.id===o.investId):null;
+                const partes=o.partes||[];
+                const totalPartes=partes.reduce((s,p)=>s+p.valor,0);
+                const isExp=objExpandido===o.id;
                 return <div key={o.id} className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${o.cor}`}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:9}}>
-                    <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{o.nome}</div>
+                  <div onClick={()=>setObjExpandido(isExp?null:o.id)} style={{display:"flex",justifyContent:"space-between",marginBottom:9,cursor:"pointer"}}>
+                    <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT,display:"flex",alignItems:"center",gap:6}}>{o.nome}<span style={{fontSize:10,color:TMUT}}>{isExp?"▲":"▼"}</span></div>
                       {invVinc&&<div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:2,fontWeight:600}}>📈 {invVinc.nome}{invVinc.banco?" · "+invVinc.banco:""}{invVinc.taxa?" · "+invVinc.taxa+"% a.a.":""}</div>}
                       {o.prazo&&<div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Prazo: {fdFull(o.prazo)}{d!==null&&<span style={{color:d<=30?C.gold:TSUB}}> · {d>0?`${d}d`:d===0?"Hoje":"Vencido"}</span>}</div>}
                       {o.obs&&<div style={{fontSize:10,color:"rgba(26,18,9,0.55)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>{o.obs}</div>}
@@ -2321,6 +2399,51 @@ function AppMain({user, onLogout}) {
                   </div>
                   <Bar value={o.atual} max={o.meta} color={o.cor} h={6}/>
                   <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>{pct.toFixed(1)}%</span><span>Falta {R(Math.max(o.meta-o.atual,0))}</span></div>
+
+                  {isExp&&(
+                    <div style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:10,border:"1px solid rgba(0,0,0,0.06)"}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Onde está esse dinheiro e para quê</div>
+                      {partes.length===0&&<div style={{fontSize:11,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Nenhum detalhamento ainda. Adicione abaixo.</div>}
+                      {partes.map(p=>{
+                        const pInv=p.investId?invests.find(i=>i.id===p.investId):null;
+                        return (
+                          <div key={p.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
+                            <div>
+                              <div style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{p.descricao}</div>
+                              <div style={{fontSize:10,color:pInv?"#2D5A10":TMUT,fontFamily:"'DM Sans',sans-serif"}}>{pInv?`📈 ${pInv.nome}${pInv.banco?" · "+pInv.banco:""}`:"Sem vínculo"}</div>
+                            </div>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span className="num" style={{fontSize:12,fontWeight:700,color:o.cor}}>{R(p.valor)}</span>
+                              <button onClick={()=>removeParte(o.id,p.id)} style={{background:"none",border:"none",color:"#aaa",fontSize:15,cursor:"pointer",lineHeight:1}}>×</button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {partes.length>0&&(
+                        <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>
+                          <span>Total detalhado</span>
+                          <span style={{fontWeight:700,color:totalPartes===o.atual?"#2D5A10":"#8B6000"}}>{R(totalPartes)} de {R(o.atual)}</span>
+                        </div>
+                      )}
+                      <div style={{marginTop:8,paddingTop:8,borderTop:"1px solid rgba(0,0,0,0.06)"}}>
+                        <div style={{display:"flex",gap:6,marginBottom:6}}>
+                          <input placeholder="Finalidade (ex: Passagem aérea)" value={fParte.descricao} onChange={e=>setFParte({...fParte,descricao:e.target.value})}
+                            style={{flex:2,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 9px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
+                          <input placeholder="R$" value={fParte.valor} onChange={e=>setFParte({...fParte,valor:e.target.value})}
+                            style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 9px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
+                        </div>
+                        <div style={{display:"flex",gap:6}}>
+                          <select value={fParte.investId} onChange={e=>setFParte({...fParte,investId:e.target.value})}
+                            style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 9px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}>
+                            <option value="">Sem vínculo de investimento</option>
+                            {invests.map(i=><option key={i.id} value={i.id}>{i.nome}{i.banco?" · "+i.banco:""}</option>)}
+                          </select>
+                          <button onClick={()=>addParte(o.id)} style={{background:"#E8205F",border:"none",borderRadius:8,padding:"7px 14px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>+ Adicionar</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("aporte",null,o.id)}>+ Aporte</Btn>
                     <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("obj",o)}>Editar</Btn>
@@ -2694,6 +2817,20 @@ function AppMain({user, onLogout}) {
           confirmarDistribuicao({...movDist,empresa:movDist.descricao,valorTotal:movDist.valor,id:movDist.id+"_dist"},alocs,true);
           setMovDist(null);
         }}/>
+      <Modal open={!!recebModal} onClose={()=>setRecebModal(null)} title="Quando você recebeu?">
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{fontSize:13,color:C.modalSub,fontFamily:"'DM Sans',sans-serif"}}>
+            {recebModal&&<>Plantão: <strong style={{color:C.modalText}}>{recebModal.empresa}</strong> · {R(recebModal.valorTotal)}</>}
+          </div>
+          <Inp label="Data do recebimento" type="date" value={recebData} onChange={e=>setRecebData(e.target.value)} autoFocus/>
+          <div style={{display:"flex",gap:6}}>
+            {[["Hoje",0],["Ontem",1],["2 dias atrás",2],["3 dias atrás",3]].map(([l,dias])=>(
+              <button key={l} onClick={()=>setRecebData(addDays(today(),-dias))} style={{flex:1,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 4px",fontSize:10,fontWeight:700,color:C.modalSub,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
+            ))}
+          </div>
+          <Btn variant="green" onClick={confirmarDataRecebimento}>✓ Confirmar recebimento</Btn>
+        </div>
+      </Modal>
       <RegrasModal open={modal==="regras"} onClose={closeM} regras={regras} setRegras={setRegras} invests={invests} objetivos={objetivos} dividas={dividas}/>
       <AlocacaoModal open={!!pltDist} onClose={()=>setPltDist(null)} plantao={pltDist} regras={regras} invests={invests} objetivos={objetivos} dividas={dividas} onConfirm={(alocs)=>confirmarDistribuicao(pltDist,alocs,false)}/>
     </div>
