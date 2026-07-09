@@ -1763,6 +1763,10 @@ function AppMain({user, onLogout}) {
         .card{background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.98);border-radius:18px;padding:18px;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,1) inset;color:#1A1209}.card *{color:inherit}.card span,.card div,.card p{color:#1A1209}
         .card *{color:inherit}
         select option{background:#3d1a10;color:#fff}
+        .plt-numinput::-webkit-outer-spin-button,.plt-numinput::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+        .plt-numinput{-moz-appearance:textfield}
+        .plt-select{appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:none!important}
+        .plt-select option{background:#fff;color:#1A1209}
         .fade{animation:fd .2s ease} @keyframes fd{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
         .scr::-webkit-scrollbar{display:none}
         .sidebar{position:fixed;top:0;left:0;height:100vh;width:240px;background:rgba(30,15,10,0.94);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid rgba(255,255,255,0.15);z-index:100;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 32px rgba(0,0,0,.3)}
@@ -2135,31 +2139,36 @@ function AppMain({user, onLogout}) {
                 const grupo=[...grupos[mk]].sort((a,b)=>(a.previsao||a.data||"").localeCompare(b.previsao||b.data||""));
                 const totalMes=grupo.reduce((s,p)=>s+(+p.valorTotal||0),0);
                 return (
-                  <div key={mk} className={CARD} style={{marginBottom:14,padding:"14px 12px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,paddingBottom:8,borderBottom:"1px solid rgba(0,0,0,0.08)"}}>
-                      <div style={{fontSize:13,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{mk==="sem-data"?"Sem data":monthLabel(mk)}</div>
-                      <div className="num" style={{fontSize:13,fontWeight:700,color:C.magenta}}>{R(totalMes)}</div>
+                  <div key={mk} className={CARD} style={{marginBottom:16,padding:"18px 16px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,paddingBottom:12,borderBottom:"2px solid rgba(0,0,0,0.08)"}}>
+                      <div style={{fontSize:16,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{mk==="sem-data"?"Sem data":monthLabel(mk)}</div>
+                      <div className="num" style={{fontSize:16,fontWeight:700,color:C.magenta}}>{R(totalMes)}</div>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 100px 110px 32px",gap:6,marginBottom:6,padding:"0 2px"}}>
-                      <div style={{fontSize:9,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
-                      <div style={{fontSize:9,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Valor</div>
-                      <div style={{fontSize:9,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data prov.</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 110px 125px 28px",gap:10,marginBottom:8,padding:"0 4px"}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
+                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Valor</div>
+                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data prov.</div>
                       <div/>
                     </div>
-                    {grupo.map(p=>{
+                    {grupo.map((p,idx)=>{
                       const emp=empNome(p.empresa);
                       return (
-                        <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 100px 110px 32px",gap:6,alignItems:"center",padding:"5px 2px",borderBottom:"1px solid rgba(0,0,0,0.04)"}}>
-                          <select value={p.empresa} onChange={e=>updatePlantao(p.id,{empresa:e.target.value})}
-                            style={{background:"transparent",border:"1px solid rgba(0,0,0,0.1)",borderRadius:6,padding:"5px 6px",fontSize:11,color:emp.cor||"#1A1209",fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%"}}>
-                            {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
-                            {!empresas.find(e=>e.nome===p.empresa)&&<option value={p.empresa}>{p.empresa}</option>}
-                          </select>
+                        <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 110px 125px 28px",gap:10,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.02)":"transparent",borderRadius:8}}>
+                          <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}>
+                            <div style={{width:8,height:8,borderRadius:99,background:emp.cor||C.magenta,flexShrink:0}}/>
+                            <select value={p.empresa} onChange={e=>updatePlantao(p.id,{empresa:e.target.value})}
+                              className="plt-select"
+                              style={{background:"transparent",border:"none",padding:"6px 4px",fontSize:14,color:"#1A1209",fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%",minWidth:0}}>
+                              {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
+                              {!empresas.find(e=>e.nome===p.empresa)&&<option value={p.empresa}>{p.empresa}</option>}
+                            </select>
+                          </div>
                           <input type="number" value={p.valorTotal} onChange={e=>updatePlantao(p.id,{valorTotal:+e.target.value})}
-                            style={{background:"transparent",border:"1px solid rgba(0,0,0,0.1)",borderRadius:6,padding:"5px 6px",fontSize:11,color:"#1A1209",fontWeight:700,outline:"none",fontFamily:"inherit",width:"100%"}}/>
+                            className="plt-numinput"
+                            style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 8px",fontSize:14,color:"#2D5A10",fontWeight:700,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
                           <input type="date" value={p.previsao||""} onChange={e=>updatePlantao(p.id,{previsao:e.target.value})}
-                            style={{background:"transparent",border:"1px solid rgba(0,0,0,0.1)",borderRadius:6,padding:"5px 6px",fontSize:10,color:"#1A1209",outline:"none",fontFamily:"inherit",width:"100%"}}/>
-                          <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"none",border:"none",color:"#aaa",fontSize:16,cursor:"pointer",lineHeight:1}}>×</button>
+                            style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 6px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                          <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:15,cursor:"pointer",lineHeight:1,width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                         </div>
                       );
                     })}
