@@ -141,6 +141,7 @@ const isPast = ds => ds && new Date(ds+"T23:59:59")<new Date();
 const monthKey = ds => ds ? ds.slice(0,7) : "";
 const months8 = () => { const a=[]; const d=new Date(); for(let i=0;i<8;i++){const dd=new Date(d);dd.setMonth(dd.getMonth()+i);a.push(dd.toISOString().slice(0,7));} return a; };
 const monthLabel = ym => { const [y,m]=ym.split("-"); return ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][+m-1]+" "+y.slice(2); };
+const shiftMonth = (ym,n) => { const [y,m]=ym.split("-").map(Number); const d=new Date(y,m-1+n,1); return d.toISOString().slice(0,7); };
 const uid = () => Date.now()+Math.random().toString(36).slice(2);
 const CATS_OUT = ["🍔 Alimentação","🚗 Transporte","🏠 Moradia","💊 Saúde","🎭 Lazer","👕 Vestuário","📚 Educação","💡 Contas","📦 Outros"];
 const CATS_IN  = ["🏥 Plantão","💼 Consultório","🎓 Ensino","💰 Investimento","🎁 Presente","📦 Outros"];
@@ -1492,6 +1493,7 @@ function AppMain({user, onLogout}) {
   const [recebModal,setRecebModal]=useState(null);
   const [recebData,setRecebData]=useState(today());
   const [pltView,setPltView]=useState("tabela");
+  const [pltMes,setPltMes]=useState(today().slice(0,7));
   const [objExpandido,setObjExpandido]=useState(null);
   const [fParte,setFParte]=useState({descricao:"",valor:"",investId:""});
   const [movDist,setMovDist]=useState(null);
@@ -2147,48 +2149,55 @@ function AppMain({user, onLogout}) {
                 if(!grupos[key])grupos[key]=[];
                 grupos[key].push(p);
               });
-              const mesesOrd=Object.keys(grupos).sort();
-              if(mesesOrd.length===0) return <div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Adicione plantões para ver a tabela</div>;
-              return mesesOrd.map(mk=>{
-                const grupo=[...grupos[mk]].sort((a,b)=>(a.previsao||a.data||"").localeCompare(b.previsao||b.data||""));
-                const totalMes=grupo.reduce((s,p)=>s+(+p.valorTotal||0),0);
-                return (
-                  <div key={mk} className={CARD} style={{marginBottom:16,padding:"18px 16px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,paddingBottom:12,borderBottom:"2px solid rgba(0,0,0,0.08)"}}>
-                      <div style={{fontSize:16,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{mk==="sem-data"?"Sem data":monthLabel(mk)}</div>
-                      <div className="num" style={{fontSize:16,fontWeight:700,color:C.magenta}}>{R(totalMes)}</div>
+              const mk=pltMes;
+              const grupo=(grupos[mk]||[]).slice().sort((a,b)=>(a.previsao||a.data||"").localeCompare(b.previsao||b.data||""));
+              const totalMes=grupo.reduce((s,p)=>s+(+p.valorTotal||0),0);
+              return (
+                <div className={CARD} style={{marginBottom:16,padding:"18px 16px"}}>
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,paddingBottom:12,borderBottom:"2px solid rgba(0,0,0,0.08)"}}>
+                    <button onClick={()=>setPltMes(shiftMonth(pltMes,-1))} style={{background:"rgba(0,0,0,0.05)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:34,height:34,cursor:"pointer",fontSize:16,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center"}}>‹</button>
+                    <div style={{textAlign:"center"}}>
+                      <div style={{fontSize:17,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{monthLabel(mk)}</div>
+                      <div className="num" style={{fontSize:13,fontWeight:700,color:C.magenta}}>{R(totalMes)}</div>
                     </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 110px 125px 28px",gap:10,marginBottom:8,padding:"0 4px"}}>
-                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
-                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Valor</div>
-                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data prov.</div>
-                      <div/>
-                    </div>
-                    {grupo.map((p,idx)=>{
-                      const emp=empNome(p.empresa);
-                      return (
-                        <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 110px 125px 28px",gap:10,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.02)":"transparent",borderRadius:8}}>
-                          <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}>
-                            <div style={{width:8,height:8,borderRadius:99,background:emp.cor||C.magenta,flexShrink:0}}/>
-                            <select value={p.empresa} onChange={e=>updatePlantao(p.id,{empresa:e.target.value})}
-                              className="plt-select"
-                              style={{background:"transparent",border:"none",padding:"6px 4px",fontSize:14,color:"#1A1209",fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%",minWidth:0}}>
-                              {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
-                              {!empresas.find(e=>e.nome===p.empresa)&&<option value={p.empresa}>{p.empresa}</option>}
-                            </select>
-                          </div>
-                          <input type="number" value={p.valorTotal} onChange={e=>updatePlantao(p.id,{valorTotal:+e.target.value})}
-                            className="plt-numinput"
-                            style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 8px",fontSize:14,color:"#2D5A10",fontWeight:700,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
-                          <input type="date" value={p.previsao||""} onChange={e=>updatePlantao(p.id,{previsao:e.target.value})}
-                            style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 6px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
-                          <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:15,cursor:"pointer",lineHeight:1,width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
-                        </div>
-                      );
-                    })}
+                    <button onClick={()=>setPltMes(shiftMonth(pltMes,1))} style={{background:"rgba(0,0,0,0.05)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:34,height:34,cursor:"pointer",fontSize:16,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center"}}>›</button>
                   </div>
-                );
-              });
+                  {grupo.length===0?(
+                    <div style={{textAlign:"center",padding:"24px 0",color:"rgba(26,18,9,0.45)",fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>Nenhum plantão em {monthLabel(mk)}</div>
+                  ):(
+                    <>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 110px 125px 28px",gap:10,marginBottom:8,padding:"0 4px"}}>
+                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
+                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Valor</div>
+                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data prov.</div>
+                        <div/>
+                      </div>
+                      {grupo.map((p,idx)=>{
+                        const emp=empNome(p.empresa);
+                        return (
+                          <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 110px 125px 28px",gap:10,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.02)":"transparent",borderRadius:8}}>
+                            <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}>
+                              <div style={{width:8,height:8,borderRadius:99,background:emp.cor||C.magenta,flexShrink:0}}/>
+                              <select value={p.empresa} onChange={e=>updatePlantao(p.id,{empresa:e.target.value})}
+                                className="plt-select"
+                                style={{background:"transparent",border:"none",padding:"6px 4px",fontSize:14,color:"#1A1209",fontWeight:600,cursor:"pointer",fontFamily:"inherit",width:"100%",minWidth:0}}>
+                                {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
+                                {!empresas.find(e=>e.nome===p.empresa)&&<option value={p.empresa}>{p.empresa}</option>}
+                              </select>
+                            </div>
+                            <input type="number" value={p.valorTotal} onChange={e=>updatePlantao(p.id,{valorTotal:+e.target.value})}
+                              className="plt-numinput"
+                              style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 8px",fontSize:14,color:"#2D5A10",fontWeight:700,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                            <input type="date" value={p.previsao||""} onChange={e=>updatePlantao(p.id,{previsao:e.target.value})}
+                              style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 6px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                            <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:15,cursor:"pointer",lineHeight:1,width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                          </div>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              );
             })()}
             {pltView==="cards"&&<>
             {plantoesEfetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Adicione empresas e plantões</div>
