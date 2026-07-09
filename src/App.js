@@ -2150,7 +2150,7 @@ function AppMain({user, onLogout}) {
                 grupos[key].push(p);
               });
               const mk=pltMes;
-              const grupo=(grupos[mk]||[]).slice().sort((a,b)=>(a.previsao||a.data||"").localeCompare(b.previsao||b.data||""));
+              const grupo=(grupos[mk]||[]).slice().sort((a,b)=>(a.data||"").localeCompare(b.data||""));
               const totalMes=grupo.reduce((s,p)=>s+(+p.valorTotal||0),0);
               return (
                 <div className={CARD} style={{marginBottom:16,padding:"18px 16px"}}>
