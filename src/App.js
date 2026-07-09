@@ -2113,14 +2113,28 @@ function AppMain({user, onLogout}) {
         {/* ══ PLANTÕES ══ */}
         {tab==="plantoes"&&(
           <div className="fade">
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <div><div style={{fontSize:22,fontWeight:300,color:TXT}}>{plantoes.length} plantões</div><div className="num" style={{fontSize:12,color:C.magenta,fontWeight:600}}>{R(totalPendPlant)} a receber</div></div>
-              <div style={{display:"flex",gap:7}}>
-                <Btn variant="secondary" style={{fontSize:11,padding:"7px 11px",color:"#1A1209",background:"rgba(255,255,255,0.2)",border:"1px solid rgba(255,255,255,0.25)"}} onClick={()=>openM("emp")}>+ Empresa</Btn>
-                <Btn variant="primary" style={{fontSize:11,padding:"7px 11px"}} onClick={()=>openM("plt")}>+ Plantão</Btn>
+            <div className={CARD} style={{marginBottom:14,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,255,255,0.82))"}}>
+              <div>
+                <div style={{fontSize:28,fontWeight:300,color:TXT,letterSpacing:"-.02em",lineHeight:1}}>{plantoes.length}</div>
+                <div style={{fontSize:11,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:2,marginBottom:8}}>plantões cadastrados</div>
+                <div className="num" style={{fontSize:14,color:C.magenta,fontWeight:700}}>{R(totalPendPlant)}</div>
+                <div style={{fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>a receber</div>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                <Btn variant="primary" style={{fontSize:11,padding:"8px 14px"}} onClick={()=>openM("plt")}>+ Plantão</Btn>
+                <Btn variant="secondary" style={{fontSize:11,padding:"8px 14px",color:"#1A1209",background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.1)"}} onClick={()=>openM("emp")}>+ Empresa</Btn>
               </div>
             </div>
-            {empresas.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>{empresas.map(e=><span key={e.id} onClick={()=>openM("emp",e)} style={{fontSize:10,fontWeight:700,padding:"4px 12px",borderRadius:99,background:"rgba(255,255,255,0.9)",color:e.cor,border:`2px solid ${e.cor}`,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{e.nome}</span>)}</div>}
+            {empresas.length>0&&(
+              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
+                {empresas.map(e=>(
+                  <span key={e.id} onClick={()=>openM("emp",e)} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:600,padding:"5px 12px",borderRadius:99,background:"rgba(255,255,255,0.85)",color:"#1A1209",border:"1px solid rgba(0,0,0,0.08)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                    <span style={{width:7,height:7,borderRadius:99,background:e.cor,flexShrink:0}}/>
+                    {e.nome}
+                  </span>
+                ))}
+              </div>
+            )}
             <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:3,marginBottom:14,maxWidth:220}}>
               {[["tabela","📊 Tabela"],["cards","📋 Cards"]].map(([v,l])=>(
                 <button key={v} onClick={()=>setPltView(v)} style={{flex:1,background:pltView===v?"#E8205F":"transparent",color:pltView===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{l}</button>
