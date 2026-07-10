@@ -2122,9 +2122,15 @@ function AppMain({user, onLogout}) {
                 <div className="num" style={{fontSize:14,color:C.magenta,fontWeight:700}}>{R(totalPendPlant)}</div>
                 <div style={{fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>a receber</div>
               </div>
-              <div style={{display:"flex",flexDirection:"column",gap:7}}>
-                <Btn variant="primary" style={{fontSize:11,padding:"8px 14px"}} onClick={()=>openM("plt")}>+ Plantão</Btn>
-                <Btn variant="secondary" style={{fontSize:11,padding:"8px 14px",color:"#1A1209",background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.1)"}} onClick={()=>openM("emp")}>+ Empresa</Btn>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 18px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)",transition:"transform .15s"}}
+                  onMouseEnter={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
+                  <span style={{fontSize:15,lineHeight:1}}>✚</span> Plantão
+                </button>
+                <button onClick={()=>openM("emp")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:"10px 18px",fontSize:12.5,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",transition:"transform .15s"}}
+                  onMouseEnter={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
+                  <span style={{fontSize:14,lineHeight:1}}>🏥</span> Empresa
+                </button>
               </div>
             </div>
             {empresas.length>0&&(
