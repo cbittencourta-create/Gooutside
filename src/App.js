@@ -2376,19 +2376,26 @@ function AppMain({user, onLogout}) {
         {/* ══ INVESTIMENTOS ══ */}
         {tab==="investimentos"&&(
           <div className="fade">
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-              <div><div style={{fontSize:22,fontWeight:300,color:TXT}}>Investimentos</div><div className="num" style={{fontSize:15,fontWeight:700,color:C.green}}>{R(totalInvestido)}</div></div>
-              <Btn variant="primary" style={{fontSize:12,padding:"9px 14px"}} onClick={()=>openM("inv")}>+ Investimento</Btn>
+            <div className={CARD} style={{marginBottom:16,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(255,255,255,0.94),rgba(255,255,255,0.86))"}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>📈 Investimentos</div>
+                <div className="num" style={{fontSize:26,fontWeight:700,color:C.green,letterSpacing:"-.02em",lineHeight:1}}>{R(totalInvestido)}</div>
+                <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:3}}>total investido</div>
+              </div>
+              <button onClick={()=>openM("inv")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)"}}>
+                <span style={{fontSize:15,lineHeight:1}}>✚</span> Investimento
+              </button>
             </div>
             {invests.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum investimento registrado</div>
               :INVEST_CATEGORIAS.map(catInfo=>{
                 const investsCat=invests.filter(i=>categoriaDoInvest(i.tipo)===catInfo.id);
                 if(investsCat.length===0) return null;
                 const totalCat=investsCat.reduce((s,i)=>s+(+i.aporte||0),0);
+                const catIcon={fixa:"📊",variavel:"📈",fundos:"🏦",outros:"📦"}[catInfo.id]||"📦";
                 return (
-                  <div key={catInfo.id} style={{marginBottom:18}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,paddingBottom:6,borderBottom:"2px solid rgba(0,0,0,0.08)"}}>
-                      <div style={{fontSize:12,fontWeight:700,color:"rgba(26,18,9,0.6)",letterSpacing:".07em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>{catInfo.label}</div>
+                  <div key={catInfo.id} style={{marginBottom:20}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,padding:"9px 14px",background:"rgba(255,255,255,0.75)",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:7,fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".07em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}><span style={{fontSize:14}}>{catIcon}</span>{catInfo.label}</div>
                       <div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{R(totalCat)}</div>
                     </div>
                     {investsCat.map(i=>{
@@ -2400,17 +2407,17 @@ function AppMain({user, onLogout}) {
                 const livreNoInvest=i.aporte-totalReservado;
                 return <div key={i.id} className={CARD} style={{marginBottom:10}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                    <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{i.nome}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>{i.tipo}{i.banco&&` · ${i.banco}`} · desde {fd(i.data)}</div></div>
+                    <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{i.nome}</div><div style={{fontSize:11,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:500}}>{i.tipo}{i.banco&&` · ${i.banco}`} · desde {fd(i.data)}</div></div>
                     <div className="num" style={{fontSize:16,fontWeight:700,color:C.green}}>{R(i.aporte)}</div>
                   </div>
                   <div style={{display:"flex",gap:8,background:"rgba(0,0,0,0.05)",borderRadius:10,border:"1px solid rgba(0,0,0,0.07)",padding:"9px 11px",marginBottom:9}}>
                     <div style={{flex:1,textAlign:"center"}}>
-                      <div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>TAXA A.A.</div>
+                      <div style={{fontSize:9,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:700,letterSpacing:".06em",marginBottom:2}}>TAXA A.A.</div>
                       <div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{txEf?txEf.toFixed(2):"—"}%</div>
-                      {i.taxaModo==="cdi"&&i.percCDI&&<div style={{fontSize:8,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>{i.percCDI}% do CDI</div>}
+                      {i.taxaModo==="cdi"&&i.percCDI&&<div style={{fontSize:9,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{i.percCDI}% do CDI</div>}
                     </div>
-                    <div style={{width:1,background:"rgba(255,255,255,0.2)"}}/>
-                    <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:600,letterSpacing:".06em",marginBottom:2}}>REND./MÊS</div><div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{R(rend)}</div></div>
+                    <div style={{width:1,background:"rgba(0,0,0,0.1)"}}/>
+                    <div style={{flex:1,textAlign:"center"}}><div style={{fontSize:9,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:700,letterSpacing:".06em",marginBottom:2}}>REND./MÊS</div><div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{R(rend)}</div></div>
                   </div>
                   {(objsVinc.length>0||divsVinc.length>0)&&(
                     <div style={{background:"rgba(91,163,212,0.08)",border:"1px solid rgba(91,163,212,0.25)",borderRadius:10,padding:"9px 11px",marginBottom:9}}>
@@ -2428,12 +2435,17 @@ function AppMain({user, onLogout}) {
                         </div>
                       ))}
                       <div style={{display:"flex",justifyContent:"space-between",padding:"4px 0 0",marginTop:4,borderTop:"1px solid rgba(91,163,212,0.2)"}}>
-                        <span style={{fontSize:10,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Livre neste investimento</span>
+                        <span style={{fontSize:10,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>Livre neste investimento</span>
                         <span className="num" style={{fontSize:11,fontWeight:700,color:livreNoInvest>=0?"#2D5A10":"#8B1A1A"}}>{R(livreNoInvest)}</span>
                       </div>
+                      {livreNoInvest<0&&(
+                        <div style={{marginTop:6,background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:8,padding:"6px 10px",fontSize:10,color:"#5A0A0A",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>
+                          ⚠ Você alocou mais do que tem guardado aqui
+                        </div>
+                      )}
                     </div>
                   )}
-                  {i.obs&&<div style={{fontSize:11,color:"rgba(26,18,9,0.55)",marginBottom:8,fontFamily:"'DM Sans',sans-serif"}}>{i.obs}</div>}
+                  {i.obs&&<div style={{fontSize:11,color:"#3D3226",marginBottom:8,fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>{i.obs}</div>}
                   <div style={{display:"flex",gap:6}}>
                     <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("inv",i)}>Editar</Btn>
                     <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(invests,setInvests,i.id)}>Excluir</Btn>
