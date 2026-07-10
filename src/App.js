@@ -2166,17 +2166,18 @@ function AppMain({user, onLogout}) {
                     <div style={{textAlign:"center",padding:"24px 0",color:"rgba(26,18,9,0.45)",fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>Nenhum plantão em {monthLabel(mk)}</div>
                   ):(
                     <>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 105px 95px 115px 28px",gap:8,marginBottom:8,padding:"0 4px"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
                         <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Dia plantão</div>
+                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Dia</div>
                         <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Valor</div>
                         <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data prov.</div>
+                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Status</div>
                         <div/>
                       </div>
                       {grupo.map((p,idx)=>{
                         const emp=empNome(p.empresa);
                         return (
-                          <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 105px 95px 115px 28px",gap:8,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.02)":"transparent",borderRadius:8}}>
+                          <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px",gap:6,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.02)":"transparent",borderRadius:8}}>
                             <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}>
                               <div style={{width:8,height:8,borderRadius:99,background:emp.cor||C.magenta,flexShrink:0}}/>
                               <select value={p.empresa} onChange={e=>updatePlantao(p.id,{empresa:e.target.value})}
@@ -2187,13 +2188,18 @@ function AppMain({user, onLogout}) {
                               </select>
                             </div>
                             <input type="date" value={p.data||""} onChange={e=>updatePlantao(p.id,{data:e.target.value})}
-                              style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 6px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                              style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 4px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
                             <input type="number" value={p.valorTotal} onChange={e=>updatePlantao(p.id,{valorTotal:+e.target.value})}
                               className="plt-numinput"
-                              style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 6px",fontSize:14,color:"#2D5A10",fontWeight:700,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                              style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 5px",fontSize:13,color:"#2D5A10",fontWeight:700,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
                             <input type="date" value={p.previsao||""} onChange={e=>updatePlantao(p.id,{previsao:e.target.value})}
-                              style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 6px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
-                            <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:15,cursor:"pointer",lineHeight:1,width:24,height:24,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                              style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 4px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                            {p.status==="recebido"?(
+                              <div style={{background:"rgba(143,196,58,0.2)",border:"1px solid rgba(45,90,16,0.3)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#2D5A10",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}>✓ Recebido</div>
+                            ):(
+                              <button onClick={()=>marcarRecebido(p.id)} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.35)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#E8205F",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%"}}>Receber</button>
+                            )}
+                            <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:14,cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                           </div>
                         );
                       })}
