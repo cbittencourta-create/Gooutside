@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 
 const SUPA_URL = "https://hbzldrnrbxvnkrbnntoe.supabase.co";
 const SUPA_KEY = "sb_publishable_Jr804JmMgoUU3x3pf5wW7g_yRPZaCYi";
@@ -1345,6 +1345,109 @@ function NotepadWidget({value, onChange}) {
   );
 }
 
+
+// ── Mascote Sol de Ouro ────────────────────────────────────────────────────
+function SolMascote({progresso, alerta}) {
+  const [piscando, setPiscando] = useState(false);
+  const [falando, setFalando] = useState(false);
+  const [bounce, setBounce] = useState(false);
+  const prevProgresso = useRef(progresso);
+
+  useEffect(()=>{
+    const blink = ()=>{ setPiscando(true); setTimeout(()=>setPiscando(false), 160); };
+    const interval = setInterval(blink, 3400 + Math.random()*2000);
+    return ()=>clearInterval(interval);
+  },[]);
+
+  useEffect(()=>{
+    if(progresso>prevProgresso.current+0.5){
+      setBounce(true);
+      const t=setTimeout(()=>setBounce(false), 900);
+      return ()=>clearTimeout(t);
+    }
+    prevProgresso.current=progresso;
+  },[progresso]);
+
+  const pct = Math.max(0, Math.min(100, progresso));
+  const stage = pct>=100?5 : pct>=75?4 : pct>=50?3 : pct>=25?2 : pct>=5?1 : 0;
+
+  const numRaios = [3,5,7,9,11,14][stage];
+  const raioComp = [8,11,14,17,20,24][stage];
+  const raioGrossura = [2,2.5,3,3.2,3.5,4][stage];
+  const corMiolo = alerta ? "#B4703A" : ["#8A8060","#B49A55","#D4B84A","#E8C838","#F5D520","#FFD700"][stage];
+  const corRaio  = alerta ? "#C48850" : ["#9A9070","#C4A860","#E0C050","#F0D040","#FFDD30","#FFEA00"][stage];
+  const glow = [0,2,5,9,14,22][stage];
+  const raioOpac = stage===0?0.35:1;
+
+  const cx=60, cy=60, rMiolo=22+stage*1.5;
+  const raios = Array.from({length:numRaios},(_,i)=>{
+    const ang=(i/numRaios)*Math.PI*2 - Math.PI/2;
+    const x1=cx+Math.cos(ang)*(rMiolo+2);
+    const y1=cy+Math.sin(ang)*(rMiolo+2);
+    const x2=cx+Math.cos(ang)*(rMiolo+2+raioComp);
+    const y2=cy+Math.sin(ang)*(rMiolo+2+raioComp);
+    return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={corRaio} strokeWidth={raioGrossura} strokeLinecap="round" opacity={raioOpac}/>;
+  });
+
+  const olhoFechado = stage===0 || piscando;
+  const sorrisoPath = alerta
+    ? `M ${cx-7} ${cy+11} Q ${cx} ${cy+5} ${cx+7} ${cy+11}`
+    : stage===0
+    ? `M ${cx-7} ${cy+9} Q ${cx} ${cy+6} ${cx+7} ${cy+9}`
+    : stage<=2
+    ? `M ${cx-7} ${cy+7} Q ${cx} ${cy+12} ${cx+7} ${cy+7}`
+    : `M ${cx-9} ${cy+6} Q ${cx} ${cy+16} ${cx+9} ${cy+6}`;
+
+  const mensagens = alerta
+    ? ["Ops, gastos passaram do orçamento este mês 😟 Vamos ajustar?"]
+    : [
+        "Vamos alimentar seus objetivos? 🌱",
+        "Já brilhando um pouquinho! Continue.",
+        "Metade do caminho — ótimo trabalho!",
+        "Quase lá! Seu sol está radiante!",
+        "Quase no máximo! Falta pouquinho!",
+        "Objetivos completos! Sol pleno! ☀️✨",
+      ];
+  const msgIdx = alerta ? 0 : stage;
+  const msgList = alerta ? mensagens : mensagens;
+
+  return (
+    <div style={{position:"fixed",bottom:28,left:24,zIndex:40,display:window.innerWidth>1300?"flex":"none",flexDirection:"column",alignItems:"center",gap:6}}>
+      {falando&&(
+        <div style={{background:"rgba(255,255,255,0.96)",borderRadius:14,padding:"9px 13px",fontSize:11,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",fontWeight:600,boxShadow:"0 4px 14px rgba(0,0,0,0.18)",maxWidth:170,textAlign:"center",marginBottom:2}}>
+          {alerta ? mensagens[0] : mensagens[stage]}
+        </div>
+      )}
+      <div onClick={()=>setFalando(f=>!f)}
+        style={{cursor:"pointer",transform:bounce?"scale(1.18)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:"solBreathe 3.2s ease-in-out infinite"}}>
+        <svg width="92" height="92" viewBox="0 0 120 120" style={{filter:glow?`drop-shadow(0 0 ${glow}px ${corRaio})`:"none"}}>
+          {raios}
+          <circle cx={cx} cy={cy} r={rMiolo} fill={corMiolo}/>
+          <circle cx={cx} cy={cy} r={rMiolo} fill="none" stroke={corRaio} strokeWidth={1.5} opacity={0.5}/>
+          {stage>=3&&!alerta&&<circle cx={cx-11} cy={cy+5} r={3.2} fill="#E8768A" opacity={0.55}/>}
+          {stage>=3&&!alerta&&<circle cx={cx+11} cy={cy+5} r={3.2} fill="#E8768A" opacity={0.55}/>}
+          {olhoFechado ? (
+            <>
+              <path d={`M ${cx-9} ${cy-3} Q ${cx-5} ${cy-1} ${cx-1} ${cy-3}`} stroke="#3D3226" strokeWidth={2} fill="none" strokeLinecap="round"/>
+              <path d={`M ${cx+1} ${cy-3} Q ${cx+5} ${cy-1} ${cx+9} ${cy-3}`} stroke="#3D3226" strokeWidth={2} fill="none" strokeLinecap="round"/>
+            </>
+          ) : (
+            <>
+              <circle cx={cx-5} cy={cy-3} r={2.6} fill="#3D3226"/>
+              <circle cx={cx+5} cy={cy-3} r={2.6} fill="#3D3226"/>
+            </>
+          )}
+          <path d={sorrisoPath} stroke="#3D3226" strokeWidth={2} fill="none" strokeLinecap="round"/>
+        </svg>
+      </div>
+      <div style={{background:"rgba(255,255,255,0.85)",borderRadius:99,padding:"3px 10px",fontSize:10,fontWeight:700,color:alerta?"#8B4A1A":"#3D3226",fontFamily:"'DM Sans',sans-serif"}}>
+        {alerta?"⚠ ":""}{pct.toFixed(0)}% {alerta?"energia":"radiante"}
+      </div>
+      <style>{`@keyframes solBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}`}</style>
+    </div>
+  );
+}
+
 // ── Login Screen ─────────────────────────────────────────────────────────────
 function LoginScreen({onLogin}) {
   const [mode, setMode]       = useState("login"); // login | signup
@@ -1624,6 +1727,16 @@ function AppMain({user, onLogout}) {
   // ── Derived ────────────────────────────────────────────────────────────────
   const plantoesEfetivos=useMemo(()=>plantoes.map(p=>({...p,se:getPltStatus(p)})),[plantoes]);
   const movsDoMes=useMemo(()=>movs.filter(m=>monthKey(m.data)===selMes),[movs,selMes]);
+  const orcamentoEstourado=useMemo(()=>{
+    const categoriasD=cats?.despesa||DEFAULT_CATS.despesa;
+    const gastosPorCat={};
+    movsDoMes.filter(m=>m.tipo==="saida").forEach(m=>{gastosPorCat[m.categoria]=(gastosPorCat[m.categoria]||0)+m.valor;});
+    return categoriasD.some(c=>{
+      const gasto=gastosPorCat[`${c.emoji} ${c.nome}`]||Object.entries(gastosPorCat).filter(([k])=>k.includes(c.nome)).reduce((s,[,v])=>s+v,0);
+      const plan=orcamento[selMes]?.[c.id]||0;
+      return plan>0&&gasto>plan;
+    });
+  },[movsDoMes,cats,orcamento,selMes]);
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
   const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
   const transferencias=movsDoMes.filter(m=>m.tipo==="transferencia").reduce((s,m)=>s+m.valor,0);
@@ -1831,6 +1944,16 @@ function AppMain({user, onLogout}) {
       </div>
 
       <NotepadWidget value={notas} onChange={setNotas}/>
+      <SolMascote
+        alerta={orcamentoEstourado}
+        progresso={(()=>{
+          const progObj=objetivos.length===0?0:objetivos.reduce((s,o)=>s+(o.meta>0?Math.min(o.atual/o.meta,1):0),0)/objetivos.length*100;
+          const progDiv=dividas.length===0?0:dividas.reduce((s,d)=>s+(+d.total>0?Math.min(+d.pago/ +d.total,1):0),0)/dividas.length*100;
+          let combinado = dividas.length>0 ? progObj*0.65+progDiv*0.35 : progObj;
+          if(orcamentoEstourado) combinado -= 18;
+          return Math.max(0,Math.min(100,combinado));
+        })()}
+      />
 
       {/* TOP BAR */}
       <div style={{background:"rgba(255,255,255,0.78)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",borderBottom:"1px solid rgba(0,0,0,0.08)",padding:"14px 16px 12px",position:"sticky",top:0,zIndex:50,boxShadow:"0 2px 20px rgba(0,0,0,0.1)"}}>
