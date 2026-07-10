@@ -145,7 +145,19 @@ const shiftMonth = (ym,n) => { const [y,m]=ym.split("-").map(Number); const d=ne
 const uid = () => Date.now()+Math.random().toString(36).slice(2);
 const CATS_OUT = ["🍔 Alimentação","🚗 Transporte","🏠 Moradia","💊 Saúde","🎭 Lazer","👕 Vestuário","📚 Educação","💡 Contas","📦 Outros"];
 const CATS_IN  = ["🏥 Plantão","💼 Consultório","🎓 Ensino","💰 Investimento","🎁 Presente","📦 Outros"];
-const INVEST_T = ["CDB","LCI/LCA","Tesouro Direto","Ações","FIIs","Poupança","Previdência","Criptomoedas","Outro"];
+const INVEST_T = ["CDB","LCI/LCA","Tesouro Direto","Ações","FIIs","Fundo de Investimento","Poupança","Previdência","Criptomoedas","Outro"];
+
+const INVEST_CATEGORIAS = [
+  {id:"fixa",     label:"Renda Fixa",     tipos:["CDB","LCI/LCA","Tesouro Direto","Poupança","Previdência"]},
+  {id:"variavel", label:"Renda Variável", tipos:["Ações","Criptomoedas"]},
+  {id:"fundos",   label:"Fundos",         tipos:["FIIs","Fundo de Investimento"]},
+  {id:"outros",   label:"Outros",         tipos:["Outro"]},
+];
+
+function categoriaDoInvest(tipo) {
+  const cat = INVEST_CATEGORIAS.find(c=>c.tipos.includes(tipo));
+  return cat ? cat.id : "outros";
+}
 
 async function fetchCDI() {
   try {
@@ -2369,7 +2381,17 @@ function AppMain({user, onLogout}) {
               <Btn variant="primary" style={{fontSize:12,padding:"9px 14px"}} onClick={()=>openM("inv")}>+ Investimento</Btn>
             </div>
             {invests.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum investimento registrado</div>
-              :invests.map(i=>{
+              :INVEST_CATEGORIAS.map(catInfo=>{
+                const investsCat=invests.filter(i=>categoriaDoInvest(i.tipo)===catInfo.id);
+                if(investsCat.length===0) return null;
+                const totalCat=investsCat.reduce((s,i)=>s+(+i.aporte||0),0);
+                return (
+                  <div key={catInfo.id} style={{marginBottom:18}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10,paddingBottom:6,borderBottom:"2px solid rgba(0,0,0,0.08)"}}>
+                      <div style={{fontSize:12,fontWeight:700,color:"rgba(26,18,9,0.6)",letterSpacing:".07em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>{catInfo.label}</div>
+                      <div className="num" style={{fontSize:14,fontWeight:700,color:C.green}}>{R(totalCat)}</div>
+                    </div>
+                    {investsCat.map(i=>{
                 const txEf=taxaEfetiva(i);
                 const rend=i.aporte*txEf/100/12;
                 const objsVinc=objetivos.filter(o=>o.investId===i.id);
@@ -2417,6 +2439,9 @@ function AppMain({user, onLogout}) {
                     <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(invests,setInvests,i.id)}>Excluir</Btn>
                   </div>
                 </div>;
+                    })}
+                  </div>
+                );
               })
             }
           </div>
