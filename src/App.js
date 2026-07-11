@@ -2284,29 +2284,68 @@ function AppMain({user, onLogout}) {
         {/* ══ MOVIMENTOS ══ */}
         {tab==="movimentos"&&(
           <div className="fade">
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-              <div style={{display:"flex",gap:8}}>
-                <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:12,padding:"10px 16px",textAlign:"center",border:"1px solid rgba(143,196,58,0.4)"}}><div style={{fontSize:9,color:"#2D5A10",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>ENTRADAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#2D5A10"}}>{R(entradas)}</div></div>
-                <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:12,padding:"10px 16px",textAlign:"center",border:"1px solid rgba(224,82,82,0.4)"}}><div style={{fontSize:9,color:"#8B1A1A",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>SAÍDAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#8B1A1A"}}>{R(saidas)}</div></div>
-              </div>
-              <div style={{display:"flex",gap:7}}>
-                <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"9px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6}}>📥 Importar</button>
-                <Btn variant="primary" style={{padding:"9px 14px",fontSize:12,boxShadow:"0 2px 10px rgba(232,32,95,0.3)"}} onClick={()=>openM("mov")}>+ Lançamento</Btn>
+            <div className={CARD} style={{marginBottom:14,padding:"16px 18px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{background:"rgba(255,255,255,0.9)",borderRadius:12,padding:"9px 15px",textAlign:"center",border:"1px solid rgba(45,90,16,0.35)"}}><div style={{fontSize:9.5,color:"#215010",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>ENTRADAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#215010"}}>{R(entradas)}</div></div>
+                  <div style={{background:"rgba(255,255,255,0.9)",borderRadius:12,padding:"9px 15px",textAlign:"center",border:"1px solid rgba(196,24,90,0.35)"}}><div style={{fontSize:9.5,color:"#8B1A1A",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>SAÍDAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#8B1A1A"}}>{R(saidas)}</div></div>
+                </div>
+                <div style={{display:"flex",gap:7}}>
+                  <button onClick={()=>setImportOpen(true)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"9px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6}}>📥 Importar</button>
+                  <button onClick={()=>openM("mov")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"9px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)"}}>
+                    <span style={{fontSize:14,lineHeight:1}}>✚</span> Lançamento
+                  </button>
+                </div>
               </div>
             </div>
+
             {movsDoMes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum lançamento em {monthLabel(selMes)}</div>
-              :[...movsDoMes].sort((a,b)=>b.data.localeCompare(a.data)).map(m=>(
-                <div key={m.id} className={CARD} style={{display:"flex",alignItems:"center",gap:10,marginBottom:7,padding:"11px 14px"}}>
-                  <div style={{width:34,height:34,borderRadius:10,background:m.tipo==="entrada"?"rgba(0,0,0,0.3)":"rgba(0,0,0,0.3)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0,border:`1px solid ${m.tipo==="entrada"?C.green:C.red}44`}}>{m.categoria.split(" ")[0]}</div>
-                  <div style={{flex:1}}><div style={{fontSize:13,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>{fd(m.data)} · {m.categoria.split(" ").slice(1).join(" ")}</div></div>
-                  <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3,flexShrink:0}}>
-                    <div className="num" style={{fontSize:14,fontWeight:700,color:m.tipo==="entrada"?C.green:m.tipo==="transferencia"?"#5BA3D4":C.red}}>{m.tipo==="entrada"?"+":m.tipo==="transferencia"?"🔄":"-"}{R(m.valor)}</div>
-                    {m.tipo==="entrada"&&regras.length>0&&<button onClick={()=>setMovDist(m)} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:6,color:"#E8205F",fontSize:9,fontWeight:700,padding:"2px 6px",cursor:"pointer",fontFamily:"inherit"}}>distribuir</button>}
-                  </div>
-                  <button onClick={()=>remove(movs,setMovs,m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.55)",fontSize:17,cursor:"pointer",padding:"0 3px",lineHeight:1}}>×</button>
+              :(
+              <div className={CARD} style={{padding:"16px 14px"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 105px 95px 90px 26px",gap:8,marginBottom:8,padding:"0 4px"}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Descrição</div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Categoria</div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data</div>
+                  <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:"right"}}>Valor</div>
+                  <div/>
                 </div>
-              ))
-            }
+                {[...movsDoMes].sort((a,b)=>b.data.localeCompare(a.data)).map((m,idx)=>{
+                  const opts = m.tipo==="entrada" ? (cats?.receita||DEFAULT_CATS.receita) : m.tipo==="transferencia" ? [] : (cats?.despesa||DEFAULT_CATS.despesa);
+                  return (
+                    <div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 105px 95px 90px 26px",gap:8,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
+                      <div>
+                        <input value={m.descricao} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,descricao:e.target.value}:x))}
+                          style={{background:"transparent",border:"none",padding:"5px 4px",fontSize:13,color:"#1A1209",fontWeight:600,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                        {m.tipo==="entrada"&&regras.length>0&&(
+                          <button onClick={()=>setMovDist(m)} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:6,color:"#C4185A",fontSize:9,fontWeight:700,padding:"2px 7px",cursor:"pointer",fontFamily:"inherit",marginLeft:4}}>distribuir</button>
+                        )}
+                      </div>
+                      {m.tipo==="transferencia" ? (
+                        <div style={{fontSize:11,color:"#1A4A6E",fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>🔄 Transfer.</div>
+                      ) : (
+                        <select value={m.categoria} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,categoria:e.target.value}:x))}
+                          className="plt-select"
+                          style={{background:"transparent",border:"none",padding:"5px 4px",fontSize:12,color:"#1A1209",fontWeight:500,cursor:"pointer",fontFamily:"inherit",width:"100%",minWidth:0}}>
+                          {opts.map(c=>(
+                            <React.Fragment key={c.id}>
+                              <option value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>
+                              {(c.subcats||[]).map(s=><option key={s.id} value={`${c.emoji} ${c.nome} · ${s.nome}`}>{c.emoji} {c.nome} · {s.nome}</option>)}
+                            </React.Fragment>
+                          ))}
+                          {!opts.some(c=>m.categoria.startsWith(`${c.emoji} ${c.nome}`))&&<option value={m.categoria}>{m.categoria}</option>}
+                        </select>
+                      )}
+                      <input type="date" value={m.data} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,data:e.target.value}:x))}
+                        style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 5px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                      <input type="number" value={m.valor} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,valor:+e.target.value}:x))}
+                        className="plt-numinput"
+                        style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 5px",fontSize:12.5,fontWeight:700,color:m.tipo==="entrada"?"#215010":m.tipo==="transferencia"?"#1A4A6E":"#8B1A1A",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%",textAlign:"right"}}/>
+                      <button onClick={()=>remove(movs,setMovs,m.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:14,cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
