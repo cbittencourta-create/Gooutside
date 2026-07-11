@@ -1819,15 +1819,13 @@ function AppMain({user, onLogout}) {
         .filter(m=>m.data&&monthKey(m.data)>=saldoIniData&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
         .reduce((s,m)=>m.tipo==="entrada"?s+m.valor:s-m.valor,0)
     : saldo;
-  // Saldo livre = saldo inicial + livre alocado - despesas reais
-  const totalLivreAlocado=alocacoes
+  // Saldo livre = saldo acumulado (TODAS entradas - saídas, mês a mês)
+  // menos o que já foi alocado para fora (investimento/objetivo/dívida) via distribuição
+  const totalNaoLivreAlocado=alocacoes
     .filter(a=>a.data&&monthKey(a.data)>=saldoIniData&&monthKey(a.data)<=selMes)
-    .flatMap(a=>a.itens.filter(it=>it.tipo==="livre"))
+    .flatMap(a=>a.itens.filter(it=>it.tipo!=="livre"))
     .reduce((s,it)=>s+it.valor,0);
-  const totalSaidasPeriodo=movs
-    .filter(m=>m.tipo==="saida"&&m.data&&monthKey(m.data)>=saldoIniData&&monthKey(m.data)<=selMes)
-    .reduce((s,m)=>s+m.valor,0);
-  const saldoReal=saldoIniValor+totalLivreAlocado-totalSaidasPeriodo;
+  const saldoReal=saldoAcumulado-totalNaoLivreAlocado;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalFundoDivida=dividas.filter(d=>d.tipo==="fundo"&&!d.investId).reduce((s,d)=>s+(+d.pago||0),0);
   const totalObjetivos=objetivos.filter(o=>!o.investId).reduce((s,o)=>s+(+o.atual||0),0);
