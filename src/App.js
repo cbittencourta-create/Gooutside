@@ -712,8 +712,8 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
               <div>
                 <div style={{fontSize:14,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{c.emoji} {c.nome}</div>
                 <div style={{marginTop:5}}>
-                  <div style={{background:"rgba(0,0,0,0.12)",borderRadius:99,height:7,overflow:"hidden"}}>
-                    <div style={{width:`${Math.min(pct,100)}%`,height:"100%",background:over?"#D4443A":"#4A9A2A",borderRadius:99,transition:"width .5s"}}/>
+                  <div style={{background:"rgba(0,0,0,0.15)",borderRadius:99,height:9,overflow:"hidden"}}>
+                    <div style={{width:`${pct>0?Math.max(Math.min(pct,100),4):0}%`,height:"100%",background:over?"#E8331F":"#2E9A12",borderRadius:99,transition:"width .5s",boxShadow:pct>0?`0 0 4px ${over?"#E8331F":"#2E9A12"}66`:"none"}}/>
                   </div>
                 </div>
               </div>
