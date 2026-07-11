@@ -648,10 +648,10 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
   return (
     <div>
       {/* Header */}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+      <div className="card" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,padding:"16px 18px"}}>
         <div>
           <div style={{fontSize:22,fontWeight:300,color:"#1A1209"}}>{monthLabel(selMes)}</div>
-          <div style={{fontSize:11,color:"rgba(26,18,9,0.6)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Planejamento orçamentário</div>
+          <div style={{fontSize:11,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>📊 Planejamento orçamentário</div>
         </div>
       </div>
 
@@ -670,7 +670,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
       </div>
 
       {/* Toggle % */}
-      <div style={{display:"flex",background:"rgba(255,255,255,0.4)",borderRadius:12,padding:3,marginBottom:14,border:"1px solid rgba(0,0,0,0.08)"}}>
+      <div style={{display:"flex",background:"rgba(255,255,255,0.9)",borderRadius:12,padding:3,marginBottom:14,border:"1px solid rgba(0,0,0,0.1)",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
         <button onClick={()=>setViewMode("planejado")}
           style={{flex:1,background:viewMode==="planejado"?"#E8205F":"transparent",color:viewMode==="planejado"?"#fff":"#1A1209",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
           % do Planejado
