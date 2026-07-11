@@ -2302,7 +2302,7 @@ function AppMain({user, onLogout}) {
             {movsDoMes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum lançamento em {monthLabel(selMes)}</div>
               :(
               <div className={CARD} style={{padding:"16px 14px"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 105px 95px 90px 26px",gap:8,marginBottom:8,padding:"0 4px"}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 175px 100px 92px 26px",gap:10,marginBottom:8,padding:"0 4px"}}>
                   <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Descrição</div>
                   <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Categoria</div>
                   <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data</div>
@@ -2312,7 +2312,7 @@ function AppMain({user, onLogout}) {
                 {[...movsDoMes].sort((a,b)=>b.data.localeCompare(a.data)).map((m,idx)=>{
                   const opts = m.tipo==="entrada" ? (cats?.receita||DEFAULT_CATS.receita) : m.tipo==="transferencia" ? [] : (cats?.despesa||DEFAULT_CATS.despesa);
                   return (
-                    <div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 105px 95px 90px 26px",gap:8,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
+                    <div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 175px 100px 92px 26px",gap:10,alignItems:"center",padding:"10px 4px",background:idx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
                       <div>
                         <input value={m.descricao} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,descricao:e.target.value}:x))}
                           style={{background:"transparent",border:"none",padding:"5px 4px",fontSize:13,color:"#1A1209",fontWeight:600,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
@@ -2321,19 +2321,25 @@ function AppMain({user, onLogout}) {
                         )}
                       </div>
                       {m.tipo==="transferencia" ? (
-                        <div style={{fontSize:11,color:"#1A4A6E",fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>🔄 Transfer.</div>
+                        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(91,163,212,0.14)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,padding:"6px 10px 6px 6px"}}>
+                          <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>🔄</div>
+                          <span style={{fontSize:12,color:"#1A4A6E",fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>Transferência</span>
+                        </div>
                       ) : (
-                        <select value={m.categoria} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,categoria:e.target.value}:x))}
-                          className="plt-select"
-                          style={{background:"transparent",border:"none",padding:"5px 4px",fontSize:12,color:"#1A1209",fontWeight:500,cursor:"pointer",fontFamily:"inherit",width:"100%",minWidth:0}}>
-                          {opts.map(c=>(
-                            <React.Fragment key={c.id}>
-                              <option value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>
-                              {(c.subcats||[]).map(s=><option key={s.id} value={`${c.emoji} ${c.nome} · ${s.nome}`}>{c.emoji} {c.nome} · {s.nome}</option>)}
-                            </React.Fragment>
-                          ))}
-                          {!opts.some(c=>m.categoria.startsWith(`${c.emoji} ${c.nome}`))&&<option value={m.categoria}>{m.categoria}</option>}
-                        </select>
+                        <div title={m.categoria} style={{display:"flex",alignItems:"center",gap:8,background:m.tipo==="entrada"?"rgba(45,90,16,0.09)":"rgba(196,24,90,0.08)",border:`1px solid ${m.tipo==="entrada"?"rgba(45,90,16,0.22)":"rgba(196,24,90,0.2)"}`,borderRadius:10,padding:"6px 8px 6px 6px",minWidth:0}}>
+                          <div style={{width:26,height:26,borderRadius:8,background:m.tipo==="entrada"?"rgba(45,90,16,0.16)":"rgba(196,24,90,0.14)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>{m.categoria.split(" ")[0]}</div>
+                          <select value={m.categoria} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,categoria:e.target.value}:x))}
+                            className="plt-select"
+                            style={{background:"transparent",border:"none",padding:0,fontSize:12,color:m.tipo==="entrada"?"#215010":"#8B1043",fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                            {opts.map(c=>(
+                              <React.Fragment key={c.id}>
+                                <option value={`${c.emoji} ${c.nome}`}>{c.nome}</option>
+                                {(c.subcats||[]).map(s=><option key={s.id} value={`${c.emoji} ${c.nome} · ${s.nome}`}>{c.nome} · {s.nome}</option>)}
+                              </React.Fragment>
+                            ))}
+                            {!opts.some(c=>m.categoria.startsWith(`${c.emoji} ${c.nome}`))&&<option value={m.categoria}>{m.categoria.split(" ").slice(1).join(" ")}</option>}
+                          </select>
+                        </div>
                       )}
                       <input type="date" value={m.data} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,data:e.target.value}:x))}
                         style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 5px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
