@@ -1371,32 +1371,47 @@ function SolMascote({progresso, alerta}) {
   const pct = Math.max(0, Math.min(100, progresso));
   const stage = pct>=100?5 : pct>=75?4 : pct>=50?3 : pct>=25?2 : pct>=5?1 : 0;
 
-  const numRaios = [3,5,7,9,11,14][stage];
-  const raioComp = [8,11,14,17,20,24][stage];
-  const raioGrossura = [2,2.5,3,3.2,3.5,4][stage];
-  const corMiolo = alerta ? "#B4703A" : ["#8A8060","#B49A55","#D4B84A","#E8C838","#F5D520","#FFD700"][stage];
-  const corRaio  = alerta ? "#C48850" : ["#9A9070","#C4A860","#E0C050","#F0D040","#FFDD30","#FFEA00"][stage];
-  const glow = [0,2,5,9,14,22][stage];
-  const raioOpac = stage===0?0.35:1;
+  const numRaios = [8,10,12,14,16,20][stage];
+  const raioComp = [22,28,34,42,50,60][stage];
+  const halfWidthDeg = [0.16,0.17,0.18,0.19,0.2,0.22][stage];
+  const corClaro = alerta ? "#E0A050" : ["#B4A870","#D4BE72","#F0D060","#FFDD40","#FFE860","#FFF080"][stage];
+  const corEscuro = alerta ? "#A05820" : ["#8A7838","#B4922E","#D4A812","#E8A800","#F0A800","#FF9800"][stage];
+  const glow = [0,3,7,12,18,28][stage];
+  const raioOpac = stage===0?0.4:1;
 
-  const cx=60, cy=60, rMiolo=22+stage*1.5;
+  const cx=100, cy=100, rMiolo=[36,39,42,46,50,56][stage];
+  const gid = "solGrad"+(alerta?"A":"N")+stage;
+
+  function petal(angle, comp, wideMult){
+    const innerR = rMiolo-3;
+    const outerR = rMiolo+comp;
+    const hw = halfWidthDeg*wideMult;
+    const a1=angle-hw, a2=angle+hw;
+    const ix1=cx+Math.cos(a1)*innerR, iy1=cy+Math.sin(a1)*innerR;
+    const ix2=cx+Math.cos(a2)*innerR, iy2=cy+Math.sin(a2)*innerR;
+    const tipx=cx+Math.cos(angle)*outerR, tipy=cy+Math.sin(angle)*outerR;
+    const midR=innerR+(outerR-innerR)*0.55;
+    const cA_x=cx+Math.cos(angle-hw*0.7)*midR, cA_y=cy+Math.sin(angle-hw*0.7)*midR;
+    const cB_x=cx+Math.cos(angle+hw*0.7)*midR, cB_y=cy+Math.sin(angle+hw*0.7)*midR;
+    return `M ${ix1} ${iy1} Q ${cA_x} ${cA_y} ${tipx} ${tipy} Q ${cB_x} ${cB_y} ${ix2} ${iy2} Z`;
+  }
+
   const raios = Array.from({length:numRaios},(_,i)=>{
     const ang=(i/numRaios)*Math.PI*2 - Math.PI/2;
-    const x1=cx+Math.cos(ang)*(rMiolo+2);
-    const y1=cy+Math.sin(ang)*(rMiolo+2);
-    const x2=cx+Math.cos(ang)*(rMiolo+2+raioComp);
-    const y2=cy+Math.sin(ang)*(rMiolo+2+raioComp);
-    return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke={corRaio} strokeWidth={raioGrossura} strokeLinecap="round" opacity={raioOpac}/>;
+    const isLong = i%2===0;
+    const comp = isLong ? raioComp : raioComp*0.52;
+    const wideMult = isLong ? 1 : 0.75;
+    return <path key={i} d={petal(ang,comp,wideMult)} fill={isLong?corEscuro:corClaro} opacity={raioOpac}/>;
   });
 
   const olhoFechado = stage===0 || piscando;
   const sorrisoPath = alerta
-    ? `M ${cx-7} ${cy+11} Q ${cx} ${cy+5} ${cx+7} ${cy+11}`
+    ? `M ${cx-13} ${cy+19} Q ${cx} ${cy+8} ${cx+13} ${cy+19}`
     : stage===0
-    ? `M ${cx-7} ${cy+9} Q ${cx} ${cy+6} ${cx+7} ${cy+9}`
+    ? `M ${cx-12} ${cy+15} Q ${cx} ${cy+10} ${cx+12} ${cy+15}`
     : stage<=2
-    ? `M ${cx-7} ${cy+7} Q ${cx} ${cy+12} ${cx+7} ${cy+7}`
-    : `M ${cx-9} ${cy+6} Q ${cx} ${cy+16} ${cx+9} ${cy+6}`;
+    ? `M ${cx-12} ${cy+12} Q ${cx} ${cy+21} ${cx+12} ${cy+12}`
+    : `M ${cx-15} ${cy+11} Q ${cx} ${cy+27} ${cx+15} ${cy+11}`;
 
   const mensagens = alerta
     ? ["Ops, gastos passaram do orçamento este mês 😟 Vamos ajustar?"]
@@ -1408,42 +1423,48 @@ function SolMascote({progresso, alerta}) {
         "Quase no máximo! Falta pouquinho!",
         "Objetivos completos! Sol pleno! ☀️✨",
       ];
-  const msgIdx = alerta ? 0 : stage;
-  const msgList = alerta ? mensagens : mensagens;
 
   return (
-    <div style={{position:"fixed",bottom:28,left:24,zIndex:40,display:window.innerWidth>1300?"flex":"none",flexDirection:"column",alignItems:"center",gap:6}}>
-      {falando&&(
-        <div style={{background:"rgba(255,255,255,0.96)",borderRadius:14,padding:"9px 13px",fontSize:11,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",fontWeight:600,boxShadow:"0 4px 14px rgba(0,0,0,0.18)",maxWidth:170,textAlign:"center",marginBottom:2}}>
-          {alerta ? mensagens[0] : mensagens[stage]}
-        </div>
-      )}
+    <div style={{position:"fixed",top:150,left:24,zIndex:40,display:window.innerWidth>1300?"flex":"none",flexDirection:"column",alignItems:"center",gap:8}}>
       <div onClick={()=>setFalando(f=>!f)}
-        style={{cursor:"pointer",transform:bounce?"scale(1.18)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:"solBreathe 3.2s ease-in-out infinite"}}>
-        <svg width="92" height="92" viewBox="0 0 120 120" style={{filter:glow?`drop-shadow(0 0 ${glow}px ${corRaio})`:"none"}}>
+        style={{cursor:"pointer",transform:bounce?"scale(1.15)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:"solBreathe 3.2s ease-in-out infinite"}}>
+        <svg width="170" height="170" viewBox="0 0 200 200" style={{filter:glow?`drop-shadow(0 0 ${glow}px ${corEscuro})`:"none",overflow:"visible"}}>
+          <defs>
+            <radialGradient id={gid} cx="38%" cy="32%" r="75%">
+              <stop offset="0%" stopColor={corClaro}/>
+              <stop offset="100%" stopColor={corEscuro}/>
+            </radialGradient>
+          </defs>
           {raios}
-          <circle cx={cx} cy={cy} r={rMiolo} fill={corMiolo}/>
-          <circle cx={cx} cy={cy} r={rMiolo} fill="none" stroke={corRaio} strokeWidth={1.5} opacity={0.5}/>
-          {stage>=3&&!alerta&&<circle cx={cx-11} cy={cy+5} r={3.2} fill="#E8768A" opacity={0.55}/>}
-          {stage>=3&&!alerta&&<circle cx={cx+11} cy={cy+5} r={3.2} fill="#E8768A" opacity={0.55}/>}
+          <circle cx={cx} cy={cy} r={rMiolo} fill={`url(#${gid})`}/>
+          <circle cx={cx} cy={cy} r={rMiolo} fill="none" stroke={corEscuro} strokeWidth={1.5} opacity={0.4}/>
+          {stage>=3&&!alerta&&<ellipse cx={cx-16} cy={cy+9} rx={6} ry={4} fill="#E8768A" opacity={0.5}/>}
+          {stage>=3&&!alerta&&<ellipse cx={cx+16} cy={cy+9} rx={6} ry={4} fill="#E8768A" opacity={0.5}/>}
           {olhoFechado ? (
             <>
-              <path d={`M ${cx-9} ${cy-3} Q ${cx-5} ${cy-1} ${cx-1} ${cy-3}`} stroke="#3D3226" strokeWidth={2} fill="none" strokeLinecap="round"/>
-              <path d={`M ${cx+1} ${cy-3} Q ${cx+5} ${cy-1} ${cx+9} ${cy-3}`} stroke="#3D3226" strokeWidth={2} fill="none" strokeLinecap="round"/>
+              <path d={`M ${cx-15} ${cy-4} Q ${cx-8} ${cy-1} ${cx-1} ${cy-4}`} stroke="#3D3226" strokeWidth={3} fill="none" strokeLinecap="round"/>
+              <path d={`M ${cx+1} ${cy-4} Q ${cx+8} ${cy-1} ${cx+15} ${cy-4}`} stroke="#3D3226" strokeWidth={3} fill="none" strokeLinecap="round"/>
             </>
           ) : (
             <>
-              <circle cx={cx-5} cy={cy-3} r={2.6} fill="#3D3226"/>
-              <circle cx={cx+5} cy={cy-3} r={2.6} fill="#3D3226"/>
+              <circle cx={cx-8} cy={cy-5} r={4.2} fill="#3D3226"/>
+              <circle cx={cx+8} cy={cy-5} r={4.2} fill="#3D3226"/>
+              <circle cx={cx-6.5} cy={cy-6.5} r={1.3} fill="#fff"/>
+              <circle cx={cx+9.5} cy={cy-6.5} r={1.3} fill="#fff"/>
             </>
           )}
-          <path d={sorrisoPath} stroke="#3D3226" strokeWidth={2} fill="none" strokeLinecap="round"/>
+          <path d={sorrisoPath} stroke="#3D3226" strokeWidth={3} fill="none" strokeLinecap="round"/>
         </svg>
       </div>
-      <div style={{background:"rgba(255,255,255,0.85)",borderRadius:99,padding:"3px 10px",fontSize:10,fontWeight:700,color:alerta?"#8B4A1A":"#3D3226",fontFamily:"'DM Sans',sans-serif"}}>
+      {falando&&(
+        <div style={{background:"rgba(255,255,255,0.96)",borderRadius:14,padding:"10px 14px",fontSize:12,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",fontWeight:600,boxShadow:"0 4px 14px rgba(0,0,0,0.18)",maxWidth:190,textAlign:"center"}}>
+          {alerta ? mensagens[0] : mensagens[stage]}
+        </div>
+      )}
+      <div style={{background:"rgba(255,255,255,0.88)",borderRadius:99,padding:"5px 14px",fontSize:12,fontWeight:700,color:alerta?"#8B4A1A":"#3D3226",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}}>
         {alerta?"⚠ ":""}{pct.toFixed(0)}% {alerta?"energia":"radiante"}
       </div>
-      <style>{`@keyframes solBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}`}</style>
+      <style>{`@keyframes solBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}`}</style>
     </div>
   );
 }
