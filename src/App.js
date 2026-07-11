@@ -1347,7 +1347,7 @@ function NotepadWidget({value, onChange}) {
 
 
 // ── Mascote Sol de Ouro ────────────────────────────────────────────────────
-function SolMascote({progresso, alerta}) {
+function PatoMascote({progresso, alerta, relaxado}) {
   const [piscando, setPiscando] = useState(false);
   const [falando, setFalando] = useState(false);
   const [bounce, setBounce] = useState(false);
@@ -1371,100 +1371,136 @@ function SolMascote({progresso, alerta}) {
   const pct = Math.max(0, Math.min(100, progresso));
   const stage = pct>=100?5 : pct>=75?4 : pct>=50?3 : pct>=25?2 : pct>=5?1 : 0;
 
-  const numRaios = [8,10,12,14,16,20][stage];
-  const raioComp = [22,28,34,42,50,60][stage];
-  const halfWidthDeg = [0.16,0.17,0.18,0.19,0.2,0.22][stage];
-  const corClaro = alerta ? "#E0A050" : ["#B4A870","#D4BE72","#F0D060","#FFDD40","#FFE860","#FFF080"][stage];
-  const corEscuro = alerta ? "#A05820" : ["#8A7838","#B4922E","#D4A812","#E8A800","#F0A800","#FF9800"][stage];
-  const glow = [0,3,7,12,18,28][stage];
-  const raioOpac = stage===0?0.4:1;
+  // droop: 1 = pescoço bem caído (triste), 0 = pescoço ereto (feliz)
+  const droopBase = alerta ? 1 : [1, 0.78, 0.52, 0.28, 0.1, 0][stage];
+  const droop = relaxado&&!alerta ? 0.05 : droopBase;
+  const corCorpo   = alerta ? "#DCD4C0" : "#F8F2E4";
+  const corSombra  = alerta ? "#C0B698" : "#E8DCC0";
+  const corBico    = alerta ? "#C89058" : "#F0A050";
+  const corBicoEsc = alerta ? "#A87840" : "#D87830";
+  const temCoroa = stage===5 && !alerta;
+  const relaxAtivo = relaxado && !alerta && stage<5;
 
-  const cx=100, cy=100, rMiolo=[36,39,42,46,50,56][stage];
-  const gid = "solGrad"+(alerta?"A":"N")+stage;
+  const cx=100;
+  const bodyCy=158, bodyRx=46, bodyRy=40;
+  const neckBaseX=100, neckBaseY=122;
+  const headX = 100 + droop*38;
+  const headY = 76 + droop*46;
+  const headR = 27;
+  const ctrlX = (neckBaseX+headX)/2 + droop*26;
+  const ctrlY = (neckBaseY+headY)/2 - droop*6;
+  const neckPath = `M ${neckBaseX-15} ${neckBaseY} Q ${ctrlX-15} ${ctrlY} ${headX-headR*0.55} ${headY+headR*0.4}
+                     L ${headX+headR*0.55} ${headY+headR*0.4} Q ${ctrlX+15} ${ctrlY} ${neckBaseX+15} ${neckBaseY} Z`;
 
-  function petal(angle, comp, wideMult){
-    const innerR = rMiolo-3;
-    const outerR = rMiolo+comp;
-    const hw = halfWidthDeg*wideMult;
-    const a1=angle-hw, a2=angle+hw;
-    const ix1=cx+Math.cos(a1)*innerR, iy1=cy+Math.sin(a1)*innerR;
-    const ix2=cx+Math.cos(a2)*innerR, iy2=cy+Math.sin(a2)*innerR;
-    const tipx=cx+Math.cos(angle)*outerR, tipy=cy+Math.sin(angle)*outerR;
-    const midR=innerR+(outerR-innerR)*0.55;
-    const cA_x=cx+Math.cos(angle-hw*0.7)*midR, cA_y=cy+Math.sin(angle-hw*0.7)*midR;
-    const cB_x=cx+Math.cos(angle+hw*0.7)*midR, cB_y=cy+Math.sin(angle+hw*0.7)*midR;
-    return `M ${ix1} ${iy1} Q ${cA_x} ${cA_y} ${tipx} ${tipy} Q ${cB_x} ${cB_y} ${ix2} ${iy2} Z`;
-  }
+  const bicoAngle = droop>0.4 ? 0.9 : 0.15;
+  const bicoLen = 24;
+  const bicoBaseX = headX + Math.cos(bicoAngle)*headR*0.85;
+  const bicoBaseY = headY + Math.sin(bicoAngle)*headR*0.85;
+  const bicoTipX = headX + Math.cos(bicoAngle)*(headR*0.85+bicoLen);
+  const bicoTipY = headY + Math.sin(bicoAngle)*(headR*0.85+bicoLen);
 
-  const raios = Array.from({length:numRaios},(_,i)=>{
-    const ang=(i/numRaios)*Math.PI*2 - Math.PI/2;
-    const isLong = i%2===0;
-    const comp = isLong ? raioComp : raioComp*0.52;
-    const wideMult = isLong ? 1 : 0.75;
-    return <path key={i} d={petal(ang,comp,wideMult)} fill={isLong?corEscuro:corClaro} opacity={raioOpac}/>;
-  });
-
-  const olhoFechado = stage===0 || piscando;
-  const sorrisoPath = alerta
-    ? `M ${cx-13} ${cy+19} Q ${cx} ${cy+8} ${cx+13} ${cy+19}`
-    : stage===0
-    ? `M ${cx-12} ${cy+15} Q ${cx} ${cy+10} ${cx+12} ${cy+15}`
-    : stage<=2
-    ? `M ${cx-12} ${cy+12} Q ${cx} ${cy+21} ${cx+12} ${cy+12}`
-    : `M ${cx-15} ${cy+11} Q ${cx} ${cy+27} ${cx+15} ${cy+11}`;
+  const olhoFechado = droop>0.65 || piscando;
+  const olhoY = headY - 4;
 
   const mensagens = alerta
-    ? ["Ops, gastos passaram do orçamento este mês 😟 Vamos ajustar?"]
+    ? ["Quá... gastos passaram do orçamento esse mês 😟"]
+    : relaxAtivo
+    ? ["Quá~ vida boa, pagando dívidas e tudo em dia 😎🍹"]
     : [
-        "Vamos alimentar seus objetivos? 🌱",
-        "Já brilhando um pouquinho! Continue.",
-        "Metade do caminho — ótimo trabalho!",
-        "Quase lá! Seu sol está radiante!",
-        "Quase no máximo! Falta pouquinho!",
-        "Objetivos completos! Sol pleno! ☀️✨",
+        "Quá? Vamos alimentar meus objetivos? 🌱",
+        "Ainda meio molinho, mas animado!",
+        "Já tô de pescoço mais durinho!",
+        "Olha meu pescoço reto! Continue assim!",
+        "Quase ganhando minha coroa de girassol!",
+        "Ganhei minha coroa! Quá quá! 🌻",
       ];
 
   return (
     <div style={{position:"fixed",top:150,left:24,zIndex:40,display:window.innerWidth>1300?"flex":"none",flexDirection:"column",alignItems:"center",gap:8}}>
       <div onClick={()=>setFalando(f=>!f)}
-        style={{cursor:"pointer",transform:bounce?"scale(1.15)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:"solBreathe 3.2s ease-in-out infinite"}}>
-        <svg width="170" height="170" viewBox="0 0 200 200" style={{filter:glow?`drop-shadow(0 0 ${glow}px ${corEscuro})`:"none",overflow:"visible"}}>
-          <defs>
-            <radialGradient id={gid} cx="38%" cy="32%" r="75%">
-              <stop offset="0%" stopColor={corClaro}/>
-              <stop offset="100%" stopColor={corEscuro}/>
-            </radialGradient>
-          </defs>
-          {raios}
-          <circle cx={cx} cy={cy} r={rMiolo} fill={`url(#${gid})`}/>
-          <circle cx={cx} cy={cy} r={rMiolo} fill="none" stroke={corEscuro} strokeWidth={1.5} opacity={0.4}/>
-          {stage>=3&&!alerta&&<ellipse cx={cx-16} cy={cy+9} rx={6} ry={4} fill="#E8768A" opacity={0.5}/>}
-          {stage>=3&&!alerta&&<ellipse cx={cx+16} cy={cy+9} rx={6} ry={4} fill="#E8768A" opacity={0.5}/>}
-          {olhoFechado ? (
+        style={{cursor:"pointer",transform:bounce?"scale(1.15)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:"patoBreathe 3.4s ease-in-out infinite"}}>
+        <svg width="170" height="190" viewBox="0 0 220 220" style={{overflow:"visible"}}>
+          {/* boia rosa (só no estado relaxado) */}
+          {relaxAtivo&&(
+            <g>
+              <ellipse cx={cx+10} cy={bodyCy+bodyRy+2} rx={62} ry={30} fill="#F582AC"/>
+              <ellipse cx={cx+10} cy={bodyCy+bodyRy+2} rx={62} ry={30} fill="none" stroke="#E8548A" strokeWidth={3}/>
+              <ellipse cx={cx+10} cy={bodyCy+bodyRy+2} rx={38} ry={16} fill="#5BA3D4" opacity={0.55}/>
+            </g>
+          )}
+          {/* asa */}
+          <path d={`M ${cx-bodyRx+8} ${bodyCy-6} Q ${cx-bodyRx-14} ${bodyCy+14} ${cx-bodyRx+4} ${bodyCy+30} Q ${cx-bodyRx+18} ${bodyCy+18} ${cx-bodyRx+8} ${bodyCy-6} Z`} fill={corSombra} opacity={0.9}/>
+          {/* corpo */}
+          <ellipse cx={cx} cy={bodyCy} rx={bodyRx} ry={bodyRy} fill={corCorpo}/>
+          <ellipse cx={cx} cy={bodyCy+bodyRy*0.35} rx={bodyRx*0.75} ry={bodyRy*0.55} fill={corSombra} opacity={0.45}/>
+          {/* pés (escondidos na boia se relaxado) */}
+          {!relaxAtivo&&(
             <>
-              <path d={`M ${cx-15} ${cy-4} Q ${cx-8} ${cy-1} ${cx-1} ${cy-4}`} stroke="#3D3226" strokeWidth={3} fill="none" strokeLinecap="round"/>
-              <path d={`M ${cx+1} ${cy-4} Q ${cx+8} ${cy-1} ${cx+15} ${cy-4}`} stroke="#3D3226" strokeWidth={3} fill="none" strokeLinecap="round"/>
-            </>
-          ) : (
-            <>
-              <circle cx={cx-8} cy={cy-5} r={4.2} fill="#3D3226"/>
-              <circle cx={cx+8} cy={cy-5} r={4.2} fill="#3D3226"/>
-              <circle cx={cx-6.5} cy={cy-6.5} r={1.3} fill="#fff"/>
-              <circle cx={cx+9.5} cy={cy-6.5} r={1.3} fill="#fff"/>
+              <path d={`M ${cx-14} ${bodyCy+bodyRy-2} L ${cx-20} ${bodyCy+bodyRy+12} L ${cx-8} ${bodyCy+bodyRy+10} Z`} fill={corBico}/>
+              <path d={`M ${cx+14} ${bodyCy+bodyRy-2} L ${cx+20} ${bodyCy+bodyRy+12} L ${cx+8} ${bodyCy+bodyRy+10} Z`} fill={corBico}/>
             </>
           )}
-          <path d={sorrisoPath} stroke="#3D3226" strokeWidth={3} fill="none" strokeLinecap="round"/>
+          {/* copo de drinque (só relaxado) */}
+          {relaxAtivo&&(
+            <g transform={`translate(${cx+52},${bodyCy-18})`}>
+              <line x1="0" y1="-2" x2="0" y2="18" stroke="#C9C9D8" strokeWidth={2}/>
+              <ellipse cx="0" cy="20" rx="10" ry="3" fill="#C9C9D8" opacity={0.7}/>
+              <path d="M -12 -30 L 12 -30 L 4 -2 L -4 -2 Z" fill="#FFA940" opacity={0.9}/>
+              <path d="M -12 -30 L 12 -30 L 10 -22 L -10 -22 Z" fill="#FFC470"/>
+              <line x1="-3" y1="-38" x2="3" y2="-20" stroke="#E8548A" strokeWidth={2.4} strokeLinecap="round"/>
+              <line x1="3" y1="-38" x2="-3" y2="-20" stroke="#fff" strokeWidth={2.4} strokeLinecap="round"/>
+              <path d="M 8 -32 Q 18 -32 16 -22 Q 10 -24 8 -32 Z" fill="#FFB020"/>
+            </g>
+          )}
+          {/* pescoço */}
+          <path d={neckPath} fill={corCorpo}/>
+          {/* cabeça */}
+          <circle cx={headX} cy={headY} r={headR} fill={corCorpo}/>
+          {/* coroa de girassol (só no 100%) */}
+          {temCoroa&&(
+            <g transform={`translate(${headX},${headY-headR+4})`}>
+              {Array.from({length:10},(_,i)=>{
+                const a=(i/10)*360;
+                const rad=a*Math.PI/180;
+                const px=Math.cos(rad)*15, py=Math.sin(rad)*7-2;
+                return <ellipse key={i} cx={px} cy={py} rx={7} ry={4.2} fill="#FFC420" stroke="#E8A800" strokeWidth={0.6} transform={`rotate(${a} ${px} ${py})`}/>;
+              })}
+              <circle cx="0" cy="-2" r="8" fill="#8B5A2B"/>
+              <circle cx="0" cy="-2" r="8" fill="#5A3A1A" opacity={0.3}/>
+            </g>
+          )}
+          {/* bico */}
+          <path d={`M ${bicoBaseX-7} ${bicoBaseY-6} Q ${bicoTipX} ${bicoTipY-3} ${bicoTipX+2} ${bicoTipY+3} Q ${bicoTipX-4} ${bicoTipY+7} ${bicoBaseX-8} ${bicoBaseY+7} Z`} fill={corBico}/>
+          <ellipse cx={(bicoBaseX+bicoTipX)/2} cy={(bicoBaseY+bicoTipY)/2+3} rx={3} ry={1.4} fill={corBicoEsc} opacity={0.6}/>
+          {/* bochecha */}
+          {droop<0.3&&<ellipse cx={headX-16} cy={headY+7} rx={5.5} ry={3.5} fill="#F5A0A8" opacity={0.5}/>}
+          {/* óculos escuros (só relaxado) OU olhos normais */}
+          {relaxAtivo ? (
+            <g>
+              <rect x={headX-16} y={olhoY-6} width={11} height={8} rx={3} fill="#1A1A1A"/>
+              <rect x={headX+5} y={olhoY-6} width={11} height={8} rx={3} fill="#1A1A1A"/>
+              <line x1={headX-5} y1={olhoY-2} x2={headX+5} y2={olhoY-2} stroke="#1A1A1A" strokeWidth={2}/>
+              <rect x={headX-16} y={olhoY-6} width={11} height={3} rx={1.5} fill="#fff" opacity={0.25}/>
+            </g>
+          ) : olhoFechado ? (
+            <path d={`M ${headX-10} ${olhoY} Q ${headX-4} ${olhoY+3} ${headX+2} ${olhoY}`} stroke="#3D3226" strokeWidth={2.6} fill="none" strokeLinecap="round"/>
+          ) : (
+            <>
+              <circle cx={headX-4} cy={olhoY} r={3.6} fill="#3D3226"/>
+              <circle cx={headX-2.5} cy={olhoY-1.5} r={1.1} fill="#fff"/>
+            </>
+          )}
         </svg>
       </div>
       {falando&&(
         <div style={{background:"rgba(255,255,255,0.96)",borderRadius:14,padding:"10px 14px",fontSize:12,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",fontWeight:600,boxShadow:"0 4px 14px rgba(0,0,0,0.18)",maxWidth:190,textAlign:"center"}}>
-          {alerta ? mensagens[0] : mensagens[stage]}
+          {alerta ? mensagens[0] : relaxAtivo ? mensagens[0] : mensagens[stage]}
         </div>
       )}
       <div style={{background:"rgba(255,255,255,0.88)",borderRadius:99,padding:"5px 14px",fontSize:12,fontWeight:700,color:alerta?"#8B4A1A":"#3D3226",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}}>
-        {alerta?"⚠ ":""}{pct.toFixed(0)}% {alerta?"energia":"radiante"}
+        {alerta?"⚠ ":relaxAtivo?"😎 ":""}{pct.toFixed(0)}% {alerta?"energia":relaxAtivo?"tranquilo":"feliz"}
       </div>
-      <style>{`@keyframes solBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}`}</style>
+      <style>{`@keyframes patoBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}`}</style>
     </div>
   );
 }
@@ -1965,16 +2001,17 @@ function AppMain({user, onLogout}) {
       </div>
 
       <NotepadWidget value={notas} onChange={setNotas}/>
-      <SolMascote
-        alerta={orcamentoEstourado}
-        progresso={(()=>{
-          const progObj=objetivos.length===0?0:objetivos.reduce((s,o)=>s+(o.meta>0?Math.min(o.atual/o.meta,1):0),0)/objetivos.length*100;
-          const progDiv=dividas.length===0?0:dividas.reduce((s,d)=>s+(+d.total>0?Math.min(+d.pago/ +d.total,1):0),0)/dividas.length*100;
-          let combinado = dividas.length>0 ? progObj*0.65+progDiv*0.35 : progObj;
-          if(orcamentoEstourado) combinado -= 18;
-          return Math.max(0,Math.min(100,combinado));
-        })()}
-      />
+      {(()=>{
+        const progObj=objetivos.length===0?0:objetivos.reduce((s,o)=>s+(o.meta>0?Math.min(o.atual/o.meta,1):0),0)/objetivos.length*100;
+        const progDiv=dividas.length===0?0:dividas.reduce((s,d)=>s+(+d.total>0?Math.min(+d.pago/ +d.total,1):0),0)/dividas.length*100;
+        let combinado = dividas.length>0 ? progObj*0.65+progDiv*0.35 : progObj;
+        if(orcamentoEstourado) combinado -= 18;
+        combinado = Math.max(0,Math.min(100,combinado));
+        const stageCalc = combinado>=100?5 : combinado>=75?4 : combinado>=50?3 : combinado>=25?2 : combinado>=5?1 : 0;
+        const relaxado = !orcamentoEstourado && stageCalc>=3 && stageCalc<5 && dividas.length>0 && progDiv>0;
+        return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado}/>;
+      })()}
+
 
       {/* TOP BAR */}
       <div style={{background:"rgba(255,255,255,0.78)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",borderBottom:"1px solid rgba(0,0,0,0.08)",padding:"14px 16px 12px",position:"sticky",top:0,zIndex:50,boxShadow:"0 2px 20px rgba(0,0,0,0.1)"}}>
