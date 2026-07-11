@@ -656,51 +656,51 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
       </div>
 
       {/* Resumo */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:14}}>
         {[
-          {l:"Planejado",v:totalPlanejado,c:"#E8205F"},
-          {l:"Realizado",v:totalGasto,c:"#FF8A80"},
-          {l:"Saldo",v:totalPlanejado-totalGasto,c:totalPlanejado-totalGasto>=0?"#A8E063":"#FF8A80"},
+          {l:"Planejado",v:totalPlanejado,c:"#C4185A"},
+          {l:"Realizado",v:totalGasto,c:"#D4443A"},
+          {l:"Saldo",v:totalPlanejado-totalGasto,c:totalPlanejado-totalGasto>=0?"#2D6E20":"#D4443A"},
         ].map(x=>(
-          <div key={x.l} className="card" style={{padding:"10px 12px",textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{x.l}</div>
-            <div style={{fontSize:13,fontWeight:700,color:x.c,fontFamily:"'DM Sans',sans-serif",letterSpacing:"-.01em"}}>{R(x.v)}</div>
+          <div key={x.l} className="card" style={{padding:"14px 12px",textAlign:"center"}}>
+            <div style={{fontSize:10,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"#1A1209",fontFamily:"'DM Sans',sans-serif",marginBottom:5}}>{x.l}</div>
+            <div className="num" style={{fontSize:16,fontWeight:700,color:x.c,letterSpacing:"-.01em"}}>{R(x.v)}</div>
           </div>
         ))}
       </div>
 
       {/* Toggle % */}
-      <div style={{display:"flex",background:"rgba(255,255,255,0.12)",borderRadius:12,padding:3,marginBottom:12,border:"1px solid rgba(255,255,255,0.2)"}}>
+      <div style={{display:"flex",background:"rgba(255,255,255,0.4)",borderRadius:12,padding:3,marginBottom:14,border:"1px solid rgba(0,0,0,0.08)"}}>
         <button onClick={()=>setViewMode("planejado")}
-          style={{flex:1,background:viewMode==="planejado"?"#E8205F":"transparent",color:viewMode==="planejado"?"#fff":"rgba(26,18,9,0.6)",border:"none",borderRadius:10,padding:"7px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+          style={{flex:1,background:viewMode==="planejado"?"#E8205F":"transparent",color:viewMode==="planejado"?"#fff":"#1A1209",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
           % do Planejado
         </button>
         <button onClick={()=>setViewMode("recebimento")}
-          style={{flex:1,background:viewMode==="recebimento"?"#E8205F":"transparent",color:viewMode==="recebimento"?"#fff":"rgba(26,18,9,0.6)",border:"none",borderRadius:10,padding:"7px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+          style={{flex:1,background:viewMode==="recebimento"?"#E8205F":"transparent",color:viewMode==="recebimento"?"#fff":"#1A1209",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
           % do Recebimento Previsto
         </button>
       </div>
 
       {viewMode==="recebimento"&&recebimentoPrevMes===0&&(
-        <div style={{background:"rgba(212,168,67,0.2)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#8B6000",fontFamily:"'DM Sans',sans-serif"}}>
+        <div style={{background:"rgba(212,168,67,0.25)",border:"1px solid rgba(212,168,67,0.5)",borderRadius:10,padding:"11px 14px",marginBottom:12,fontSize:12.5,color:"#6B4C00",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>
           ⚠ Nenhum plantão com previsão para {monthLabel(selMes)}. Cadastre plantões para ver a % do recebimento.
         </div>
       )}
 
       {viewMode==="recebimento"&&recebimentoPrevMes>0&&(
-        <div style={{background:"rgba(168,224,99,0.15)",border:"1px solid rgba(168,224,99,0.3)",borderRadius:10,padding:"10px 14px",marginBottom:10,fontSize:12,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif"}}>
+        <div style={{background:"rgba(168,224,99,0.22)",border:"1px solid rgba(143,196,58,0.5)",borderRadius:10,padding:"11px 14px",marginBottom:12,fontSize:12.5,color:"#215010",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>
           Base: {R(recebimentoPrevMes)} previstos para {monthLabel(selMes)}
         </div>
       )}
 
       {/* Tabela por categoria */}
-      <div className="card">
-        <div style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,marginBottom:10,paddingBottom:8,borderBottom:"1px solid rgba(255,255,255,0.1)"}}>
+      <div className="card" style={{padding:"16px 14px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 82px 82px 52px",gap:8,marginBottom:10,paddingBottom:10,borderBottom:"2px solid rgba(0,0,0,0.1)"}}>
           {["Categoria","Planejado","Realizado","%"].map(h=>(
-            <div key={h} style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:h!=="Categoria"?"right":"left"}}>{h}</div>
+            <div key={h} style={{fontSize:10.5,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:h!=="Categoria"?"right":"left"}}>{h}</div>
           ))}
         </div>
-        {categorias.map(c=>{
+        {categorias.map((c,idx)=>{
           const gasto = gastosPorCat[`${c.emoji} ${c.nome}`] || 
                         Object.entries(gastosPorCat).filter(([k])=>k.includes(c.nome)).reduce((s,[,v])=>s+v,0);
           const plan = orcamento[selMes]?.[c.id] || 0;
@@ -708,12 +708,12 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
           const pct = base>0 ? (gasto/base*100) : 0;
           const over = plan>0 && gasto>plan;
           return (
-            <div key={c.id} style={{display:"grid",gridTemplateColumns:"1fr auto auto auto",gap:8,alignItems:"center",marginBottom:8}}>
+            <div key={c.id} style={{display:"grid",gridTemplateColumns:"1fr 82px 82px 52px",gap:8,alignItems:"center",padding:"10px 6px",marginBottom:2,background:idx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
               <div>
-                <div style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{c.emoji} {c.nome}</div>
-                <div style={{marginTop:3}}>
-                  <div style={{background:"rgba(0,0,0,0.2)",borderRadius:99,height:4,overflow:"hidden"}}>
-                    <div style={{width:`${Math.min(pct,100)}%`,height:"100%",background:over?"#FF8A80":"#A8E063",borderRadius:99,transition:"width .5s"}}/>
+                <div style={{fontSize:14,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{c.emoji} {c.nome}</div>
+                <div style={{marginTop:5}}>
+                  <div style={{background:"rgba(0,0,0,0.12)",borderRadius:99,height:7,overflow:"hidden"}}>
+                    <div style={{width:`${Math.min(pct,100)}%`,height:"100%",background:over?"#D4443A":"#4A9A2A",borderRadius:99,transition:"width .5s"}}/>
                   </div>
                 </div>
               </div>
@@ -722,16 +722,21 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
                   <input type="number" value={editVal} onChange={e=>setEditVal(e.target.value)}
                     onBlur={()=>{setOrcamento({...orcamento,[selMes]:{...(orcamento[selMes]||{}),[c.id]:+editVal}});setEditCat(null);}}
                     onKeyDown={e=>e.key==="Enter"&&(setOrcamento({...orcamento,[selMes]:{...(orcamento[selMes]||{}),[c.id]:+editVal}}),setEditCat(null))}
-                    autoFocus style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:6,padding:"3px 6px",width:70,fontSize:11,color:"#1A1209",outline:"none",textAlign:"right",fontFamily:"inherit"}}/>
+                    autoFocus style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:6,padding:"4px 7px",width:75,fontSize:12,color:"#1A1209",outline:"none",textAlign:"right",fontFamily:"inherit"}}/>
+                ) : plan>0 ? (
+                  <button onClick={()=>{setEditCat(c.id);setEditVal(plan||"");}}
+                    style={{background:"none",border:"none",color:"#1A1209",fontSize:12.5,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>
+                    {R(plan)}
+                  </button>
                 ) : (
                   <button onClick={()=>{setEditCat(c.id);setEditVal(plan||"");}}
-                    style={{background:"none",border:"none",color:plan>0?"#1A1209":"rgba(26,18,9,0.35)",fontSize:11,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:plan>0?600:400}}>
-                    {plan>0?R(plan):"+ planejar"}
+                    style={{background:"rgba(232,32,95,0.12)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:8,color:"#C4185A",fontSize:10.5,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:700,padding:"4px 9px"}}>
+                    + planejar
                   </button>
                 )}
               </div>
-              <div style={{textAlign:"right",fontSize:11,color:"rgba(26,18,9,0.75)",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{R(gasto)}</div>
-              <div style={{textAlign:"right",fontSize:11,fontWeight:700,color:over?"#8B1A1A":pct>80?"#8B6000":"#2D5A10",fontFamily:"'DM Sans',sans-serif"}}>{pct.toFixed(0)}%</div>
+              <div style={{textAlign:"right",fontSize:12.5,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>{R(gasto)}</div>
+              <div style={{textAlign:"right",fontSize:12.5,fontWeight:700,color:over?"#B01818":pct>80?"#8B5A00":"#215010",fontFamily:"'DM Sans',sans-serif"}}>{over&&"⚠"}{pct.toFixed(0)}%</div>
             </div>
           );
         })}
