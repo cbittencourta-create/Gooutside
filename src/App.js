@@ -1742,6 +1742,8 @@ function AppMain({user, onLogout}) {
   const [pltView,setPltView]=useState("tabela");
   const [pltMes,setPltMes]=useState(today().slice(0,7));
   const [objExpandido,setObjExpandido]=useState(null);
+  const [investExpandido,setInvestExpandido]=useState(null);
+  const [fJuros,setFJuros]=useState({mes:today().slice(0,7),taxa:""});
   const [fParte,setFParte]=useState({descricao:"",valor:"",investId:""});
   const [movDist,setMovDist]=useState(null);
 
@@ -1806,6 +1808,15 @@ function AppMain({user, onLogout}) {
   const saveDiv=()=>{if(!fDiv.credor||!fDiv.total)return;upsert(dividas,setDividas,{...fDiv,tipo:fDiv.tipo||"ativa",total:+String(fDiv.total).replace(",","."),pago:+String(fDiv.pago||0).replace(",",".")});};
   const saveCart=()=>{if(!fCart.nome||!fCart.limite)return;upsert(cartoes,setCartoes,{...fCart,limite:+String(fCart.limite).replace(",",".")});};
   const saveCCMov=()=>{if(!fCCMov.descricao||!fCCMov.valor||!fCCMov.cartao)return;upsert(ccMovs,setCCMovs,{...fCCMov,valor:+String(fCCMov.valor).replace(",",".")});};
+  const addJuros=(investId)=>{
+    if(!fJuros.mes||!fJuros.taxa)return;
+    const entry={id:uid(),mes:fJuros.mes,taxa:+String(fJuros.taxa).replace(",",".")};
+    setInvests(invests.map(i=>i.id===investId?{...i,historicoTaxas:[...(i.historicoTaxas||[]).filter(h=>h.mes!==entry.mes),entry].sort((a,b)=>a.mes.localeCompare(b.mes))}:i));
+    setFJuros({mes:today().slice(0,7),taxa:""});
+  };
+  const removeJuros=(investId,entryId)=>{
+    setInvests(invests.map(i=>i.id===investId?{...i,historicoTaxas:(i.historicoTaxas||[]).filter(h=>h.id!==entryId)}:i));
+  };
   const addParte=(objId)=>{
     if(!fParte.descricao||!fParte.valor)return;
     const val=+String(fParte.valor).replace(",",".");
@@ -2696,6 +2707,26 @@ function AppMain({user, onLogout}) {
                 <span style={{fontSize:15,lineHeight:1}}>✚</span> Investimento
               </button>
             </div>
+            {invests.length>1&&(()=>{
+              const ranking=[...invests].map(i=>({...i,txEf:taxaEfetiva(i)})).sort((a,b)=>b.txEf-a.txEf);
+              const maxTx=Math.max(...ranking.map(i=>i.txEf),1);
+              return (
+                <div className={CARD} style={{marginBottom:16,padding:"16px 18px"}}>
+                  <div style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:12}}>📊 Onde vale mais a pena alocar</div>
+                  {ranking.map((i,idx)=>(
+                    <div key={i.id} style={{marginBottom:10}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{idx===0&&"🏆 "}{i.nome}</span>
+                        <span className="num" style={{fontSize:12,fontWeight:700,color:idx===0?"#2D5A10":"#1A1209"}}>{i.txEf.toFixed(2)}% a.a.</span>
+                      </div>
+                      <div style={{background:"rgba(0,0,0,0.1)",borderRadius:99,height:6,overflow:"hidden"}}>
+                        <div style={{width:`${(i.txEf/maxTx*100)}%`,height:"100%",background:idx===0?"#2D9A1A":"#5BA3D4",borderRadius:99,transition:"width .5s"}}/>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
             {invests.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum investimento registrado</div>
               :INVEST_CATEGORIAS.map(catInfo=>{
                 const investsCat=invests.filter(i=>categoriaDoInvest(i.tipo)===catInfo.id);
@@ -2756,7 +2787,39 @@ function AppMain({user, onLogout}) {
                     </div>
                   )}
                   {i.obs&&<div style={{fontSize:11,color:"#3D3226",marginBottom:8,fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>{i.obs}</div>}
+
+                  {investExpandido===i.id&&(()=>{
+                    const hist=(i.historicoTaxas||[]).slice().sort((a,b)=>a.mes.localeCompare(b.mes));
+                    const jurosAcumulado=hist.reduce((s,h)=>s+(i.aporte*h.taxa/100/12),0);
+                    return (
+                      <div style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:9,border:"1px solid rgba(0,0,0,0.06)"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Histórico de juros mensal</div>
+                          {hist.length>0&&<span className="num" style={{fontSize:11,fontWeight:700,color:"#2D5A10"}}>≈{R(jurosAcumulado)} acumulado</span>}
+                        </div>
+                        {hist.length===0&&<div style={{fontSize:11,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Nenhum mês registrado ainda.</div>}
+                        {hist.map(h=>(
+                          <div key={h.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
+                            <span style={{fontSize:11.5,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:600,textTransform:"capitalize"}}>{monthLabel(h.mes)}</span>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span className="num" style={{fontSize:12,fontWeight:700,color:"#2D5A10"}}>{h.taxa}% a.a.</span>
+                              <button onClick={()=>removeJuros(i.id,h.id)} style={{background:"none",border:"none",color:"#aaa",fontSize:14,cursor:"pointer",lineHeight:1}}>×</button>
+                            </div>
+                          </div>
+                        ))}
+                        <div style={{display:"flex",gap:6,marginTop:8}}>
+                          <input type="month" value={fJuros.mes} onChange={e=>setFJuros({...fJuros,mes:e.target.value})}
+                            style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 8px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
+                          <input placeholder="Taxa % a.a." value={fJuros.taxa} onChange={e=>setFJuros({...fJuros,taxa:e.target.value})}
+                            style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 8px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
+                          <button onClick={()=>addJuros(i.id)} style={{background:"#E8205F",border:"none",borderRadius:8,padding:"7px 12px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>+ Add</button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div style={{display:"flex",gap:6}}>
+                    <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>setInvestExpandido(investExpandido===i.id?null:i.id)}>{investExpandido===i.id?"▲ Fechar":"📊 Juros"}</Btn>
                     <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("inv",i)}>Editar</Btn>
                     <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(invests,setInvests,i.id)}>Excluir</Btn>
                   </div>
