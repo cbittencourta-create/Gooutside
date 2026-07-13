@@ -1829,7 +1829,7 @@ function AppMain({user, onLogout}) {
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalFundoDivida=dividas.filter(d=>d.tipo==="fundo"&&!d.investId).reduce((s,d)=>s+(+d.pago||0),0);
   const totalObjetivos=objetivos.filter(o=>!o.investId).reduce((s,o)=>s+(+o.atual||0),0);
-  const totalPatrimonio=totalInvestido+totalFundoDivida+totalObjetivos;
+  const totalPatrimonio=totalInvestido+totalFundoDivida;
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
   const empNome=n=>empresas.find(e=>e.nome===n)||{nome:n,cor:C.magenta};
