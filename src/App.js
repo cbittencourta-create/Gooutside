@@ -1744,7 +1744,7 @@ function AppMain({user, onLogout}) {
   const [fParte,setFParte]=useState({descricao:"",valor:"",investId:""});
   const [movDist,setMovDist]=useState(null);
 
-  const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
+  const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:""});
   const [fEmp,setFEmp]=useState({nome:"",contato:"",prazo:"30",cor:"#E8205F"});
   const [fPlt,setFPlt]=useState({empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
   const [fInv,setFInv]=useState({nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
@@ -1760,7 +1760,7 @@ function AppMain({user, onLogout}) {
 
   const openM=(m,item=null,ex=null)=>{
     setEdit(item);setExtra(ex);setModal(m);
-    if(m==="mov")   setFMov(item?{...item}:{tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
+    if(m==="mov")   setFMov(item?{...item,subtipo:item.subtipo||"aporte",investId:item.investId||""}:{tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:""});
     if(m==="emp")   setFEmp(item?{...item}:{nome:"",contato:"",prazo:"30",cor:"#E8205F"});
     if(m==="plt")   setFPlt(item?{...item}:{empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
     if(m==="inv")   setFInv(item?{...item,taxaModo:item.taxaModo||"fixo"}:{nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
@@ -1773,9 +1773,27 @@ function AppMain({user, onLogout}) {
   const closeM=()=>{setModal(null);setEdit(null);setExtra(null);};
   const upsert=(list,setList,item)=>{if(edit)setList(list.map(i=>i.id===edit.id?{...item,id:edit.id}:i));else setList([{...item,id:uid()},...list]);closeM();};
   const remove=(list,setList,id)=>setList(list.filter(i=>i.id!==id));
+  const removeMov=id=>{
+    const m=movs.find(x=>x.id===id);
+    if(m&&m.tipo==="transferencia"&&m.investId){
+      setInvests(invests.map(i=>i.id===m.investId
+        ? {...i,aporte:m.subtipo==="resgate"?i.aporte+m.valor:Math.max(0,i.aporte-m.valor)}
+        : i));
+    }
+    setMovs(movs.filter(x=>x.id!==id));
+  };
 
   const importarMovs=items=>{setMovs([...items,...movs]);};
-  const saveMov=()=>{if(!fMov.descricao||!fMov.valor)return;upsert(movs,setMovs,{...fMov,valor:+String(fMov.valor).replace(",",".")});};
+  const saveMov=()=>{
+    if(!fMov.descricao||!fMov.valor)return;
+    const valorNum=+String(fMov.valor).replace(",",".");
+    upsert(movs,setMovs,{...fMov,valor:valorNum});
+    if(!edit&&fMov.tipo==="transferencia"&&fMov.investId){
+      setInvests(invests.map(i=>i.id===fMov.investId
+        ? {...i,aporte:fMov.subtipo==="resgate"?Math.max(0,i.aporte-valorNum):i.aporte+valorNum}
+        : i));
+    }
+  };
   const saveEmp=()=>{if(!fEmp.nome)return;upsert(empresas,setEmpresas,fEmp);};
   const savePlt=()=>{if(!fPlt.empresa||!fPlt.data||!fPlt.valorTotal)return;upsert(plantoes,setPlantoes,{...fPlt,valorTotal:+fPlt.valorTotal});};
   const saveInv=()=>{
@@ -2376,9 +2394,12 @@ function AppMain({user, onLogout}) {
                         )}
                       </div>
                       {m.tipo==="transferencia" ? (
-                        <div style={{display:"flex",alignItems:"center",gap:8,background:"rgba(91,163,212,0.14)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,padding:"6px 10px 6px 6px"}}>
-                          <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>🔄</div>
-                          <span style={{fontSize:12,color:"#1A4A6E",fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>Transferência</span>
+                        <div title={m.investId?invests.find(i=>i.id===m.investId)?.nome:""} style={{display:"flex",alignItems:"center",gap:8,background:"rgba(91,163,212,0.14)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,padding:"6px 10px 6px 6px",minWidth:0}}>
+                          <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.25)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,flexShrink:0}}>{m.subtipo==="resgate"?"📉":m.investId?"📈":"🔄"}</div>
+                          <div style={{minWidth:0}}>
+                            <div style={{fontSize:11.5,color:"#1A4A6E",fontWeight:700,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{m.subtipo==="resgate"?"Resgate":"Transferência"}</div>
+                            {m.investId&&<div style={{fontSize:9.5,color:"#1A4A6E",opacity:0.75,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{invests.find(i=>i.id===m.investId)?.nome||""}</div>}
+                          </div>
                         </div>
                       ) : (
                         <div title={m.categoria} style={{display:"flex",alignItems:"center",gap:8,background:m.tipo==="entrada"?"rgba(45,90,16,0.09)":"rgba(196,24,90,0.08)",border:`1px solid ${m.tipo==="entrada"?"rgba(45,90,16,0.22)":"rgba(196,24,90,0.2)"}`,borderRadius:10,padding:"6px 8px 6px 6px",minWidth:0}}>
@@ -2401,7 +2422,7 @@ function AppMain({user, onLogout}) {
                       <input type="number" value={m.valor} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,valor:+e.target.value}:x))}
                         className="plt-numinput"
                         style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 5px",fontSize:12.5,fontWeight:700,color:m.tipo==="entrada"?"#215010":m.tipo==="transferencia"?"#1A4A6E":"#8B1A1A",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%",textAlign:"right"}}/>
-                      <button onClick={()=>remove(movs,setMovs,m.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:14,cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                      <button onClick={()=>removeMov(m.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:14,cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                     </div>
                   );
                 })}
@@ -3012,8 +3033,19 @@ function AppMain({user, onLogout}) {
           <Inp label="Descrição" placeholder="Ex: Salário, Aluguel..." value={fMov.descricao} onChange={e=>setFMov({...fMov,descricao:e.target.value})}/>
           <G2><Inp label="Valor (R$)" placeholder="0,00" value={fMov.valor} onChange={e=>setFMov({...fMov,valor:e.target.value})}/><Inp label="Data" type="date" value={fMov.data} onChange={e=>setFMov({...fMov,data:e.target.value})}/></G2>
           {fMov.tipo==="transferencia" ? (
-            <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,padding:"11px 13px",fontSize:13,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif"}}>
-              🔄 Transferência — não conta como gasto nem como receita
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,padding:"9px 13px",fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif"}}>
+                🔄 Transferência — não conta como gasto nem como receita
+              </div>
+              <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:3,gap:3}}>
+                <button onClick={()=>setFMov({...fMov,subtipo:"aporte"})} style={{flex:1,background:fMov.subtipo==="aporte"?"rgba(45,90,16,0.75)":"transparent",color:fMov.subtipo==="aporte"?"#fff":C.modalSub,border:"none",borderRadius:10,padding:"8px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>📈 Investimento (aporte)</button>
+                <button onClick={()=>setFMov({...fMov,subtipo:"resgate"})} style={{flex:1,background:fMov.subtipo==="resgate"?"rgba(196,24,90,0.75)":"transparent",color:fMov.subtipo==="resgate"?"#fff":C.modalSub,border:"none",borderRadius:10,padding:"8px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>📉 Resgate</button>
+              </div>
+              <Sel label={fMov.subtipo==="resgate"?"Resgatar de qual investimento?":"Adicionar a qual investimento?"} value={fMov.investId} onChange={e=>setFMov({...fMov,investId:e.target.value})}>
+                <option value="">Sem vínculo (só registrar)</option>
+                {invests.map(i=><option key={i.id} value={i.id}>{i.nome}{i.banco?" · "+i.banco:""}</option>)}
+              </Sel>
+              {invests.length===0&&<div style={{fontSize:11,color:C.modalSub,fontFamily:"'DM Sans',sans-serif"}}>Cadastre um investimento primeiro para vincular.</div>}
             </div>
           ) : (
             <Sel label="Categoria" value={fMov.categoria} onChange={e=>setFMov({...fMov,categoria:e.target.value})}>
