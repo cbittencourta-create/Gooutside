@@ -1352,7 +1352,7 @@ function NotepadWidget({value, onChange}) {
 
 
 // ── Mascote Sol de Ouro ────────────────────────────────────────────────────
-function PatoMascote({progresso, alerta, relaxado, morto, onClickMorto}) {
+function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto}) {
   const [piscando, setPiscando] = useState(false);
   const [falando, setFalando] = useState(false);
   const [bounce, setBounce] = useState(false);
@@ -1385,6 +1385,7 @@ function PatoMascote({progresso, alerta, relaxado, morto, onClickMorto}) {
   const corBicoEsc = morto ? "#988870" : alerta ? "#A87840" : "#D87830";
   const temCoroa = stage===5 && !alerta && !morto;
   const relaxAtivo = relaxado && !alerta && !morto && stage<5;
+  const correndoAtivo = correndo && !morto && !relaxAtivo;
 
   const cx=100;
   const bodyCy=158, bodyRx=46, bodyRy=40;
@@ -1413,6 +1414,8 @@ function PatoMascote({progresso, alerta, relaxado, morto, onClickMorto}) {
     ? ["Quá... eu não aguentei esse mês 💀 vê o relatório"]
     : alerta
     ? ["Quá... gastos passaram do orçamento esse mês 😟"]
+    : correndoAtivo
+    ? ["QUÁ QUÁ QUÁ! Muita saída esse mês, corre pra ver os gastos! 😱"]
     : relaxAtivo
     ? ["Quá~ vida boa, pagando dívidas e tudo em dia 😎🍹"]
     : [
@@ -1432,7 +1435,7 @@ function PatoMascote({progresso, alerta, relaxado, morto, onClickMorto}) {
   return (
     <div style={{position:"fixed",top:150,left:24,zIndex:40,display:window.innerWidth>1300?"flex":"none",flexDirection:"column",alignItems:"center",gap:8}}>
       <div onClick={handleClick}
-        style={{cursor:"pointer",transform:morto?"rotate(18deg)":bounce?"scale(1.15)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:morto?"none":"patoBreathe 3.4s ease-in-out infinite"}}>
+        style={{cursor:"pointer",transform:morto?"rotate(18deg)":bounce?"scale(1.15)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:morto?"none":correndoAtivo?"patoPanico 0.5s ease-in-out infinite":"patoBreathe 3.4s ease-in-out infinite"}}>
         <svg width="170" height="190" viewBox="0 0 220 220" style={{overflow:"visible"}}>
           {/* boia rosa (só no estado relaxado) */}
           {relaxAtivo&&(
@@ -1442,8 +1445,15 @@ function PatoMascote({progresso, alerta, relaxado, morto, onClickMorto}) {
               <ellipse cx={cx+10} cy={bodyCy+bodyRy+2} rx={38} ry={16} fill="#5BA3D4" opacity={0.55}/>
             </g>
           )}
-          {/* asa */}
-          <path d={`M ${cx-bodyRx+8} ${bodyCy-6} Q ${cx-bodyRx-14} ${bodyCy+14} ${cx-bodyRx+4} ${bodyCy+30} Q ${cx-bodyRx+18} ${bodyCy+18} ${cx-bodyRx+8} ${bodyCy-6} Z`} fill={corSombra} opacity={0.9}/>
+          {/* asa (normal ou espalhada quando correndo/alarmado) */}
+          {correndoAtivo ? (
+            <g className="patoAsaFlap">
+              <path d={`M ${cx-bodyRx+4} ${bodyCy-10} Q ${cx-bodyRx-46} ${bodyCy-30} ${cx-bodyRx-38} ${bodyCy+2} Q ${cx-bodyRx-10} ${bodyCy+6} ${cx-bodyRx+6} ${bodyCy-4} Z`} fill={corSombra}/>
+              <path d={`M ${cx+bodyRx-4} ${bodyCy-10} Q ${cx+bodyRx+46} ${bodyCy-30} ${cx+bodyRx+38} ${bodyCy+2} Q ${cx+bodyRx+10} ${bodyCy+6} ${cx+bodyRx-6} ${bodyCy-4} Z`} fill={corSombra}/>
+            </g>
+          ) : (
+            <path d={`M ${cx-bodyRx+8} ${bodyCy-6} Q ${cx-bodyRx-14} ${bodyCy+14} ${cx-bodyRx+4} ${bodyCy+30} Q ${cx-bodyRx+18} ${bodyCy+18} ${cx-bodyRx+8} ${bodyCy-6} Z`} fill={corSombra} opacity={0.9}/>
+          )}
           {/* corpo */}
           <ellipse cx={cx} cy={bodyCy} rx={bodyRx} ry={bodyRy} fill={corCorpo}/>
           <ellipse cx={cx} cy={bodyCy+bodyRy*0.35} rx={bodyRx*0.75} ry={bodyRy*0.55} fill={corSombra} opacity={0.45}/>
@@ -1486,6 +1496,10 @@ function PatoMascote({progresso, alerta, relaxado, morto, onClickMorto}) {
           {/* bico */}
           <path d={`M ${bicoBaseX-7} ${bicoBaseY-6} Q ${bicoTipX} ${bicoTipY-3} ${bicoTipX+2} ${bicoTipY+3} Q ${bicoTipX-4} ${bicoTipY+7} ${bicoBaseX-8} ${bicoBaseY+7} Z`} fill={corBico}/>
           <ellipse cx={(bicoBaseX+bicoTipX)/2} cy={(bicoBaseY+bicoTipY)/2+3} rx={3} ry={1.4} fill={corBicoEsc} opacity={0.6}/>
+          {/* boca escancarada (correndo/alarmado) */}
+          {correndoAtivo&&(
+            <ellipse cx={(bicoBaseX+bicoTipX)/2-2} cy={(bicoBaseY+bicoTipY)/2+2} rx={6} ry={5} fill="#C24A5A"/>
+          )}
           {/* língua pra fora (só morto) */}
           {morto&&(
             <ellipse cx={bicoTipX+2} cy={bicoTipY+9} rx={4} ry={3} fill="#E86C8A"/>
@@ -1498,6 +1512,13 @@ function PatoMascote({progresso, alerta, relaxado, morto, onClickMorto}) {
             <>
               <path d={`M ${headX-10} ${olhoY-4} L ${headX-2} ${olhoY+4} M ${headX-2} ${olhoY-4} L ${headX-10} ${olhoY+4}`} stroke="#3D3226" strokeWidth={2.2} strokeLinecap="round"/>
               <path d={`M ${headX+2} ${olhoY-4} L ${headX+10} ${olhoY+4} M ${headX+10} ${olhoY-4} L ${headX+2} ${olhoY+4}`} stroke="#3D3226" strokeWidth={2.2} strokeLinecap="round"/>
+            </>
+          ) : correndoAtivo ? (
+            <>
+              <circle cx={headX-4} cy={olhoY} r={4.6} fill="#fff" stroke="#3D3226" strokeWidth={1}/>
+              <circle cx={headX+7} cy={olhoY-1} r={4.6} fill="#fff" stroke="#3D3226" strokeWidth={1}/>
+              <circle cx={headX-4} cy={olhoY} r={2.4} fill="#3D3226"/>
+              <circle cx={headX+7} cy={olhoY-1} r={2.4} fill="#3D3226"/>
             </>
           ) : relaxAtivo ? (
             <g transform={`translate(${headX},${olhoY-2})`}>
@@ -1527,13 +1548,16 @@ function PatoMascote({progresso, alerta, relaxado, morto, onClickMorto}) {
       </div>
       {falando&&(
         <div style={{background:"rgba(255,255,255,0.96)",borderRadius:14,padding:"10px 14px",fontSize:12,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",fontWeight:600,boxShadow:"0 4px 14px rgba(0,0,0,0.18)",maxWidth:190,textAlign:"center"}}>
-          {morto ? mensagens[0] : alerta ? mensagens[0] : relaxAtivo ? mensagens[0] : mensagens[stage]}
+          {morto ? mensagens[0] : alerta ? mensagens[0] : correndoAtivo ? mensagens[0] : relaxAtivo ? mensagens[0] : mensagens[stage]}
         </div>
       )}
       <div style={{background:"rgba(255,255,255,0.88)",borderRadius:99,padding:"5px 14px",fontSize:12,fontWeight:700,color:morto?"#8B1A1A":alerta?"#8B4A1A":"#3D3226",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}}>
-        {morto?"💀 desmaiou":alerta?"⚠ "+pct.toFixed(0)+"% energia":relaxAtivo?"😎 "+pct.toFixed(0)+"% tranquilo":pct.toFixed(0)+"% feliz"}
+        {morto?"💀 desmaiou":alerta?"⚠ "+pct.toFixed(0)+"% energia":correndoAtivo?"😱 muita saída":relaxAtivo?"😎 "+pct.toFixed(0)+"% tranquilo":pct.toFixed(0)+"% feliz"}
       </div>
-      <style>{`@keyframes patoBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}`}</style>
+      <style>{`@keyframes patoBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+        @keyframes patoPanico{0%,100%{transform:translateX(0) rotate(0deg)}25%{transform:translateX(-3px) rotate(-2deg)}75%{transform:translateX(3px) rotate(2deg)}}
+        .patoAsaFlap{animation:asaFlap 0.4s ease-in-out infinite;transform-origin:100px 148px}
+        @keyframes asaFlap{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-8deg)}}`}</style>
     </div>
   );
 }
@@ -2046,7 +2070,7 @@ function AppMain({user, onLogout}) {
         combinado = Math.max(0,Math.min(100,combinado));
         const stageCalc = combinado>=100?5 : combinado>=75?4 : combinado>=50?3 : combinado>=25?2 : combinado>=5?1 : 0;
         const relaxado = !orcamentoEstourado && stageCalc>=3 && stageCalc<5 && dividas.length>0 && progDiv>0;
-        return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado} morto={estaMorto} onClickMorto={()=>setMortoReportOpen(true)}/>;
+        return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado} morto={estaMorto} correndo={saidas>entradas} onClickMorto={()=>setMortoReportOpen(true)}/>;
       })()}
 
 
