@@ -1352,7 +1352,7 @@ function NotepadWidget({value, onChange}) {
 
 
 // ── Mascote Sol de Ouro ────────────────────────────────────────────────────
-function PatoMascote({progresso, alerta, relaxado}) {
+function PatoMascote({progresso, alerta, relaxado, morto, onClickMorto}) {
   const [piscando, setPiscando] = useState(false);
   const [falando, setFalando] = useState(false);
   const [bounce, setBounce] = useState(false);
@@ -1378,13 +1378,13 @@ function PatoMascote({progresso, alerta, relaxado}) {
 
   // droop: 1 = pescoço bem caído (triste), 0 = pescoço ereto (feliz)
   const droopBase = alerta ? 1 : [1, 0.78, 0.52, 0.28, 0.1, 0][stage];
-  const droop = relaxado&&!alerta ? 0.05 : droopBase;
-  const corCorpo   = alerta ? "#DCD4C0" : "#F8F2E4";
-  const corSombra  = alerta ? "#C0B698" : "#E8DCC0";
-  const corBico    = alerta ? "#C89058" : "#F0A050";
-  const corBicoEsc = alerta ? "#A87840" : "#D87830";
-  const temCoroa = stage===5 && !alerta;
-  const relaxAtivo = relaxado && !alerta && stage<5;
+  const droop = morto ? 1 : relaxado&&!alerta ? 0.05 : droopBase;
+  const corCorpo   = morto ? "#DDDAD2" : alerta ? "#DCD4C0" : "#F8F2E4";
+  const corSombra  = morto ? "#C4C0B6" : alerta ? "#C0B698" : "#E8DCC0";
+  const corBico    = morto ? "#B8A888" : alerta ? "#C89058" : "#F0A050";
+  const corBicoEsc = morto ? "#988870" : alerta ? "#A87840" : "#D87830";
+  const temCoroa = stage===5 && !alerta && !morto;
+  const relaxAtivo = relaxado && !alerta && !morto && stage<5;
 
   const cx=100;
   const bodyCy=158, bodyRx=46, bodyRy=40;
@@ -1404,10 +1404,14 @@ function PatoMascote({progresso, alerta, relaxado}) {
   const bicoTipX = headX + Math.cos(bicoAngle)*(headR*0.85+bicoLen);
   const bicoTipY = headY + Math.sin(bicoAngle)*(headR*0.85+bicoLen);
 
-  const olhoFechado = droop>0.65 || piscando;
+  const olhoFechado = !morto && (droop>0.65 || piscando);
   const olhoY = headY - 4;
+  const mostrarBochecha = !morto && droop<0.5;
+  const mostrarCilios = !morto && !olhoFechado && !relaxAtivo;
 
-  const mensagens = alerta
+  const mensagens = morto
+    ? ["Quá... eu não aguentei esse mês 💀 vê o relatório"]
+    : alerta
     ? ["Quá... gastos passaram do orçamento esse mês 😟"]
     : relaxAtivo
     ? ["Quá~ vida boa, pagando dívidas e tudo em dia 😎🍹"]
@@ -1420,10 +1424,15 @@ function PatoMascote({progresso, alerta, relaxado}) {
         "Ganhei minha coroa! Quá quá! 🌻",
       ];
 
+  const handleClick = () => {
+    if(morto && onClickMorto){ onClickMorto(); return; }
+    setFalando(f=>!f);
+  };
+
   return (
     <div style={{position:"fixed",top:150,left:24,zIndex:40,display:window.innerWidth>1300?"flex":"none",flexDirection:"column",alignItems:"center",gap:8}}>
-      <div onClick={()=>setFalando(f=>!f)}
-        style={{cursor:"pointer",transform:bounce?"scale(1.15)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:"patoBreathe 3.4s ease-in-out infinite"}}>
+      <div onClick={handleClick}
+        style={{cursor:"pointer",transform:morto?"rotate(18deg)":bounce?"scale(1.15)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:morto?"none":"patoBreathe 3.4s ease-in-out infinite"}}>
         <svg width="170" height="190" viewBox="0 0 220 220" style={{overflow:"visible"}}>
           {/* boia rosa (só no estado relaxado) */}
           {relaxAtivo&&(
@@ -1477,15 +1486,27 @@ function PatoMascote({progresso, alerta, relaxado}) {
           {/* bico */}
           <path d={`M ${bicoBaseX-7} ${bicoBaseY-6} Q ${bicoTipX} ${bicoTipY-3} ${bicoTipX+2} ${bicoTipY+3} Q ${bicoTipX-4} ${bicoTipY+7} ${bicoBaseX-8} ${bicoBaseY+7} Z`} fill={corBico}/>
           <ellipse cx={(bicoBaseX+bicoTipX)/2} cy={(bicoBaseY+bicoTipY)/2+3} rx={3} ry={1.4} fill={corBicoEsc} opacity={0.6}/>
-          {/* bochecha */}
-          {droop<0.3&&<ellipse cx={headX-16} cy={headY+7} rx={5.5} ry={3.5} fill="#F5A0A8" opacity={0.5}/>}
-          {/* óculos escuros (só relaxado) OU olhos normais */}
-          {relaxAtivo ? (
-            <g>
-              <rect x={headX-16} y={olhoY-6} width={11} height={8} rx={3} fill="#1A1A1A"/>
-              <rect x={headX+5} y={olhoY-6} width={11} height={8} rx={3} fill="#1A1A1A"/>
-              <line x1={headX-5} y1={olhoY-2} x2={headX+5} y2={olhoY-2} stroke="#1A1A1A" strokeWidth={2}/>
-              <rect x={headX-16} y={olhoY-6} width={11} height={3} rx={1.5} fill="#fff" opacity={0.25}/>
+          {/* língua pra fora (só morto) */}
+          {morto&&(
+            <ellipse cx={bicoTipX+2} cy={bicoTipY+9} rx={4} ry={3} fill="#E86C8A"/>
+          )}
+          {/* bochecha rosada */}
+          {mostrarBochecha&&<ellipse cx={headX-17} cy={headY+8} rx={6.5} ry={4.2} fill="#F5A0B0" opacity={0.6}/>}
+          {mostrarBochecha&&<ellipse cx={headX+17} cy={headY+8} rx={5} ry={3.2} fill="#F5A0B0" opacity={0.4}/>}
+          {/* óculos de coração (só relaxado) OU olhos normais OU X (morto) */}
+          {morto ? (
+            <>
+              <path d={`M ${headX-10} ${olhoY-4} L ${headX-2} ${olhoY+4} M ${headX-2} ${olhoY-4} L ${headX-10} ${olhoY+4}`} stroke="#3D3226" strokeWidth={2.2} strokeLinecap="round"/>
+              <path d={`M ${headX+2} ${olhoY-4} L ${headX+10} ${olhoY+4} M ${headX+10} ${olhoY-4} L ${headX+2} ${olhoY+4}`} stroke="#3D3226" strokeWidth={2.2} strokeLinecap="round"/>
+            </>
+          ) : relaxAtivo ? (
+            <g transform={`translate(${headX},${olhoY-2})`}>
+              {[-11,11].map((dx,i)=>(
+                <path key={i} transform={`translate(${dx},0) scale(0.85)`}
+                  d="M 0 -6 C -3 -10 -9 -9 -9 -4 C -9 0 -4 4 0 7 C 4 4 9 0 9 -4 C 9 -9 3 -10 0 -6 Z"
+                  fill="#F582AC" stroke="#E8548A" strokeWidth={1} opacity={0.88}/>
+              ))}
+              <line x1={-4} y1={0} x2={4} y2={0} stroke="#C8447A" strokeWidth={1.4}/>
             </g>
           ) : olhoFechado ? (
             <path d={`M ${headX-10} ${olhoY} Q ${headX-4} ${olhoY+3} ${headX+2} ${olhoY}`} stroke="#3D3226" strokeWidth={2.6} fill="none" strokeLinecap="round"/>
@@ -1493,17 +1514,24 @@ function PatoMascote({progresso, alerta, relaxado}) {
             <>
               <circle cx={headX-4} cy={olhoY} r={3.6} fill="#3D3226"/>
               <circle cx={headX-2.5} cy={olhoY-1.5} r={1.1} fill="#fff"/>
+              {mostrarCilios&&(
+                <>
+                  <path d={`M ${headX-8} ${olhoY-4} Q ${headX-11} ${olhoY-8} ${headX-13} ${olhoY-6}`} stroke="#2A2018" strokeWidth={1.3} fill="none" strokeLinecap="round"/>
+                  <path d={`M ${headX-6} ${olhoY-5.5} Q ${headX-8} ${olhoY-10} ${headX-9} ${olhoY-9}`} stroke="#2A2018" strokeWidth={1.2} fill="none" strokeLinecap="round"/>
+                  <path d={`M ${headX-3} ${olhoY-6} Q ${headX-4} ${olhoY-10} ${headX-5} ${olhoY-9.5}`} stroke="#2A2018" strokeWidth={1.1} fill="none" strokeLinecap="round"/>
+                </>
+              )}
             </>
           )}
         </svg>
       </div>
       {falando&&(
         <div style={{background:"rgba(255,255,255,0.96)",borderRadius:14,padding:"10px 14px",fontSize:12,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",fontWeight:600,boxShadow:"0 4px 14px rgba(0,0,0,0.18)",maxWidth:190,textAlign:"center"}}>
-          {alerta ? mensagens[0] : relaxAtivo ? mensagens[0] : mensagens[stage]}
+          {morto ? mensagens[0] : alerta ? mensagens[0] : relaxAtivo ? mensagens[0] : mensagens[stage]}
         </div>
       )}
-      <div style={{background:"rgba(255,255,255,0.88)",borderRadius:99,padding:"5px 14px",fontSize:12,fontWeight:700,color:alerta?"#8B4A1A":"#3D3226",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}}>
-        {alerta?"⚠ ":relaxAtivo?"😎 ":""}{pct.toFixed(0)}% {alerta?"energia":relaxAtivo?"tranquilo":"feliz"}
+      <div style={{background:"rgba(255,255,255,0.88)",borderRadius:99,padding:"5px 14px",fontSize:12,fontWeight:700,color:morto?"#8B1A1A":alerta?"#8B4A1A":"#3D3226",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}}>
+        {morto?"💀 desmaiou":alerta?"⚠ "+pct.toFixed(0)+"% energia":relaxAtivo?"😎 "+pct.toFixed(0)+"% tranquilo":pct.toFixed(0)+"% feliz"}
       </div>
       <style>{`@keyframes patoBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}`}</style>
     </div>
@@ -1655,6 +1683,8 @@ function AppMain({user, onLogout}) {
   const [alocacoes, setAlocacoes] = useLS("v4_aloc",   [], userId);
   const [saldoMensal, setSaldoMensal] = useLS("v4_saldo_mensal", {}, userId);
   const [confirmSaldoMes, setConfirmSaldoMes] = useState(null);
+  const [editSaldoMes, setEditSaldoMes] = useState(null);
+  const [mortoReportOpen, setMortoReportOpen] = useState(false);
 
   const [tab,setTab]=useState("dashboard");
   const [modal,setModal]=useState(null);
@@ -1804,16 +1834,17 @@ function AppMain({user, onLogout}) {
   // ── Derived ────────────────────────────────────────────────────────────────
   const plantoesEfetivos=useMemo(()=>plantoes.map(p=>({...p,se:getPltStatus(p)})),[plantoes]);
   const movsDoMes=useMemo(()=>movs.filter(m=>monthKey(m.data)===selMes),[movs,selMes]);
-  const orcamentoEstourado=useMemo(()=>{
+  const categoriasEstouradas=useMemo(()=>{
     const categoriasD=cats?.despesa||DEFAULT_CATS.despesa;
     const gastosPorCat={};
     movsDoMes.filter(m=>m.tipo==="saida").forEach(m=>{gastosPorCat[m.categoria]=(gastosPorCat[m.categoria]||0)+m.valor;});
-    return categoriasD.some(c=>{
+    return categoriasD.map(c=>{
       const gasto=gastosPorCat[`${c.emoji} ${c.nome}`]||Object.entries(gastosPorCat).filter(([k])=>k.includes(c.nome)).reduce((s,[,v])=>s+v,0);
       const plan=orcamento[selMes]?.[c.id]||0;
-      return plan>0&&gasto>plan;
-    });
+      return {nome:`${c.emoji} ${c.nome}`, gasto, plan, excesso:gasto-plan};
+    }).filter(c=>c.plan>0&&c.excesso>0).sort((a,b)=>b.excesso-a.excesso);
   },[movsDoMes,cats,orcamento,selMes]);
+  const orcamentoEstourado=categoriasEstouradas.length>0;
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
   const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
   const transferencias=movsDoMes.filter(m=>m.tipo==="transferencia").reduce((s,m)=>s+m.valor,0);
@@ -1823,6 +1854,7 @@ function AppMain({user, onLogout}) {
     .reduce((s,m)=>s+m.valor,0);
   // Saldo mensal puro
   const saldo=entradas-saidas-transferencias;
+  const estaMorto=saldo<0;
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
 
   // Saldo com carry-forward: cada mês parte do saldo confirmado do mês anterior
@@ -2014,7 +2046,7 @@ function AppMain({user, onLogout}) {
         combinado = Math.max(0,Math.min(100,combinado));
         const stageCalc = combinado>=100?5 : combinado>=75?4 : combinado>=50?3 : combinado>=25?2 : combinado>=5?1 : 0;
         const relaxado = !orcamentoEstourado && stageCalc>=3 && stageCalc<5 && dividas.length>0 && progDiv>0;
-        return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado}/>;
+        return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado} morto={estaMorto} onClickMorto={()=>setMortoReportOpen(true)}/>;
       })()}
 
 
@@ -2031,7 +2063,10 @@ function AppMain({user, onLogout}) {
               <div>
                 <div style={{fontSize:10,fontWeight:600,letterSpacing:".15em",textTransform:"uppercase",color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:1}}>{TABS.find(t=>t.id===tab)?.label||"Velara Finance"}</div>
                 <div style={{fontSize:24,fontWeight:300,letterSpacing:"-.03em",lineHeight:1,color:"#1A1209"}}>{R(saldoFinal)}</div>
-                <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif"}}>saldo · {monthLabel(selMes)}</div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                  <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif"}}>saldo · {monthLabel(selMes)}</div>
+                  <button onClick={()=>setEditSaldoMes(String(saldoMensal[selMes]!==undefined?saldoMensal[selMes]:0))} style={{background:"rgba(0,0,0,0.07)",border:"none",borderRadius:6,padding:"1px 6px",fontSize:9,color:"rgba(0,0,0,0.5)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>⚙ ajustar</button>
+                </div>
               </div>
             </div>
             <div style={{textAlign:"right"}}>
@@ -3112,6 +3147,47 @@ function AppMain({user, onLogout}) {
             <Btn variant="primary" onClick={()=>{setSaldoMensal({...saldoMensal,[confirmSaldoMes.mes]:+confirmSaldoMes.valor||0});setConfirmSaldoMes(null);}}>✓ Confirmar</Btn>
           </div>
         )}
+      </Modal>
+      <Modal open={editSaldoMes!==null} onClose={()=>setEditSaldoMes(null)} title="Ajustar saldo inicial">
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+            Corrija o saldo inicial de <strong style={{color:"#1A1209"}}>{monthLabel(selMes)}</strong>. O app vai recalcular o saldo desse mês em diante a partir desse valor.
+          </div>
+          <Inp label="Saldo inicial deste mês (R$)" type="text" inputMode="decimal" value={editSaldoMes||""}
+            onChange={e=>setEditSaldoMes(e.target.value.replace(",","."))}/>
+          <Btn variant="primary" onClick={()=>{setSaldoMensal({...saldoMensal,[selMes]:+editSaldoMes||0});setEditSaldoMes(null);}}>✓ Salvar ajuste</Btn>
+        </div>
+      </Modal>
+      <Modal open={mortoReportOpen} onClose={()=>setMortoReportOpen(false)} title="💀 Relatório do mês">
+        <div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:12,padding:"14px 16px",textAlign:"center"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#8B1A1A",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>Saldo negativo em {monthLabel(selMes)}</div>
+            <div className="num" style={{fontSize:22,fontWeight:700,color:"#8B1A1A"}}>{R(saldo)}</div>
+          </div>
+          <div>
+            <div style={{fontSize:12,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>O que passou do planejado:</div>
+            {categoriasEstouradas.length===0?(
+              <div style={{fontSize:12,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>Nenhuma categoria específica estourou — o saldo negativo veio do total geral de gastos ter passado das entradas do mês.</div>
+            ):(
+              categoriasEstouradas.map((c,i)=>(
+                <div key={i} style={{display:"flex",justifyContent:"space-between",padding:"7px 0",borderBottom:"1px solid rgba(0,0,0,0.06)"}}>
+                  <span style={{fontSize:12,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{c.nome}</span>
+                  <span className="num" style={{fontSize:12,fontWeight:700,color:"#8B1A1A"}}>+{R(c.excesso)}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:12,padding:"12px 14px"}}>
+            <div style={{fontSize:11,fontWeight:700,color:"#1A4A6E",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>Como melhorar</div>
+            <div style={{fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",lineHeight:1.6}}>
+              {categoriasEstouradas.length>0
+                ? <>Foque em reduzir gastos em <strong>{categoriasEstouradas[0].nome}</strong> no próximo mês — foi onde mais passou do planejado. Revise o orçamento dessa categoria ou ajuste o planejamento se ele estava irreal.</>
+                : <>Revise suas entradas e saídas do mês na aba Movimentos — pode ter algum gasto grande pontual, ou entradas que ainda não chegaram (verifique plantões pendentes).</>
+              }
+            </div>
+          </div>
+          <Btn variant="primary" onClick={()=>setMortoReportOpen(false)}>Entendi</Btn>
+        </div>
       </Modal>
       <AlocacaoModal open={!!movDist} onClose={()=>setMovDist(null)}
         plantao={movDist?{...movDist,empresa:movDist.descricao,valorTotal:movDist.valor}:null}
