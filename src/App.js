@@ -1672,8 +1672,9 @@ function AppMain({user, onLogout}) {
     if(!temDadosAnterior) return;
     const entMesAnt = movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===mesAnterior).reduce((s,m)=>s+m.valor,0);
     const saiMesAnt = movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===mesAnterior).reduce((s,m)=>s+m.valor,0);
+    const transfMesAnt = movs.filter(m=>m.tipo==="transferencia"&&monthKey(m.data)===mesAnterior).reduce((s,m)=>s+m.valor,0);
     const baseAnterior = saldoMensal[mesAnterior]!==undefined?+saldoMensal[mesAnterior]:0;
-    const saldoFinalAnterior = baseAnterior+entMesAnt-saiMesAnt;
+    const saldoFinalAnterior = baseAnterior+entMesAnt-saiMesAnt-transfMesAnt;
     setConfirmSaldoMes({mes:mesAtualReal, valor:saldoFinalAnterior.toFixed(2)});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
@@ -1821,7 +1822,7 @@ function AppMain({user, onLogout}) {
     .filter(m=>m.tipo==="transferencia"&&m.data&&monthKey(m.data)<=selMes)
     .reduce((s,m)=>s+m.valor,0);
   // Saldo mensal puro
-  const saldo=entradas-saidas;
+  const saldo=entradas-saidas-transferencias;
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
 
   // Saldo com carry-forward: cada mês parte do saldo confirmado do mês anterior
