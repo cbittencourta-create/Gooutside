@@ -1653,7 +1653,8 @@ function AppMain({user, onLogout}) {
   const [ccMovs,    setCCMovs]    = useLS("v4_ccm",    [], userId);
   const [regras,    setRegras]    = useLS("v4_regras", [], userId);
   const [alocacoes, setAlocacoes] = useLS("v4_aloc",   [], userId);
-  const [saldoIni,  setSaldoIni]  = useLS("v4_saldo_ini2", {valor:"0", data:today().slice(0,7)}, userId);
+  const [saldoMensal, setSaldoMensal] = useLS("v4_saldo_mensal", {}, userId);
+  const [confirmSaldoMes, setConfirmSaldoMes] = useState(null);
 
   const [tab,setTab]=useState("dashboard");
   const [modal,setModal]=useState(null);
@@ -1663,6 +1664,19 @@ function AppMain({user, onLogout}) {
   const [sideOpen,setSideOpen]=useState(false);
   const [cdiAtual,setCdiAtual]=useState(()=>{try{return JSON.parse(localStorage.getItem("velara_cdi")||"null")?.valor||null;}catch{return null;}});
   useEffect(()=>{fetchCDI().then(v=>{if(v)setCdiAtual(v);});},[]);
+  useEffect(()=>{
+    const mesAtualReal = today().slice(0,7);
+    if(saldoMensal[mesAtualReal]!==undefined) return;
+    const mesAnterior = shiftMonth(mesAtualReal,-1);
+    const temDadosAnterior = saldoMensal[mesAnterior]!==undefined || movs.some(m=>monthKey(m.data)===mesAnterior);
+    if(!temDadosAnterior) return;
+    const entMesAnt = movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===mesAnterior).reduce((s,m)=>s+m.valor,0);
+    const saiMesAnt = movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===mesAnterior).reduce((s,m)=>s+m.valor,0);
+    const baseAnterior = saldoMensal[mesAnterior]!==undefined?+saldoMensal[mesAnterior]:0;
+    const saldoFinalAnterior = baseAnterior+entMesAnt-saiMesAnt;
+    setConfirmSaldoMes({mes:mesAtualReal, valor:saldoFinalAnterior.toFixed(2)});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
   const [alocExpanded,setAlocExpanded]=useState(false);
   const [importOpen,setImportOpen]=useState(false);
   const [notas,setNotas]=useLS("v4_notas","",userId);
@@ -1810,22 +1824,9 @@ function AppMain({user, onLogout}) {
   const saldo=entradas-saidas;
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
 
-  // Saldo acumulado: saldo inicial + tudo desde a data inicial até o mês selecionado
-  // Se o mês for ANTES da data inicial: mostra só o saldo do mês (sem fantasmas)
-  const saldoIniValor=parseFloat(String(saldoIni.valor||0).replace(",","."))||0;
-  const saldoIniData=saldoIni.data||today().slice(0,7);
-  const saldoAcumulado=selMes>=saldoIniData
-    ? saldoIniValor+movs
-        .filter(m=>m.data&&monthKey(m.data)>=saldoIniData&&monthKey(m.data)<=selMes&&m.tipo!=="transferencia")
-        .reduce((s,m)=>m.tipo==="entrada"?s+m.valor:s-m.valor,0)
-    : saldo;
-  // Saldo livre = saldo acumulado (TODAS entradas - saídas, mês a mês)
-  // menos o que já foi alocado para fora (investimento/objetivo/dívida) via distribuição
-  const totalNaoLivreAlocado=alocacoes
-    .filter(a=>a.data&&monthKey(a.data)>=saldoIniData&&monthKey(a.data)<=selMes)
-    .flatMap(a=>a.itens.filter(it=>it.tipo!=="livre"))
-    .reduce((s,it)=>s+it.valor,0);
-  const saldoReal=saldoAcumulado-totalNaoLivreAlocado;
+  // Saldo com carry-forward: cada mês parte do saldo confirmado do mês anterior
+  const saldoBaseDoMes = saldoMensal[selMes]!==undefined ? +saldoMensal[selMes] : 0;
+  const saldoFinal = saldoBaseDoMes + saldo;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalFundoDivida=dividas.filter(d=>d.tipo==="fundo"&&!d.investId).reduce((s,d)=>s+(+d.pago||0),0);
   const totalObjetivos=objetivos.filter(o=>!o.investId).reduce((s,o)=>s+(+o.atual||0),0);
@@ -2028,11 +2029,8 @@ function AppMain({user, onLogout}) {
               </button>
               <div>
                 <div style={{fontSize:10,fontWeight:600,letterSpacing:".15em",textTransform:"uppercase",color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:1}}>{TABS.find(t=>t.id===tab)?.label||"Velara Finance"}</div>
-                <div style={{fontSize:24,fontWeight:300,letterSpacing:"-.03em",lineHeight:1,color:"#1A1209"}}>{R(saldoReal)}</div>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif"}}>💵 livre · {monthLabel(selMes)}</div>
-                  <button onClick={()=>setModal("saldoini")} style={{background:"rgba(0,0,0,0.07)",border:"none",borderRadius:6,padding:"1px 6px",fontSize:9,color:"rgba(0,0,0,0.5)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>⚙ inicial</button>
-                </div>
+                <div style={{fontSize:24,fontWeight:300,letterSpacing:"-.03em",lineHeight:1,color:"#1A1209"}}>{R(saldoFinal)}</div>
+                <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif"}}>saldo · {monthLabel(selMes)}</div>
               </div>
             </div>
             <div style={{textAlign:"right"}}>
@@ -2040,7 +2038,6 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>⏳ {R(totalPendPlant)}</div>}
               {totalPatrimonio>0&&<div style={{fontSize:10,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}>📈 {R(totalPatrimonio)} patrimônio</div>}
-              <div style={{fontSize:10,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:700}}>{R(saldoAcumulado)} saldo</div>
             </div>
           </div>
           <div className="scr" style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:2}}>
@@ -3103,25 +3100,17 @@ function AppMain({user, onLogout}) {
       </Modal>
 
       <ImportacaoModal open={importOpen} onClose={()=>setImportOpen(false)} onImport={importarMovs} cats={cats}/>
-      <Modal open={modal==="saldoini"} onClose={closeM} title="Saldo Inicial">
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
-            Defina a data e o valor que você tinha na conta naquele momento. O app vai calcular tudo a partir daí.
-          </div>
-          <G2>
-            <div>
-              <div style={{fontSize:11,fontWeight:600,color:"#5A4A3A",letterSpacing:".06em",textTransform:"uppercase",marginBottom:5}}>Mês de referência</div>
-              <input type="month" value={saldoIni.data} onChange={e=>setSaldoIni({...saldoIni,data:e.target.value})}
-                style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"11px 13px",color:"#1A1209",fontSize:14,outline:"none",width:"100%",fontFamily:"inherit"}}/>
+      <Modal open={!!confirmSaldoMes} onClose={()=>{}} title="Confirmar saldo do mês">
+        {confirmSaldoMes&&(
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+              Você está entrando em <strong style={{color:"#1A1209"}}>{monthLabel(confirmSaldoMes.mes)}</strong> com esse saldo (calculado do resultado de {monthLabel(shiftMonth(confirmSaldoMes.mes,-1))}). Confirma ou ajusta se precisar:
             </div>
-            <Inp label="Valor que tinha (R$)" type="text" inputMode="decimal" placeholder="0,00" value={saldoIni.valor}
-              onChange={e=>setSaldoIni({...saldoIni,valor:e.target.value.replace(",",".")})}/>
-          </G2>
-          <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,padding:"10px 14px",fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
-            💡 Exemplo: se em março você tinha R$500 no banco, coloque Mês = Mar 2026 e Valor = 500. O app soma esse valor com tudo que entrou e saiu a partir de março.
+            <Inp label="Saldo inicial deste mês (R$)" type="text" inputMode="decimal" value={confirmSaldoMes.valor}
+              onChange={e=>setConfirmSaldoMes({...confirmSaldoMes,valor:e.target.value.replace(",",".")})}/>
+            <Btn variant="primary" onClick={()=>{setSaldoMensal({...saldoMensal,[confirmSaldoMes.mes]:+confirmSaldoMes.valor||0});setConfirmSaldoMes(null);}}>✓ Confirmar</Btn>
           </div>
-          <Btn variant="primary" onClick={closeM}>Salvar</Btn>
-        </div>
+        )}
       </Modal>
       <AlocacaoModal open={!!movDist} onClose={()=>setMovDist(null)}
         plantao={movDist?{...movDist,empresa:movDist.descricao,valorTotal:movDist.valor}:null}
