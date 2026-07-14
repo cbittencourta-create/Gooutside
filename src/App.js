@@ -136,6 +136,7 @@ const fd = d => d ? new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-d
 const fdFull = d => d ? new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}) : "—";
 const today = () => new Date().toISOString().slice(0,10);
 const addDays = (ds,n) => { const d=new Date(ds+"T12:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+const addMonths = (ds,n) => { const d=new Date(ds+"T12:00:00"); d.setMonth(d.getMonth()+n); return d.toISOString().slice(0,10); };
 const daysUntil = ds => ds ? Math.ceil((new Date(ds+"T12:00:00")-new Date())/86400000) : null;
 const isPast = ds => ds && new Date(ds+"T23:59:59")<new Date();
 const monthKey = ds => ds ? ds.slice(0,7) : "";
@@ -749,7 +750,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
 // MÓDULO 3 — BALANÇO MENSAL COM GRÁFICOS
 // ═══════════════════════════════════════════════════════════════════
 
-function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
+function BalancoTab({movs, plantoes, cartoes, selMes}) {
   // Últimos 12 meses
   const meses = Array.from({length:12},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-11+i);return d.toISOString().slice(0,7);});
 
@@ -757,8 +758,7 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
     ym,
     label: monthLabel(ym).split(" ")[0],
     ent: movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
-    sai: movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)
-        + ccMovs.filter(m=>monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
+    sai: movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
   }));
 
   const maxVal = Math.max(...dataLinha.map(d=>Math.max(d.ent,d.sai)),1);
@@ -777,7 +777,7 @@ function BalancoTab({movs, plantoes, ccMovs, cartoes, selMes}) {
 
   // Cartões do mês
   const cartaoData = cartoes.map(c=>{
-    const usado = ccMovs.filter(m=>m.cartao===c.id&&monthKey(m.data)===selMes).reduce((s,m)=>s+m.valor,0);
+    const usado = movs.filter(m=>m.formaPagamento==="cartao"&&m.cartaoId===c.id&&monthKey(m.data)===selMes).reduce((s,m)=>s+m.valor,0);
     const pct = c.limite>0 ? usado/c.limite*100 : 0;
     return {...c, usado, pct};
   }).filter(c=>c.usado>0).sort((a,b)=>b.pct-a.pct);
@@ -1719,6 +1719,17 @@ function AppMain({user, onLogout}) {
   const [cdiAtual,setCdiAtual]=useState(()=>{try{return JSON.parse(localStorage.getItem("velara_cdi")||"null")?.valor||null;}catch{return null;}});
   useEffect(()=>{fetchCDI().then(v=>{if(v)setCdiAtual(v);});},[]);
   useEffect(()=>{
+    if(ccMovs.length>0){
+      const migrados=ccMovs.map(m=>({
+        id:uid(), tipo:"saida", descricao:m.descricao, valor:m.valor, categoria:m.categoria, data:m.data,
+        formaPagamento:"cartao", cartaoId:m.cartao,
+      }));
+      setMovs([...migrados,...movs]);
+      setCCMovs([]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+  useEffect(()=>{
     const mesAtualReal = today().slice(0,7);
     if(saldoMensal[mesAtualReal]!==undefined) return;
     const mesAnterior = shiftMonth(mesAtualReal,-1);
@@ -1745,18 +1756,19 @@ function AppMain({user, onLogout}) {
   const [investExpandido,setInvestExpandido]=useState(null);
   const [investIdx,setInvestIdx]=useState(0);
   const [fJuros,setFJuros]=useState({mes:today().slice(0,7),taxa:""});
+  const [temDinheiroPergunta,setTemDinheiroPergunta]=useState(null); // {mov, valorTotal} aguardando resposta
+  const [planoAcaoAberto,setPlanoAcaoAberto]=useState(null); // {descricao, valorTotal} pra mostrar estrategia
   const [fParte,setFParte]=useState({descricao:"",valor:"",investId:""});
   const [movDist,setMovDist]=useState(null);
 
-  const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:""});
+  const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:"",formaPagamento:"dinheiro",cartaoId:"",parcelado:false,numParcelas:"2"});
   const [fEmp,setFEmp]=useState({nome:"",contato:"",prazo:"30",cor:"#E8205F"});
   const [fPlt,setFPlt]=useState({empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
   const [fInv,setFInv]=useState({nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
   const [fObj,setFObj]=useState({nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
   const [fDiv,setFDiv]=useState({credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
   const [fCart,setFCart]=useState({nome:"",bandeira:"",limite:"",fechamento:"",vencimento:""});
-  const [fCCMov,setFCCMov]=useState({cartao:"",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
-  const [fAporte,setFAporte]=useState({valor:"",data:today()});
+    const [fAporte,setFAporte]=useState({valor:"",data:today()});
   const [fPgto,setFPgto]=useState({valor:"",data:today()});
 
   useEffect(()=>{const h=parseFloat(fPlt.horas),v=parseFloat(fPlt.valorH);if(h&&v)setFPlt(f=>({...f,valorTotal:(h*v).toFixed(2)}));},[fPlt.horas,fPlt.valorH]);
@@ -1764,7 +1776,7 @@ function AppMain({user, onLogout}) {
 
   const openM=(m,item=null,ex=null)=>{
     setEdit(item);setExtra(ex);setModal(m);
-    if(m==="mov")   setFMov(item?{...item,subtipo:item.subtipo||"aporte",investId:item.investId||""}:{tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:""});
+    if(m==="mov")   setFMov(item?{...item,subtipo:item.subtipo||"aporte",investId:item.investId||"",formaPagamento:item.formaPagamento||"dinheiro",cartaoId:item.cartaoId||"",parcelado:false,numParcelas:"2"}:{tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:"",formaPagamento:"dinheiro",cartaoId:"",parcelado:false,numParcelas:"2"});
     if(m==="emp")   setFEmp(item?{...item}:{nome:"",contato:"",prazo:"30",cor:"#E8205F"});
     if(m==="plt")   setFPlt(item?{...item}:{empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
     if(m==="inv")   setFInv(item?{...item,taxaModo:item.taxaModo||"fixo"}:{nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
@@ -1791,11 +1803,31 @@ function AppMain({user, onLogout}) {
   const saveMov=()=>{
     if(!fMov.descricao||!fMov.valor)return;
     const valorNum=+String(fMov.valor).replace(",",".");
+
+    // Compra parcelada no cartão: gera N lançamentos, um por mês
+    if(!edit&&fMov.tipo==="saida"&&fMov.formaPagamento==="cartao"&&fMov.parcelado){
+      const n=Math.max(2,+fMov.numParcelas||2);
+      const valorParcela=+(valorNum/n).toFixed(2);
+      const grupoId=uid();
+      const novos=Array.from({length:n},(_,idx)=>({
+        id:uid(), tipo:"saida", descricao:`${fMov.descricao} (${idx+1}/${n})`, valor:valorParcela,
+        categoria:fMov.categoria, data:addMonths(fMov.data,idx),
+        formaPagamento:"cartao", cartaoId:fMov.cartaoId, parcelaAtual:idx+1, parcelaTotal:n, compraGrupoId:grupoId,
+      }));
+      setMovs([...novos,...movs]);
+      closeM();
+      if(fMov.formaPagamento==="cartao") setTemDinheiroPergunta({descricao:fMov.descricao,valorTotal:valorNum});
+      return;
+    }
+
     upsert(movs,setMovs,{...fMov,valor:valorNum});
     if(!edit&&fMov.tipo==="transferencia"&&fMov.investId){
       setInvests(invests.map(i=>i.id===fMov.investId
         ? {...i,aporte:fMov.subtipo==="resgate"?Math.max(0,i.aporte-valorNum):i.aporte+valorNum}
         : i));
+    }
+    if(!edit&&fMov.tipo==="saida"&&fMov.formaPagamento==="cartao"){
+      setTemDinheiroPergunta({descricao:fMov.descricao,valorTotal:valorNum});
     }
   };
   const saveEmp=()=>{if(!fEmp.nome)return;upsert(empresas,setEmpresas,fEmp);};
@@ -1808,8 +1840,7 @@ function AppMain({user, onLogout}) {
   const saveObj=()=>{if(!fObj.nome||!fObj.meta)return;upsert(objetivos,setObjetivos,{...fObj,meta:+String(fObj.meta).replace(",","."),atual:+String(fObj.atual||0).replace(",",".")});};
   const saveDiv=()=>{if(!fDiv.credor||!fDiv.total)return;upsert(dividas,setDividas,{...fDiv,tipo:fDiv.tipo||"ativa",total:+String(fDiv.total).replace(",","."),pago:+String(fDiv.pago||0).replace(",",".")});};
   const saveCart=()=>{if(!fCart.nome||!fCart.limite)return;upsert(cartoes,setCartoes,{...fCart,limite:+String(fCart.limite).replace(",",".")});};
-  const saveCCMov=()=>{if(!fCCMov.descricao||!fCCMov.valor||!fCCMov.cartao)return;upsert(ccMovs,setCCMovs,{...fCCMov,valor:+String(fCCMov.valor).replace(",",".")});};
-  const addJuros=(investId)=>{
+    const addJuros=(investId)=>{
     if(!fJuros.mes||!fJuros.taxa)return;
     const entry={id:uid(),mes:fJuros.mes,taxa:+String(fJuros.taxa).replace(",",".")};
     setInvests(invests.map(i=>i.id===investId?{...i,historicoTaxas:[...(i.historicoTaxas||[]).filter(h=>h.mes!==entry.mes),entry].sort((a,b)=>a.mes.localeCompare(b.mes))}:i));
@@ -1900,6 +1931,26 @@ function AppMain({user, onLogout}) {
     }).filter(c=>c.plan>0&&c.excesso>0).sort((a,b)=>b.excesso-a.excesso);
   },[movsDoMes,cats,orcamento,selMes]);
   const orcamentoEstourado=categoriasEstouradas.length>0;
+  const mediaSaldoLivre3Meses=useMemo(()=>{
+    const meses=[1,2,3].map(n=>shiftMonth(today().slice(0,7),-n));
+    const valores=meses.map(mk=>{
+      const ent=movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===mk).reduce((s,m)=>s+m.valor,0);
+      const sai=movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===mk).reduce((s,m)=>s+m.valor,0);
+      const tA=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate"&&monthKey(m.data)===mk).reduce((s,m)=>s+m.valor,0);
+      const tR=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo==="resgate"&&monthKey(m.data)===mk).reduce((s,m)=>s+m.valor,0);
+      return ent-sai-tA+tR;
+    });
+    return valores.reduce((s,v)=>s+v,0)/valores.length;
+  },[movs]);
+  const categoriaMaiorGasto=useMemo(()=>{
+    const gastosPorCat={};
+    movsDoMes.filter(m=>m.tipo==="saida").forEach(m=>{
+      const catPai=m.categoria.includes("·")?m.categoria.split("·")[0].trim():m.categoria;
+      gastosPorCat[catPai]=(gastosPorCat[catPai]||0)+m.valor;
+    });
+    const entries=Object.entries(gastosPorCat).sort((a,b)=>b[1]-a[1]);
+    return entries.length?{nome:entries[0][0],valor:entries[0][1]}:null;
+  },[movsDoMes]);
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
   const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
   const transferenciasAporte=movsDoMes.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate").reduce((s,m)=>s+m.valor,0);
@@ -1924,7 +1975,7 @@ function AppMain({user, onLogout}) {
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
   const empNome=n=>empresas.find(e=>e.nome===n)||{nome:n,cor:C.magenta};
-  const ccGastosMes=cid=>ccMovs.filter(m=>m.cartao===cid&&monthKey(m.data)===selMes).reduce((s,m)=>s+m.valor,0);
+  const ccGastosMes=cid=>movs.filter(m=>m.formaPagamento==="cartao"&&m.cartaoId===cid&&monthKey(m.data)===selMes).reduce((s,m)=>s+m.valor,0);
 
   // Donut gastos
   const donutGastos=useMemo(()=>{
@@ -1964,9 +2015,9 @@ function AppMain({user, onLogout}) {
   const forecast=useMemo(()=>months8().map(ym=>({
     ym,
     entradas:movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)+plantoes.filter(p=>monthKey(p.previsao)===ym).reduce((s,p)=>s+p.valorTotal,0),
-    saidas:movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)+ccMovs.filter(m=>monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
+    saidas:movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
     rendimentos:invests.reduce((s,i)=>s+(i.aporte*taxaEfetiva(i)/100/12),0),
-  })).map(f=>({...f,saldo:f.entradas-f.saidas+f.rendimentos})),[movs,plantoes,invests,ccMovs]);
+  })).map(f=>({...f,saldo:f.entradas-f.saidas+f.rendimentos})),[movs,plantoes,invests]);
   const maxFc=Math.max(...forecast.map(f=>Math.max(f.entradas,f.saidas,1)));
 
   const statusDiv=d=>{if(!d.prazo)return{label:"Em aberto",color:"rgba(26,18,9,0.5)",bg:"rgba(0,0,0,0.06)"};if(isPast(d.prazo)&&d.pago<d.total)return{label:"Atrasada",color:C.red,bg:C.redGlass};if(daysUntil(d.prazo)<=30)return{label:"Vence em breve",color:C.gold,bg:C.goldGlass};return{label:"Em dia",color:C.green,bg:C.greenGlass};};
@@ -2997,12 +3048,12 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:22,fontWeight:300,color:TXT}}>Cartões</div>
               <div style={{display:"flex",gap:7}}>
                 <Btn variant="secondary" style={{fontSize:11,padding:"7px 11px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("cart")}>+ Cartão</Btn>
-                <Btn variant="primary" style={{fontSize:11,padding:"7px 11px"}} onClick={()=>openM("ccmov")}>+ Compra</Btn>
+                <Btn variant="primary" style={{fontSize:11,padding:"7px 11px"}} onClick={()=>{openM("mov");setFMov(f=>({...f,tipo:"saida",formaPagamento:"cartao"}));}}>+ Compra</Btn>
               </div>
             </div>
             {cartoes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Adicione seus cartões</div>
               :cartoes.map(c=>{const usado=ccGastosMes(c.id);const pct=+c.limite>0?Math.min(usado/+c.limite*100,100):0;const alerta=pct>=80;
-                const cc=ccMovs.filter(m=>m.cartao===c.id&&monthKey(m.data)===selMes).sort((a,b)=>b.data.localeCompare(a.data));
+                const cc=movs.filter(m=>m.formaPagamento==="cartao"&&m.cartaoId===c.id&&monthKey(m.data)===selMes).sort((a,b)=>b.data.localeCompare(a.data));
                 return <div key={c.id} style={{marginBottom:14}}>
                   <div className={CARD} style={{background:alerta?"rgba(224,82,82,0.22)":"rgba(255,255,255,0.15)",border:`1px solid ${alerta?C.red+"55":"rgba(255,255,255,0.26)"}`,marginBottom:7}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:11}}>
@@ -3012,7 +3063,7 @@ function AppMain({user, onLogout}) {
                     <Bar value={usado} max={+c.limite} color={alerta?C.red:C.magenta} h={5}/>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:4}}><span>{pct.toFixed(0)}%</span>{alerta&&<span style={{color:C.red,fontWeight:700}}>⚠ Limite próximo</span>}<span>Disponível: {R(+c.limite-usado)}</span></div>
                     <div style={{display:"flex",gap:6,marginTop:9}}>
-                      <Btn variant="primary" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("ccmov",null,c.id)}>+ Compra</Btn>
+                      <Btn variant="primary" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>{openM("mov");setFMov(f=>({...f,tipo:"saida",formaPagamento:"cartao",cartaoId:c.id}));}}>+ Compra</Btn>
                       <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("cart",c)}>Editar</Btn>
                       <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(cartoes,setCartoes,c.id)}>Excluir</Btn>
                     </div>
@@ -3020,9 +3071,12 @@ function AppMain({user, onLogout}) {
                   {cc.slice(0,4).map(m=>(
                     <div key={m.id} className={CARD} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 12px",marginBottom:5}}>
                       <div style={{fontSize:17}}>{m.categoria.split(" ")[0]}</div>
-                      <div style={{flex:1}}><div style={{fontSize:12,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div><div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{fd(m.data)}</div></div>
+                      <div style={{flex:1}}>
+                        <div style={{fontSize:12,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div>
+                        <div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{fd(m.data)}{m.parcelaTotal>1&&` · parcela ${m.parcelaAtual}/${m.parcelaTotal}`}</div>
+                      </div>
                       <div className="num" style={{fontSize:12,fontWeight:700,color:C.magenta}}>{R(m.valor)}</div>
-                      <button onClick={()=>remove(ccMovs,setCCMovs,m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.55)",fontSize:16,cursor:"pointer",padding:"0 2px"}}>×</button>
+                      <button onClick={()=>removeMov(m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.55)",fontSize:16,cursor:"pointer",padding:"0 2px"}}>×</button>
                     </div>
                   ))}
                 </div>;
@@ -3075,7 +3129,7 @@ function AppMain({user, onLogout}) {
         {/* ══ BALANÇO ══ */}
         {tab==="balanco"&&(
           <div className="fade">
-            <BalancoTab movs={movs} plantoes={plantoes} ccMovs={ccMovs} cartoes={cartoes} selMes={selMes}/>
+            <BalancoTab movs={movs} plantoes={plantoes} cartoes={cartoes} selMes={selMes}/>
           </div>
         )}
 
@@ -3124,17 +3178,52 @@ function AppMain({user, onLogout}) {
               {invests.length===0&&<div style={{fontSize:11,color:C.modalSub,fontFamily:"'DM Sans',sans-serif"}}>Cadastre um investimento primeiro para vincular.</div>}
             </div>
           ) : (
-            <Sel label="Categoria" value={fMov.categoria} onChange={e=>setFMov({...fMov,categoria:e.target.value})}>
-              {fMov.tipo==="entrada"
-                ? (cats?.receita||DEFAULT_CATS.receita).map(c=><option key={c.id} value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>)
-                : (cats?.despesa||DEFAULT_CATS.despesa).map(c=>(
-                    <optgroup key={c.id} label={`${c.emoji} ${c.nome}`}>
-                      <option value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>
-                      {c.subcats.map(s=><option key={s.id} value={`${c.emoji} ${c.nome} · ${s.nome}`}>{c.emoji} {c.nome} · {s.nome}</option>)}
-                    </optgroup>
-                  ))
-              }
-            </Sel>
+            <>
+              <Sel label="Categoria" value={fMov.categoria} onChange={e=>setFMov({...fMov,categoria:e.target.value})}>
+                {fMov.tipo==="entrada"
+                  ? (cats?.receita||DEFAULT_CATS.receita).map(c=><option key={c.id} value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>)
+                  : (cats?.despesa||DEFAULT_CATS.despesa).map(c=>(
+                      <optgroup key={c.id} label={`${c.emoji} ${c.nome}`}>
+                        <option value={`${c.emoji} ${c.nome}`}>{c.emoji} {c.nome}</option>
+                        {c.subcats.map(s=><option key={s.id} value={`${c.emoji} ${c.nome} · ${s.nome}`}>{c.emoji} {c.nome} · {s.nome}</option>)}
+                      </optgroup>
+                    ))
+                }
+              </Sel>
+              {fMov.tipo==="saida"&&(
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <div>
+                    <div style={{fontSize:11,fontWeight:600,color:C.modalSub,letterSpacing:".06em",textTransform:"uppercase",marginBottom:5}}>Forma de pagamento</div>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:4}}>
+                      {[["dinheiro","💵"],["pix","📱"],["debito","💳"],["cartao","🖊️"]].map(([v,ic])=>(
+                        <button key={v} onClick={()=>setFMov({...fMov,formaPagamento:v})} style={{background:fMov.formaPagamento===v?C.magentaDark:"rgba(0,0,0,0.05)",color:fMov.formaPagamento===v?"#fff":C.modalSub,border:"none",borderRadius:9,padding:"8px 2px",fontSize:10,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>{ic}<br/>{v==="dinheiro"?"Dinheiro":v==="pix"?"Pix":v==="debito"?"Débito":"Cartão"}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {fMov.formaPagamento==="cartao"&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:10,background:"rgba(232,32,95,0.05)",border:"1px solid rgba(232,32,95,0.15)",borderRadius:10,padding:"11px 13px"}}>
+                      <Sel label="Qual cartão?" value={fMov.cartaoId} onChange={e=>setFMov({...fMov,cartaoId:e.target.value})}>
+                        <option value="">Selecione...</option>
+                        {cartoes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
+                      </Sel>
+                      {cartoes.length===0&&<div style={{fontSize:11,color:C.modalSub,fontFamily:"'DM Sans',sans-serif"}}>Cadastre um cartão primeiro na aba Cartões.</div>}
+                      <label style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}}>
+                        <input type="checkbox" checked={fMov.parcelado} onChange={e=>setFMov({...fMov,parcelado:e.target.checked})} style={{width:16,height:16,accentColor:C.magenta}}/>
+                        <span style={{fontSize:12,color:C.modalText,fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Compra parcelada</span>
+                      </label>
+                      {fMov.parcelado&&(
+                        <Inp label="Número de parcelas" type="number" min="2" value={fMov.numParcelas} onChange={e=>setFMov({...fMov,numParcelas:e.target.value})}/>
+                      )}
+                      {fMov.parcelado&&fMov.valor&&fMov.numParcelas>=2&&(
+                        <div style={{fontSize:11,color:"#8B1043",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>
+                          {fMov.numParcelas}x de {R((+String(fMov.valor).replace(",","."))/(+fMov.numParcelas||1))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           )}
           <Btn variant="primary" style={{marginTop:4}} onClick={saveMov}>Salvar lançamento</Btn>
         </div>
@@ -3257,17 +3346,64 @@ function AppMain({user, onLogout}) {
         </div>
       </Modal>
 
-      <Modal open={modal==="ccmov"} onClose={closeM} title="Lançar Compra no Cartão">
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          <Sel label="Cartão" value={fCCMov.cartao} onChange={e=>setFCCMov({...fCCMov,cartao:e.target.value})}><option value="">Selecione...</option>{cartoes.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}</Sel>
-          <Inp label="Descrição" placeholder="Ex: Farmácia, Restaurante..." value={fCCMov.descricao} onChange={e=>setFCCMov({...fCCMov,descricao:e.target.value})}/>
-          <G2><Inp label="Valor (R$)" placeholder="0,00" value={fCCMov.valor} onChange={e=>setFCCMov({...fCCMov,valor:e.target.value})}/><Inp label="Data" type="date" value={fCCMov.data} onChange={e=>setFCCMov({...fCCMov,data:e.target.value})}/></G2>
-          <Sel label="Categoria" value={fCCMov.categoria} onChange={e=>setFCCMov({...fCCMov,categoria:e.target.value})}>{CATS_OUT.map(c=><option key={c} value={c}>{c}</option>)}</Sel>
-          <Btn variant="primary" onClick={saveCCMov}>Salvar compra</Btn>
-        </div>
-      </Modal>
-
       <ImportacaoModal open={importOpen} onClose={()=>setImportOpen(false)} onImport={importarMovs} cats={cats}/>
+      <Modal open={!!temDinheiroPergunta} onClose={()=>setTemDinheiroPergunta(null)} title="💳 Compra no cartão">
+        {temDinheiroPergunta&&(
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+              Você registrou <strong style={{color:"#1A1209"}}>{temDinheiroPergunta.descricao}</strong> — {R(temDinheiroPergunta.valorTotal)}.
+              <br/>Você já tem esse valor guardado pra pagar a fatura?
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <Btn variant="green" style={{flex:1}} onClick={()=>setTemDinheiroPergunta(null)}>✓ Sim, já tenho</Btn>
+              <Btn variant="danger" style={{flex:1}} onClick={()=>{setPlanoAcaoAberto(temDinheiroPergunta);setTemDinheiroPergunta(null);}}>Ainda não</Btn>
+            </div>
+          </div>
+        )}
+      </Modal>
+      <Modal open={!!planoAcaoAberto} onClose={()=>setPlanoAcaoAberto(null)} title="📋 Plano para conseguir pagar">
+        {planoAcaoAberto&&(()=>{
+          const mesesNecessarios=mediaSaldoLivre3Meses>0?Math.ceil(planoAcaoAberto.valorTotal/mediaSaldoLivre3Meses):null;
+          return (
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{background:"rgba(232,32,95,0.08)",border:"1px solid rgba(232,32,95,0.25)",borderRadius:12,padding:"12px 16px",textAlign:"center"}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#8B1043",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>{planoAcaoAberto.descricao}</div>
+                <div className="num" style={{fontSize:20,fontWeight:700,color:"#8B1043"}}>{R(planoAcaoAberto.valorTotal)}</div>
+              </div>
+
+              <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:12,padding:"12px 14px"}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#1A4A6E",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>⏱ Tempo estimado</div>
+                <div style={{fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                  {mesesNecessarios
+                    ? <>Com sua média de <strong>{R(mediaSaldoLivre3Meses)}</strong> livre por mês, levaria cerca de <strong>{mesesNecessarios} {mesesNecessarios===1?"mês":"meses"}</strong> pra juntar esse valor guardando tudo que sobra.</>
+                    : <>Seus últimos meses não deixaram sobra pra guardar. Vale reduzir gastos antes de assumir esse compromisso.</>
+                  }
+                </div>
+              </div>
+
+              {categoriaMaiorGasto&&(
+                <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:12,padding:"12px 14px"}}>
+                  <div style={{fontSize:11,fontWeight:700,color:"#8B6000",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>✂ Onde cortar</div>
+                  <div style={{fontSize:12,color:"#6B4C00",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                    Sua maior categoria de gasto esse mês é <strong>{categoriaMaiorGasto.nome}</strong> ({R(categoriaMaiorGasto.valor)}). Reduzir um pouco ali pode liberar dinheiro pra essa compra mais rápido.
+                  </div>
+                </div>
+              )}
+
+              <div style={{background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.25)",borderRadius:12,padding:"12px 14px"}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#215010",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>🎯 Acompanhar como meta</div>
+                <Btn variant="green" style={{width:"100%"}} onClick={()=>{
+                  const prazo=mesesNecessarios?addMonths(today(),mesesNecessarios):"";
+                  setObjetivos([{id:uid(),nome:planoAcaoAberto.descricao,meta:planoAcaoAberto.valorTotal,atual:0,prazo,cor:C.green,obs:"Criado automaticamente pelo plano de economia",partes:[]},...objetivos]);
+                  setPlanoAcaoAberto(null);
+                }}>+ Criar objetivo pra essa compra</Btn>
+              </div>
+
+              <Btn variant="secondary" style={{color:"#1A1209",background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.1)"}} onClick={()=>setPlanoAcaoAberto(null)}>Fechar</Btn>
+            </div>
+          );
+        })()}
+      </Modal>
       <Modal open={!!confirmSaldoMes} onClose={()=>{}} title="Confirmar saldo do mês">
         {confirmSaldoMes&&(
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
