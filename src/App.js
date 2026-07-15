@@ -1755,6 +1755,7 @@ function AppMain({user, onLogout}) {
   const [objExpandido,setObjExpandido]=useState(null);
   const [investExpandido,setInvestExpandido]=useState(null);
   const [investIdx,setInvestIdx]=useState(0);
+  const [cartaoIdx,setCartaoIdx]=useState(0);
   const [fJuros,setFJuros]=useState({mes:today().slice(0,7),taxa:""});
   const [temDinheiroPergunta,setTemDinheiroPergunta]=useState(null); // {mov, valorTotal} aguardando resposta
   const [planoAcaoAberto,setPlanoAcaoAberto]=useState(null); // {descricao, valorTotal} pra mostrar estrategia
@@ -2215,7 +2216,29 @@ function AppMain({user, onLogout}) {
               ))}
             </div>
 
-            {/* ── Linha 2: Gráficos lado a lado ── */}
+            {/* ── Resumo de Cartões ── */}
+            {cartoes.length>0&&(
+              <div className={CARD} style={{marginBottom:10,padding:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <SL style={{marginBottom:0}}>▭ Cartões</SL>
+                  <button onClick={()=>navTo("cartoes")} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Ver todos</button>
+                </div>
+                {cartoes.map(c=>{
+                  const usado=ccGastosMes(c.id);
+                  const pct=+c.limite>0?Math.min(usado/+c.limite*100,100):0;
+                  const alertaC=pct>=80;
+                  return (
+                    <div key={c.id} style={{marginBottom:9}}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                        <span style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{c.nome}</span>
+                        <span className="num" style={{fontSize:12,fontWeight:700,color:alertaC?C.red:"#1A1209"}}>{R(usado)} <span style={{fontSize:10,color:"rgba(26,18,9,0.5)",fontWeight:500}}>de {R(+c.limite)}</span></span>
+                      </div>
+                      <Bar value={usado} max={+c.limite} color={alertaC?C.red:C.magenta} h={5}/>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
 
               {/* Pizza gastos */}
@@ -3052,36 +3075,84 @@ function AppMain({user, onLogout}) {
               </div>
             </div>
             {cartoes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Adicione seus cartões</div>
-              :cartoes.map(c=>{const usado=ccGastosMes(c.id);const pct=+c.limite>0?Math.min(usado/+c.limite*100,100):0;const alerta=pct>=80;
+              :(()=>{
+                const idx=Math.max(0,Math.min(cartaoIdx,cartoes.length-1));
+                const c=cartoes[idx];
+                const usado=ccGastosMes(c.id);
+                const pct=+c.limite>0?Math.min(usado/+c.limite*100,100):0;
+                const alerta=pct>=80;
                 const cc=movs.filter(m=>m.formaPagamento==="cartao"&&m.cartaoId===c.id&&monthKey(m.data)===selMes).sort((a,b)=>b.data.localeCompare(a.data));
-                return <div key={c.id} style={{marginBottom:14}}>
-                  <div className={CARD} style={{background:alerta?"rgba(224,82,82,0.22)":"rgba(255,255,255,0.15)",border:`1px solid ${alerta?C.red+"55":"rgba(255,255,255,0.26)"}`,marginBottom:7}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:11}}>
-                      <div><div style={{fontSize:15,fontWeight:700,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{c.nome}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",marginTop:1,fontFamily:"'DM Sans',sans-serif"}}>{c.bandeira&&`${c.bandeira} · `}Fecha dia {c.fechamento} · Vence dia {c.vencimento}</div></div>
-                      <div style={{textAlign:"right"}}><div className="num" style={{fontSize:17,fontWeight:700,color:alerta?C.red:TXT}}>{R(usado)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>de {R(+c.limite)}</div></div>
-                    </div>
-                    <Bar value={usado} max={+c.limite} color={alerta?C.red:C.magenta} h={5}/>
-                    <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:4}}><span>{pct.toFixed(0)}%</span>{alerta&&<span style={{color:C.red,fontWeight:700}}>⚠ Limite próximo</span>}<span>Disponível: {R(+c.limite-usado)}</span></div>
-                    <div style={{display:"flex",gap:6,marginTop:9}}>
-                      <Btn variant="primary" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>{openM("mov");setFMov(f=>({...f,tipo:"saida",formaPagamento:"cartao",cartaoId:c.id}));}}>+ Compra</Btn>
-                      <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("cart",c)}>Editar</Btn>
-                      <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(cartoes,setCartoes,c.id)}>Excluir</Btn>
-                    </div>
-                  </div>
-                  {cc.slice(0,4).map(m=>(
-                    <div key={m.id} className={CARD} style={{display:"flex",alignItems:"center",gap:9,padding:"8px 12px",marginBottom:5}}>
-                      <div style={{fontSize:17}}>{m.categoria.split(" ")[0]}</div>
-                      <div style={{flex:1}}>
-                        <div style={{fontSize:12,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{m.descricao}</div>
-                        <div style={{fontSize:9,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{fd(m.data)}{m.parcelaTotal>1&&` · parcela ${m.parcelaAtual}/${m.parcelaTotal}`}</div>
+                return (
+                  <>
+                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+                      <button onClick={()=>setCartaoIdx(idx===0?cartoes.length-1:idx-1)} style={{background:"rgba(255,255,255,0.75)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:36,height:36,cursor:"pointer",fontSize:17,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>‹</button>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>▭ Cartões</div>
+                        <div style={{fontSize:11,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif"}}>{idx+1} de {cartoes.length}</div>
                       </div>
-                      <div className="num" style={{fontSize:12,fontWeight:700,color:C.magenta}}>{R(m.valor)}</div>
-                      <button onClick={()=>removeMov(m.id)} style={{background:"none",border:"none",color:"rgba(26,18,9,0.55)",fontSize:16,cursor:"pointer",padding:"0 2px"}}>×</button>
+                      <button onClick={()=>setCartaoIdx(idx===cartoes.length-1?0:idx+1)} style={{background:"rgba(255,255,255,0.75)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:36,height:36,cursor:"pointer",fontSize:17,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>›</button>
                     </div>
-                  ))}
-                </div>;
-              })
-            }
+                    {cartoes.length>1&&(
+                      <div style={{display:"flex",gap:5,justifyContent:"center",marginBottom:14,flexWrap:"wrap"}}>
+                        {cartoes.map((cd,dotIdx)=>(
+                          <button key={cd.id} onClick={()=>setCartaoIdx(dotIdx)} title={cd.nome}
+                            style={{width:dotIdx===idx?18:7,height:7,borderRadius:99,border:"none",background:dotIdx===idx?"#E8205F":"rgba(0,0,0,0.18)",cursor:"pointer",transition:"all .2s",padding:0}}/>
+                        ))}
+                      </div>
+                    )}
+                    <div className={CARD} style={{background:alerta?"rgba(224,82,82,0.22)":"rgba(255,255,255,0.85)",border:`1px solid ${alerta?C.red+"55":"rgba(0,0,0,0.08)"}`,marginBottom:14}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:11}}>
+                        <div><div style={{fontSize:16,fontWeight:700,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{c.nome}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",marginTop:1,fontFamily:"'DM Sans',sans-serif"}}>{c.bandeira&&`${c.bandeira} · `}Fecha dia {c.fechamento} · Vence dia {c.vencimento}</div></div>
+                        <div style={{textAlign:"right"}}><div className="num" style={{fontSize:18,fontWeight:700,color:alerta?C.red:TXT}}>{R(usado)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>de {R(+c.limite)}</div></div>
+                      </div>
+                      <Bar value={usado} max={+c.limite} color={alerta?C.red:C.magenta} h={6}/>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:4}}><span>{pct.toFixed(0)}%</span>{alerta&&<span style={{color:C.red,fontWeight:700}}>⚠ Limite próximo</span>}<span>Disponível: {R(+c.limite-usado)}</span></div>
+                      <div style={{display:"flex",gap:6,marginTop:9}}>
+                        <Btn variant="primary" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>{openM("mov");setFMov(f=>({...f,tipo:"saida",formaPagamento:"cartao",cartaoId:c.id}));}}>+ Compra</Btn>
+                        <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("cart",c)}>Editar</Btn>
+                        <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>{remove(cartoes,setCartoes,c.id);setCartaoIdx(0);}}>Excluir</Btn>
+                      </div>
+                    </div>
+                    {cc.length===0?(
+                      <div className={CARD} style={{textAlign:"center",padding:24,color:"rgba(26,18,9,0.45)",fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>Nenhuma compra em {monthLabel(selMes)}</div>
+                    ):(
+                      <div className={CARD} style={{padding:"16px 14px"}}>
+                        <div style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
+                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Descrição</div>
+                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Categoria</div>
+                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data</div>
+                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:"right"}}>Valor</div>
+                          <div/>
+                        </div>
+                        {cc.map((m,rowIdx)=>{
+                          const opts=cats?.despesa||DEFAULT_CATS.despesa;
+                          return (
+                            <div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 26px",gap:6,alignItems:"center",padding:"9px 4px",background:rowIdx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
+                              <div>
+                                <input value={m.descricao} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,descricao:e.target.value}:x))}
+                                  style={{background:"transparent",border:"none",padding:"5px 4px",fontSize:12.5,color:"#1A1209",fontWeight:600,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                                {m.parcelaTotal>1&&<div style={{fontSize:9,color:"#8B1043",fontFamily:"'DM Sans',sans-serif",marginLeft:4}}>parcela {m.parcelaAtual}/{m.parcelaTotal}</div>}
+                              </div>
+                              <select value={m.categoria} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,categoria:e.target.value}:x))}
+                                className="plt-select"
+                                style={{background:"rgba(196,24,90,0.08)",border:"1px solid rgba(196,24,90,0.2)",borderRadius:8,padding:"5px 6px",fontSize:11,color:"#8B1043",fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%",minWidth:0}}>
+                                {opts.map(cc2=><option key={cc2.id} value={`${cc2.emoji} ${cc2.nome}`}>{cc2.nome}</option>)}
+                                {!opts.some(cc2=>m.categoria.startsWith(`${cc2.emoji} ${cc2.nome}`))&&<option value={m.categoria}>{m.categoria}</option>}
+                              </select>
+                              <input type="date" value={m.data} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,data:e.target.value}:x))}
+                                style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 4px",fontSize:10.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
+                              <input type="number" value={m.valor} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,valor:+e.target.value}:x))}
+                                className="plt-numinput"
+                                style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px 5px",fontSize:12,fontWeight:700,color:C.magenta,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%",textAlign:"right"}}/>
+                              <button onClick={()=>removeMov(m.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:14,cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
           </div>
         )}
 
