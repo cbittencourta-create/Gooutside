@@ -343,7 +343,7 @@ const Inp = ({label,...p}) => (
 const Sel = ({label,children,...p}) => (
   <div>
     {label&&<div style={{fontSize:11,fontWeight:600,color:C.modalSub,letterSpacing:".06em",textTransform:"uppercase",marginBottom:5}}>{label}</div>}
-    <select style={{background:C.inputBg,border:`1.5px solid ${C.inputBorder}`,borderRadius:10,padding:"11px 13px",color:C.modalText,fontSize:14,outline:"none",width:"100%",fontFamily:"inherit",appearance:"none",cursor:"pointer"}} {...p}>{children}</select>
+    <select className="filter-select" style={{background:C.inputBg,border:`1.5px solid ${C.inputBorder}`,borderRadius:10,padding:"11px 30px 11px 13px",color:C.modalText,fontSize:14,outline:"none",width:"100%",fontFamily:"inherit",cursor:"pointer"}} {...p}>{children}</select>
   </div>
 );
 const G2=({children,gap=10})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap}}>{children}</div>;
@@ -1302,12 +1302,14 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
                       <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                         <span style={{fontSize:10,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>{t.data||"—"}</span>
                         <select value={t.tipo} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,tipo:e.target.value}:x))}
+                          className="plt-select"
                           style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:t.tipo==="entrada"?"#2D5A10":t.tipo==="transferencia"?"#5BA3D4":"#8B1A1A",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                           <option value="entrada">↑ Entrada</option>
                           <option value="saida">↓ Saída</option>
                           <option value="transferencia">🔄 Transfer.</option>
                         </select>
                         <select value={t.categoria} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,categoria:e.target.value}:x))}
+                          className="plt-select"
                           style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:"#1A1209",cursor:"pointer",fontFamily:"inherit",flex:1,minWidth:0}}>
                           <optgroup label="Despesas">{CATS_DESP.map(c=><option key={c} value={c}>{c}</option>)}</optgroup>
                           <optgroup label="Receitas">{CATS_REC.map(c=><option key={c} value={c}>{c}</option>)}</optgroup>
@@ -3090,7 +3092,8 @@ function AppMain({user, onLogout}) {
                         </div>
                         <div style={{display:"flex",gap:6}}>
                           <select value={fParte.investId} onChange={e=>setFParte({...fParte,investId:e.target.value})}
-                            style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 9px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}>
+                            className="filter-select"
+                            style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 26px 7px 9px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}>
                             <option value="">Sem vínculo de investimento</option>
                             {invests.map(i=><option key={i.id} value={i.id}>{i.nome}{i.banco?" · "+i.banco:""}</option>)}
                           </select>
