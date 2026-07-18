@@ -1772,6 +1772,9 @@ function AppMain({user, onLogout}) {
   const [fInv,setFInv]=useState({nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
   const [fObj,setFObj]=useState({nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
   const [fDiv,setFDiv]=useState({credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
+  const [fCartaoRenegoc,setFCartaoRenegoc]=useState({credor:"",numParcelas:"12",valorComDesconto:"",valorSemDesconto:"",percentualDesconto:"",percentualAntecipado:"",dataPrimeiraParcela:today()});
+  const [cartaoRenegocExpandido,setCartaoRenegocExpandido]=useState(null);
+  const [pagarParcelaModal,setPagarParcelaModal]=useState(null); // {divId, parcelaIdx}
   const [fCart,setFCart]=useState({nome:"",bandeira:"",limite:"",fechamento:"",vencimento:""});
     const [fAporte,setFAporte]=useState({valor:"",data:today()});
   const [fPgto,setFPgto]=useState({valor:"",data:today()});
@@ -1844,6 +1847,49 @@ function AppMain({user, onLogout}) {
   const taxaEfetiva=inv=>inv.taxaModo==="cdi"&&inv.percCDI?(cdiAtual?cdiAtual*(+inv.percCDI)/100:0):(parseFloat(inv.taxa)||0);
   const saveObj=()=>{if(!fObj.nome||!fObj.meta)return;upsert(objetivos,setObjetivos,{...fObj,meta:+String(fObj.meta).replace(",","."),atual:+String(fObj.atual||0).replace(",",".")});};
   const saveDiv=()=>{if(!fDiv.credor||!fDiv.total)return;upsert(dividas,setDividas,{...fDiv,tipo:fDiv.tipo||"ativa",total:+String(fDiv.total).replace(",","."),pago:+String(fDiv.pago||0).replace(",",".")});};
+
+  const saveCartaoRenegoc=()=>{
+    const f=fCartaoRenegoc;
+    if(!f.credor||!f.numParcelas||!f.valorComDesconto)return;
+    const n=Math.max(1,+f.numParcelas);
+    const vCom=+String(f.valorComDesconto).replace(",",".");
+    const vSem=+String(f.valorSemDesconto||f.valorComDesconto).replace(",",".");
+    const parcelasStatus=Array.from({length:n},(_,idx)=>({
+      numero:idx+1, dataVencimento:addMonths(f.dataPrimeiraParcela,idx), pago:false, valorPago:0, comDesconto:null,
+    }));
+    const novaDiv={
+      id:uid(), tipo:"cartao_desconto", credor:f.credor,
+      numParcelas:n, valorComDesconto:vCom, valorSemDesconto:vSem,
+      percentualDesconto:+String(f.percentualDesconto||0).replace(",","."),
+      percentualAntecipado:+String(f.percentualAntecipado||0).replace(",","."),
+      parcelasStatus, total:vCom*n, pago:0,
+    };
+    setDividas([novaDiv,...dividas]);
+    setFCartaoRenegoc({credor:"",numParcelas:"12",valorComDesconto:"",valorSemDesconto:"",percentualDesconto:"",percentualAntecipado:"",dataPrimeiraParcela:today()});
+    closeM();
+  };
+
+  const marcarParcelaPaga=(divId,parcelaIdx,comDesconto)=>{
+    setDividas(dividas.map(d=>{
+      if(d.id!==divId)return d;
+      const novasParcelas=d.parcelasStatus.map((p,idx)=>{
+        if(idx!==parcelaIdx)return p;
+        const valorPago=comDesconto?d.valorComDesconto:d.valorSemDesconto;
+        return {...p,pago:true,valorPago,comDesconto};
+      });
+      const novoPago=novasParcelas.reduce((s,p)=>s+(p.pago?p.valorPago:0),0);
+      return {...d,parcelasStatus:novasParcelas,pago:novoPago};
+    }));
+    setPagarParcelaModal(null);
+  };
+  const desmarcarParcela=(divId,parcelaIdx)=>{
+    setDividas(dividas.map(d=>{
+      if(d.id!==divId)return d;
+      const novasParcelas=d.parcelasStatus.map((p,idx)=>idx===parcelaIdx?{...p,pago:false,valorPago:0,comDesconto:null}:p);
+      const novoPago=novasParcelas.reduce((s,p)=>s+(p.pago?p.valorPago:0),0);
+      return {...d,parcelasStatus:novasParcelas,pago:novoPago};
+    }));
+  };
   const saveCart=()=>{if(!fCart.nome||!fCart.limite)return;upsert(cartoes,setCartoes,{...fCart,limite:+String(fCart.limite).replace(",",".")});};
     const addJuros=(investId)=>{
     if(!fJuros.mes||!fJuros.taxa)return;
@@ -3117,10 +3163,89 @@ function AppMain({user, onLogout}) {
         {/* ══ DÍVIDAS ══ */}
         {tab==="dividas"&&(
           <div className="fade">
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
               <div><div style={{fontSize:22,fontWeight:300,color:TXT}}>Dívidas</div><div className="num" style={{fontSize:12,color:C.red,fontWeight:600}}>{R(totalDividas)} em aberto</div></div>
-              <Btn variant="primary" style={{fontSize:12,padding:"9px 14px"}} onClick={()=>openM("div")}>+ Dívida</Btn>
+              <div style={{display:"flex",gap:7}}>
+                <Btn variant="secondary" style={{fontSize:11,padding:"8px 12px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("div")}>+ Dívida</Btn>
+                <Btn variant="primary" style={{fontSize:11,padding:"8px 12px"}} onClick={()=>setModal("cartaoRenegoc")}>💳 Cartão Renegociado</Btn>
+              </div>
             </div>
+
+            {/* ── Cartão Renegociado (com desconto pontualidade) ── */}
+            {dividas.filter(d=>d.tipo==="cartao_desconto").length>0&&(
+              <div style={{marginBottom:18}}>
+                <div style={{fontSize:11,fontWeight:700,color:"#8B1043",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>💳 Cartão Renegociado — desconto por pontualidade</div>
+                {dividas.filter(d=>d.tipo==="cartao_desconto").map(d=>{
+                  const parcelas=d.parcelasStatus||[];
+                  const pagasCount=parcelas.filter(p=>p.pago).length;
+                  const totalComDesconto=d.valorComDesconto*d.numParcelas;
+                  const totalSemDesconto=d.valorSemDesconto*d.numParcelas;
+                  const economiaMaxima=totalSemDesconto-totalComDesconto;
+                  const economiaRealizada=parcelas.filter(p=>p.pago&&p.comDesconto).reduce((s,p)=>s+(d.valorSemDesconto-d.valorComDesconto),0);
+                  const proxima=parcelas.find(p=>!p.pago);
+                  const diasProxima=proxima?daysUntil(proxima.dataVencimento):null;
+                  const pctPago=d.numParcelas>0?(pagasCount/d.numParcelas*100):0;
+                  const isExp=cartaoRenegocExpandido===d.id;
+                  return (
+                    <div key={d.id} className={CARD} style={{marginBottom:10,borderLeft:"3px solid #C4185A"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+                        <div>
+                          <div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{d.credor}</div>
+                          <div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>{pagasCount} de {d.numParcelas} parcelas pagas</div>
+                        </div>
+                        <div style={{textAlign:"right"}}>
+                          <div className="num" style={{fontSize:15,fontWeight:700,color:"#C4185A"}}>{R(d.valorComDesconto)}</div>
+                          <div style={{fontSize:9,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>por parcela (com desconto)</div>
+                        </div>
+                      </div>
+                      <Bar value={pagasCount} max={d.numParcelas} color="#C4185A" h={6}/>
+                      <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:9}}>
+                        <span>{pctPago.toFixed(0)}% quitado</span>
+                        <span>Falta {R(totalComDesconto-d.pago)}</span>
+                      </div>
+                      {proxima&&(
+                        <div style={{background:diasProxima<0?"rgba(139,26,26,0.1)":diasProxima<=5?"rgba(212,168,67,0.15)":"rgba(45,90,16,0.08)",border:`1px solid ${diasProxima<0?"rgba(139,26,26,0.3)":diasProxima<=5?"rgba(212,168,67,0.4)":"rgba(45,90,16,0.2)"}`,borderRadius:10,padding:"9px 12px",marginBottom:9}}>
+                          <div style={{fontSize:11,fontWeight:700,color:diasProxima<0?"#8B1A1A":diasProxima<=5?"#8B6000":"#215010",fontFamily:"'DM Sans',sans-serif"}}>
+                            {diasProxima<0?`⚠ Parcela ${proxima.numero} atrasada há ${Math.abs(diasProxima)}d`:diasProxima===0?`🔔 Parcela ${proxima.numero} vence hoje!`:`Próxima: parcela ${proxima.numero} em ${diasProxima}d`}
+                          </div>
+                          <div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Vence {fdFull(proxima.dataVencimento)} · pague até lá pra manter o desconto</div>
+                          <button onClick={()=>setPagarParcelaModal({divId:d.id,parcelaIdx:parcelas.indexOf(proxima)})} style={{marginTop:6,background:"#C4185A",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,padding:"6px 12px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Marcar parcela {proxima.numero} como paga</button>
+                        </div>
+                      )}
+                      <div style={{background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:10,padding:"9px 12px",marginBottom:9}}>
+                        <div style={{display:"flex",justifyContent:"space-between"}}>
+                          <span style={{fontSize:10,fontWeight:700,color:"#215010",fontFamily:"'DM Sans',sans-serif"}}>💰 Economia se pagar tudo em dia</span>
+                          <span className="num" style={{fontSize:12,fontWeight:700,color:"#215010"}}>{R(economiaMaxima)}</span>
+                        </div>
+                        {economiaRealizada>0&&<div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:3}}>Já economizou {R(economiaRealizada)} até agora ✓</div>}
+                      </div>
+                      <button onClick={()=>setCartaoRenegocExpandido(isExp?null:d.id)} style={{width:"100%",background:"rgba(0,0,0,0.05)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:8,color:"#1A1209",fontSize:11,fontWeight:700,padding:"7px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginBottom:isExp?9:0}}>{isExp?"▲ Fechar parcelas":`▼ Ver todas as ${d.numParcelas} parcelas`}</button>
+                      {isExp&&(
+                        <div style={{maxHeight:280,overflowY:"auto",marginBottom:9}}>
+                          {parcelas.map((p,idx)=>(
+                            <div key={p.numero} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 4px",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
+                              <div>
+                                <span style={{fontSize:11.5,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>Parcela {p.numero}</span>
+                                <span style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginLeft:6}}>{fd(p.dataVencimento)}</span>
+                              </div>
+                              {p.pago ? (
+                                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                                  <span className="num" style={{fontSize:11,fontWeight:700,color:p.comDesconto?"#215010":"#8B1A1A"}}>{R(p.valorPago)} {p.comDesconto?"✓":"(sem desc.)"}</span>
+                                  <button onClick={()=>desmarcarParcela(d.id,idx)} style={{background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer"}}>×</button>
+                                </div>
+                              ) : (
+                                <button onClick={()=>setPagarParcelaModal({divId:d.id,parcelaIdx:idx})} style={{background:"rgba(196,24,90,0.1)",border:"1px solid rgba(196,24,90,0.3)",borderRadius:7,color:"#C4185A",fontSize:10,fontWeight:700,padding:"4px 9px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Marcar paga</button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(dividas,setDividas,d.id)}>Excluir</Btn>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {/* ── Fundo de Dívidas ── */}
             {dividas.filter(d=>d.tipo==="fundo").length>0&&(
@@ -3515,6 +3640,60 @@ function AppMain({user, onLogout}) {
           <Inp label="Observações" placeholder="Opcional" value={fDiv.obs} onChange={e=>setFDiv({...fDiv,obs:e.target.value})}/>
           <Btn variant="primary" onClick={saveDiv}>Salvar</Btn>
         </div>
+      </Modal>
+
+      <Modal open={modal==="cartaoRenegoc"} onClose={closeM} title="💳 Cartão Renegociado">
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{background:"rgba(196,24,90,0.08)",border:"1px solid rgba(196,24,90,0.2)",borderRadius:10,padding:"10px 13px",fontSize:12,color:"#8B1043",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+            Pra dívidas de cartão renegociadas com desconto por pagar em dia (ex: banco negocia parcela menor se pagar pontual).
+          </div>
+          <Inp label="Credor / Banco" placeholder="Ex: Itaú" value={fCartaoRenegoc.credor} onChange={e=>setFCartaoRenegoc({...fCartaoRenegoc,credor:e.target.value})}/>
+          <G2>
+            <Inp label="Número de parcelas" type="number" value={fCartaoRenegoc.numParcelas} onChange={e=>setFCartaoRenegoc({...fCartaoRenegoc,numParcelas:e.target.value})}/>
+            <Inp label="Data 1ª parcela" type="date" value={fCartaoRenegoc.dataPrimeiraParcela} onChange={e=>setFCartaoRenegoc({...fCartaoRenegoc,dataPrimeiraParcela:e.target.value})}/>
+          </G2>
+          <G2>
+            <Inp label="Valor da parcela COM desconto" placeholder="0,00" value={fCartaoRenegoc.valorComDesconto} onChange={e=>setFCartaoRenegoc({...fCartaoRenegoc,valorComDesconto:e.target.value})}/>
+            <Inp label="Valor da parcela SEM desconto" placeholder="0,00" value={fCartaoRenegoc.valorSemDesconto} onChange={e=>setFCartaoRenegoc({...fCartaoRenegoc,valorSemDesconto:e.target.value})}/>
+          </G2>
+          <G2>
+            <Inp label="% desconto pontualidade" placeholder="Ex: 12,55" value={fCartaoRenegoc.percentualDesconto} onChange={e=>setFCartaoRenegoc({...fCartaoRenegoc,percentualDesconto:e.target.value})}/>
+            <Inp label="% extra se antecipar (opcional)" placeholder="Ex: 5" value={fCartaoRenegoc.percentualAntecipado} onChange={e=>setFCartaoRenegoc({...fCartaoRenegoc,percentualAntecipado:e.target.value})}/>
+          </G2>
+          {fCartaoRenegoc.valorComDesconto&&fCartaoRenegoc.valorSemDesconto&&fCartaoRenegoc.numParcelas&&(
+            <div style={{background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.25)",borderRadius:10,padding:"10px 13px",fontSize:12,color:"#215010",fontFamily:"'DM Sans',sans-serif"}}>
+              💰 Economia total se pagar tudo em dia: <strong>{R((+String(fCartaoRenegoc.valorSemDesconto).replace(",",".")-(+String(fCartaoRenegoc.valorComDesconto).replace(",",".")))*(+fCartaoRenegoc.numParcelas||0))}</strong>
+            </div>
+          )}
+          <Btn variant="primary" onClick={saveCartaoRenegoc}>Salvar dívida renegociada</Btn>
+        </div>
+      </Modal>
+
+      <Modal open={!!pagarParcelaModal} onClose={()=>setPagarParcelaModal(null)} title="Marcar parcela como paga">
+        {pagarParcelaModal&&(()=>{
+          const d=dividas.find(x=>x.id===pagarParcelaModal.divId);
+          const p=d?.parcelasStatus[pagarParcelaModal.parcelaIdx];
+          if(!d||!p)return null;
+          const noPrazo=!isPast(p.dataVencimento);
+          return (
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>
+                Parcela <strong style={{color:"#1A1209"}}>{p.numero}</strong> de {d.credor} — vencimento {fdFull(p.dataVencimento)}
+                {noPrazo?<span style={{color:"#215010",fontWeight:700}}> (ainda no prazo)</span>:<span style={{color:"#8B1A1A",fontWeight:700}}> (atrasada)</span>}
+              </div>
+              <button onClick={()=>marcarParcelaPaga(d.id,pagarParcelaModal.parcelaIdx,true)}
+                style={{background:"rgba(45,90,16,0.1)",border:"2px solid rgba(45,90,16,0.35)",borderRadius:12,padding:"14px",textAlign:"left",cursor:"pointer"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#215010",fontFamily:"'DM Sans',sans-serif"}}>✓ Paguei com desconto (em dia)</div>
+                <div className="num" style={{fontSize:16,fontWeight:700,color:"#215010",marginTop:2}}>{R(d.valorComDesconto)}</div>
+              </button>
+              <button onClick={()=>marcarParcelaPaga(d.id,pagarParcelaModal.parcelaIdx,false)}
+                style={{background:"rgba(139,26,26,0.08)",border:"2px solid rgba(139,26,26,0.25)",borderRadius:12,padding:"14px",textAlign:"left",cursor:"pointer"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#8B1A1A",fontFamily:"'DM Sans',sans-serif"}}>Paguei sem desconto (atrasada)</div>
+                <div className="num" style={{fontSize:16,fontWeight:700,color:"#8B1A1A",marginTop:2}}>{R(d.valorSemDesconto)}</div>
+              </button>
+            </div>
+          );
+        })()}
       </Modal>
 
       <Modal open={modal==="pgto"} onClose={closeM} title="Registrar Pagamento">
