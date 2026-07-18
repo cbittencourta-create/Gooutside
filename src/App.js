@@ -1757,7 +1757,7 @@ function AppMain({user, onLogout}) {
   const [investIdx,setInvestIdx]=useState(0);
   const [cartaoIdx,setCartaoIdx]=useState(0);
   const [filtroMov,setFiltroMov]=useState({tipo:"todos",categoria:"todos",formaPagamento:"todos"});
-  const [filtroPlt,setFiltroPlt]=useState({empresa:"todos",status:"todos"});
+  const [filtroPlt,setFiltroPlt]=useState({empresa:"todos",status:"todos",dataDe:"",dataAte:""});
   const [fJuros,setFJuros]=useState({mes:today().slice(0,7),taxa:""});
   const [temDinheiroPergunta,setTemDinheiroPergunta]=useState(null); // {mov, valorTotal} aguardando resposta
   const [planoAcaoAberto,setPlanoAcaoAberto]=useState(null); // {descricao, valorTotal} pra mostrar estrategia
@@ -2614,8 +2614,16 @@ function AppMain({user, onLogout}) {
                   <option value="atrasado">Atrasado</option>
                   <option value="cancelado">Cancelado</option>
                 </select>
-                {(filtroPlt.empresa!=="todos"||filtroPlt.status!=="todos")&&(
-                  <button onClick={()=>setFiltroPlt({empresa:"todos",status:"todos"})} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:8,color:"#C4185A",fontSize:11,fontWeight:700,padding:"6px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>× Limpar</button>
+                <div style={{display:"flex",alignItems:"center",gap:4}}>
+                  <span style={{fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>Previsão de</span>
+                  <input type="date" value={filtroPlt.dataDe} onChange={e=>setFiltroPlt({...filtroPlt,dataDe:e.target.value})}
+                    style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 6px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}/>
+                  <span style={{fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>até</span>
+                  <input type="date" value={filtroPlt.dataAte} onChange={e=>setFiltroPlt({...filtroPlt,dataAte:e.target.value})}
+                    style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 6px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}/>
+                </div>
+                {(filtroPlt.empresa!=="todos"||filtroPlt.status!=="todos"||filtroPlt.dataDe||filtroPlt.dataAte)&&(
+                  <button onClick={()=>setFiltroPlt({empresa:"todos",status:"todos",dataDe:"",dataAte:""})} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:8,color:"#C4185A",fontSize:11,fontWeight:700,padding:"6px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>× Limpar</button>
                 )}
               </div>
             </div>
@@ -2623,6 +2631,8 @@ function AppMain({user, onLogout}) {
               const plantoesFiltrados=plantoes.filter(p=>{
                 if(filtroPlt.empresa!=="todos"&&p.empresa!==filtroPlt.empresa)return false;
                 if(filtroPlt.status!=="todos"&&getPltStatus(p)!==filtroPlt.status)return false;
+                if(filtroPlt.dataDe&&(!p.previsao||p.previsao<filtroPlt.dataDe))return false;
+                if(filtroPlt.dataAte&&(!p.previsao||p.previsao>filtroPlt.dataAte))return false;
                 return true;
               });
               const grupos={};
@@ -2695,6 +2705,8 @@ function AppMain({user, onLogout}) {
               const plantoesEfetivosFiltrados=plantoesEfetivos.filter(p=>{
                 if(filtroPlt.empresa!=="todos"&&p.empresa!==filtroPlt.empresa)return false;
                 if(filtroPlt.status!=="todos"&&p.se!==filtroPlt.status)return false;
+                if(filtroPlt.dataDe&&(!p.previsao||p.previsao<filtroPlt.dataDe))return false;
+                if(filtroPlt.dataAte&&(!p.previsao||p.previsao>filtroPlt.dataAte))return false;
                 return true;
               });
               return plantoesEfetivosFiltrados.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum plantão encontrado com esse filtro</div>
