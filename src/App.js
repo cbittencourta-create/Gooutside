@@ -2463,31 +2463,43 @@ function AppMain({user, onLogout}) {
               </div>
             </div>
 
-            <div className={CARD} style={{marginBottom:14,padding:"12px 14px"}}>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-                <span style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>🔍 Filtrar</span>
-                <select value={filtroMov.tipo} onChange={e=>setFiltroMov({...filtroMov,tipo:e.target.value})}
-                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}>
-                  <option value="todos">Todos os tipos</option>
-                  <option value="entrada">▲ Entradas</option>
-                  <option value="saida">▼ Saídas</option>
-                  <option value="transferencia">🔄 Transferências</option>
-                </select>
-                <select value={filtroMov.categoria} onChange={e=>setFiltroMov({...filtroMov,categoria:e.target.value})}
-                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",maxWidth:170}}>
-                  <option value="todos">Todas categorias</option>
-                  {[...new Set(movs.map(m=>m.categoria.includes("·")?m.categoria.split("·")[0].trim():m.categoria))].sort().map(c=><option key={c} value={c}>{c}</option>)}
-                </select>
-                <select value={filtroMov.formaPagamento} onChange={e=>setFiltroMov({...filtroMov,formaPagamento:e.target.value})}
-                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}>
-                  <option value="todos">Toda forma de pgto</option>
-                  <option value="dinheiro">💵 Dinheiro</option>
-                  <option value="pix">📱 Pix</option>
-                  <option value="debito">💳 Débito</option>
-                  <option value="cartao">🖊️ Cartão</option>
-                </select>
+            <div className={CARD} style={{marginBottom:14,padding:"14px 16px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <div style={{width:26,height:26,borderRadius:8,background:"rgba(232,32,95,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🔍</div>
+                <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Filtrar lançamentos</span>
+              </div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+                <div>
+                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Tipo</div>
+                  <select value={filtroMov.tipo} onChange={e=>setFiltroMov({...filtroMov,tipo:e.target.value})}
+                    style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                    <option value="todos">Todos</option>
+                    <option value="entrada">▲ Entradas</option>
+                    <option value="saida">▼ Saídas</option>
+                    <option value="transferencia">🔄 Transferências</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Categoria</div>
+                  <select value={filtroMov.categoria} onChange={e=>setFiltroMov({...filtroMov,categoria:e.target.value})}
+                    style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",maxWidth:170,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                    <option value="todos">Todas</option>
+                    {[...new Set(movs.map(m=>m.categoria.includes("·")?m.categoria.split("·")[0].trim():m.categoria))].sort().map(c=><option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Pagamento</div>
+                  <select value={filtroMov.formaPagamento} onChange={e=>setFiltroMov({...filtroMov,formaPagamento:e.target.value})}
+                    style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                    <option value="todos">Todas</option>
+                    <option value="dinheiro">💵 Dinheiro</option>
+                    <option value="pix">📱 Pix</option>
+                    <option value="debito">💳 Débito</option>
+                    <option value="cartao">🖊️ Cartão</option>
+                  </select>
+                </div>
                 {(filtroMov.tipo!=="todos"||filtroMov.categoria!=="todos"||filtroMov.formaPagamento!=="todos")&&(
-                  <button onClick={()=>setFiltroMov({tipo:"todos",categoria:"todos",formaPagamento:"todos"})} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:8,color:"#C4185A",fontSize:11,fontWeight:700,padding:"6px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>× Limpar</button>
+                  <button onClick={()=>setFiltroMov({tipo:"todos",categoria:"todos",formaPagamento:"todos"})} style={{display:"flex",alignItems:"center",gap:5,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:10,color:"#fff",fontSize:12,fontWeight:700,padding:"8px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.3)"}}>✕ Limpar</button>
                 )}
               </div>
             </div>
@@ -2598,32 +2610,43 @@ function AppMain({user, onLogout}) {
                 <button key={v} onClick={()=>setPltView(v)} style={{flex:1,background:pltView===v?"#E8205F":"transparent",color:pltView===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{l}</button>
               ))}
             </div>
-            <div className={CARD} style={{marginBottom:14,padding:"12px 14px"}}>
-              <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
-                <span style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>🔍 Filtrar</span>
-                <select value={filtroPlt.empresa} onChange={e=>setFiltroPlt({...filtroPlt,empresa:e.target.value})}
-                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",maxWidth:170}}>
-                  <option value="todos">Todas empresas</option>
-                  {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
-                </select>
-                <select value={filtroPlt.status} onChange={e=>setFiltroPlt({...filtroPlt,status:e.target.value})}
-                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}>
-                  <option value="todos">Todo status</option>
-                  <option value="pendente">Pendente</option>
-                  <option value="recebido">Recebido</option>
-                  <option value="atrasado">Atrasado</option>
-                  <option value="cancelado">Cancelado</option>
-                </select>
-                <div style={{display:"flex",alignItems:"center",gap:4}}>
-                  <span style={{fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>Previsão de</span>
-                  <input type="date" value={filtroPlt.dataDe} onChange={e=>setFiltroPlt({...filtroPlt,dataDe:e.target.value})}
-                    style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 6px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}/>
-                  <span style={{fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>até</span>
-                  <input type="date" value={filtroPlt.dataAte} onChange={e=>setFiltroPlt({...filtroPlt,dataAte:e.target.value})}
-                    style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 6px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}/>
+            <div className={CARD} style={{marginBottom:14,padding:"14px 16px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <div style={{width:26,height:26,borderRadius:8,background:"rgba(232,32,95,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🔍</div>
+                <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Filtrar plantões</span>
+              </div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
+                <div>
+                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
+                  <select value={filtroPlt.empresa} onChange={e=>setFiltroPlt({...filtroPlt,empresa:e.target.value})}
+                    style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",maxWidth:170,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                    <option value="todos">Todas</option>
+                    {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Status</div>
+                  <select value={filtroPlt.status} onChange={e=>setFiltroPlt({...filtroPlt,status:e.target.value})}
+                    style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                    <option value="todos">Todos</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="recebido">Recebido</option>
+                    <option value="atrasado">Atrasado</option>
+                    <option value="cancelado">Cancelado</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Previsão de pagamento</div>
+                  <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"5px 8px",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
+                    <input type="date" value={filtroPlt.dataDe} onChange={e=>setFiltroPlt({...filtroPlt,dataDe:e.target.value})}
+                      style={{background:"transparent",border:"none",padding:"3px 0",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,width:118}}/>
+                    <span style={{fontSize:11,color:"rgba(26,18,9,0.4)",fontWeight:600}}>→</span>
+                    <input type="date" value={filtroPlt.dataAte} onChange={e=>setFiltroPlt({...filtroPlt,dataAte:e.target.value})}
+                      style={{background:"transparent",border:"none",padding:"3px 0",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,width:118}}/>
+                  </div>
                 </div>
                 {(filtroPlt.empresa!=="todos"||filtroPlt.status!=="todos"||filtroPlt.dataDe||filtroPlt.dataAte)&&(
-                  <button onClick={()=>setFiltroPlt({empresa:"todos",status:"todos",dataDe:"",dataAte:""})} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:8,color:"#C4185A",fontSize:11,fontWeight:700,padding:"6px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>× Limpar</button>
+                  <button onClick={()=>setFiltroPlt({empresa:"todos",status:"todos",dataDe:"",dataAte:""})} style={{display:"flex",alignItems:"center",gap:5,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:10,color:"#fff",fontSize:12,fontWeight:700,padding:"8px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.3)"}}>✕ Limpar</button>
                 )}
               </div>
             </div>
