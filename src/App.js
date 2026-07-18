@@ -2098,6 +2098,7 @@ function AppMain({user, onLogout}) {
         .plt-numinput::-webkit-outer-spin-button,.plt-numinput::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
         .plt-numinput{-moz-appearance:textfield}
         .plt-select{appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:none!important}
+        .filter-select{appearance:none;-webkit-appearance:none;-moz-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A1209' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")!important;background-repeat:no-repeat!important;background-position:right 10px center!important;padding-right:26px!important}
         .plt-select option{background:#fff;color:#1A1209}
         .fade{animation:fd .2s ease} @keyframes fd{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
         .scr::-webkit-scrollbar{display:none}
@@ -2472,6 +2473,7 @@ function AppMain({user, onLogout}) {
                 <div>
                   <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Tipo</div>
                   <select value={filtroMov.tipo} onChange={e=>setFiltroMov({...filtroMov,tipo:e.target.value})}
+                    className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
                     <option value="todos">Todos</option>
                     <option value="entrada">▲ Entradas</option>
@@ -2482,6 +2484,7 @@ function AppMain({user, onLogout}) {
                 <div>
                   <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Categoria</div>
                   <select value={filtroMov.categoria} onChange={e=>setFiltroMov({...filtroMov,categoria:e.target.value})}
+                    className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",maxWidth:170,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
                     <option value="todos">Todas</option>
                     {[...new Set(movs.map(m=>m.categoria.includes("·")?m.categoria.split("·")[0].trim():m.categoria))].sort().map(c=><option key={c} value={c}>{c}</option>)}
@@ -2490,6 +2493,7 @@ function AppMain({user, onLogout}) {
                 <div>
                   <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Pagamento</div>
                   <select value={filtroMov.formaPagamento} onChange={e=>setFiltroMov({...filtroMov,formaPagamento:e.target.value})}
+                    className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
                     <option value="todos">Todas</option>
                     <option value="dinheiro">💵 Dinheiro</option>
@@ -2619,6 +2623,7 @@ function AppMain({user, onLogout}) {
                 <div>
                   <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
                   <select value={filtroPlt.empresa} onChange={e=>setFiltroPlt({...filtroPlt,empresa:e.target.value})}
+                    className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",maxWidth:170,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
                     <option value="todos">Todas</option>
                     {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
@@ -2627,6 +2632,7 @@ function AppMain({user, onLogout}) {
                 <div>
                   <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Status</div>
                   <select value={filtroPlt.status} onChange={e=>setFiltroPlt({...filtroPlt,status:e.target.value})}
+                    className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
                     <option value="todos">Todos</option>
                     <option value="pendente">Pendente</option>
