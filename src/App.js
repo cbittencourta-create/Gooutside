@@ -1756,6 +1756,8 @@ function AppMain({user, onLogout}) {
   const [investExpandido,setInvestExpandido]=useState(null);
   const [investIdx,setInvestIdx]=useState(0);
   const [cartaoIdx,setCartaoIdx]=useState(0);
+  const [filtroMov,setFiltroMov]=useState({tipo:"todos",categoria:"todos",formaPagamento:"todos"});
+  const [filtroPlt,setFiltroPlt]=useState({empresa:"todos",status:"todos"});
   const [fJuros,setFJuros]=useState({mes:today().slice(0,7),taxa:""});
   const [temDinheiroPergunta,setTemDinheiroPergunta]=useState(null); // {mov, valorTotal} aguardando resposta
   const [planoAcaoAberto,setPlanoAcaoAberto]=useState(null); // {descricao, valorTotal} pra mostrar estrategia
@@ -2461,7 +2463,46 @@ function AppMain({user, onLogout}) {
               </div>
             </div>
 
-            {movsDoMes.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum lançamento em {monthLabel(selMes)}</div>
+            <div className={CARD} style={{marginBottom:14,padding:"12px 14px"}}>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                <span style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>🔍 Filtrar</span>
+                <select value={filtroMov.tipo} onChange={e=>setFiltroMov({...filtroMov,tipo:e.target.value})}
+                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}>
+                  <option value="todos">Todos os tipos</option>
+                  <option value="entrada">▲ Entradas</option>
+                  <option value="saida">▼ Saídas</option>
+                  <option value="transferencia">🔄 Transferências</option>
+                </select>
+                <select value={filtroMov.categoria} onChange={e=>setFiltroMov({...filtroMov,categoria:e.target.value})}
+                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",maxWidth:170}}>
+                  <option value="todos">Todas categorias</option>
+                  {[...new Set(movs.map(m=>m.categoria.includes("·")?m.categoria.split("·")[0].trim():m.categoria))].sort().map(c=><option key={c} value={c}>{c}</option>)}
+                </select>
+                <select value={filtroMov.formaPagamento} onChange={e=>setFiltroMov({...filtroMov,formaPagamento:e.target.value})}
+                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}>
+                  <option value="todos">Toda forma de pgto</option>
+                  <option value="dinheiro">💵 Dinheiro</option>
+                  <option value="pix">📱 Pix</option>
+                  <option value="debito">💳 Débito</option>
+                  <option value="cartao">🖊️ Cartão</option>
+                </select>
+                {(filtroMov.tipo!=="todos"||filtroMov.categoria!=="todos"||filtroMov.formaPagamento!=="todos")&&(
+                  <button onClick={()=>setFiltroMov({tipo:"todos",categoria:"todos",formaPagamento:"todos"})} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:8,color:"#C4185A",fontSize:11,fontWeight:700,padding:"6px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>× Limpar</button>
+                )}
+              </div>
+            </div>
+
+            {(()=>{
+              const movsFiltrados=movsDoMes.filter(m=>{
+                if(filtroMov.tipo!=="todos"&&m.tipo!==filtroMov.tipo)return false;
+                if(filtroMov.categoria!=="todos"){
+                  const catPai=m.categoria.includes("·")?m.categoria.split("·")[0].trim():m.categoria;
+                  if(catPai!==filtroMov.categoria)return false;
+                }
+                if(filtroMov.formaPagamento!=="todos"&&(m.formaPagamento||"dinheiro")!==filtroMov.formaPagamento)return false;
+                return true;
+              });
+              return movsFiltrados.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum lançamento encontrado com esse filtro</div>
               :(
               <div className={CARD} style={{padding:"16px 14px"}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 175px 100px 92px 26px",gap:10,marginBottom:8,padding:"0 4px"}}>
@@ -2471,7 +2512,7 @@ function AppMain({user, onLogout}) {
                   <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:"right"}}>Valor</div>
                   <div/>
                 </div>
-                {[...movsDoMes].sort((a,b)=>b.data.localeCompare(a.data)).map((m,idx)=>{
+                {[...movsFiltrados].sort((a,b)=>b.data.localeCompare(a.data)).map((m,idx)=>{
                   const opts = m.tipo==="entrada" ? (cats?.receita||DEFAULT_CATS.receita) : m.tipo==="transferencia" ? [] : (cats?.despesa||DEFAULT_CATS.despesa);
                   return (
                     <div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 175px 100px 92px 26px",gap:10,alignItems:"center",padding:"10px 4px",background:idx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
@@ -2516,7 +2557,8 @@ function AppMain({user, onLogout}) {
                   );
                 })}
               </div>
-            )}
+            );
+            })()}
           </div>
         )}
 
@@ -2556,9 +2598,35 @@ function AppMain({user, onLogout}) {
                 <button key={v} onClick={()=>setPltView(v)} style={{flex:1,background:pltView===v?"#E8205F":"transparent",color:pltView===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{l}</button>
               ))}
             </div>
+            <div className={CARD} style={{marginBottom:14,padding:"12px 14px"}}>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                <span style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>🔍 Filtrar</span>
+                <select value={filtroPlt.empresa} onChange={e=>setFiltroPlt({...filtroPlt,empresa:e.target.value})}
+                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",maxWidth:170}}>
+                  <option value="todos">Todas empresas</option>
+                  {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
+                </select>
+                <select value={filtroPlt.status} onChange={e=>setFiltroPlt({...filtroPlt,status:e.target.value})}
+                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"6px 8px",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif"}}>
+                  <option value="todos">Todo status</option>
+                  <option value="pendente">Pendente</option>
+                  <option value="recebido">Recebido</option>
+                  <option value="atrasado">Atrasado</option>
+                  <option value="cancelado">Cancelado</option>
+                </select>
+                {(filtroPlt.empresa!=="todos"||filtroPlt.status!=="todos")&&(
+                  <button onClick={()=>setFiltroPlt({empresa:"todos",status:"todos"})} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.3)",borderRadius:8,color:"#C4185A",fontSize:11,fontWeight:700,padding:"6px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>× Limpar</button>
+                )}
+              </div>
+            </div>
             {pltView==="tabela"&&(()=>{
+              const plantoesFiltrados=plantoes.filter(p=>{
+                if(filtroPlt.empresa!=="todos"&&p.empresa!==filtroPlt.empresa)return false;
+                if(filtroPlt.status!=="todos"&&getPltStatus(p)!==filtroPlt.status)return false;
+                return true;
+              });
               const grupos={};
-              plantoes.forEach(p=>{
+              plantoesFiltrados.forEach(p=>{
                 const key=monthKey(p.previsao||p.data)||"sem-data";
                 if(!grupos[key])grupos[key]=[];
                 grupos[key].push(p);
@@ -2623,8 +2691,14 @@ function AppMain({user, onLogout}) {
               );
             })()}
             {pltView==="cards"&&<>
-            {plantoesEfetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Adicione empresas e plantões</div>
-              :[...plantoesEfetivos].sort((a,b)=>b.data.localeCompare(a.data)).map(p=>{
+            {(()=>{
+              const plantoesEfetivosFiltrados=plantoesEfetivos.filter(p=>{
+                if(filtroPlt.empresa!=="todos"&&p.empresa!==filtroPlt.empresa)return false;
+                if(filtroPlt.status!=="todos"&&p.se!==filtroPlt.status)return false;
+                return true;
+              });
+              return plantoesEfetivosFiltrados.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum plantão encontrado com esse filtro</div>
+              :[...plantoesEfetivosFiltrados].sort((a,b)=>b.data.localeCompare(a.data)).map(p=>{
                 const emp=empNome(p.empresa);const d=daysUntil(p.previsao);
                 const sc={pendente:{label:"Pendente",color:C.gold,bg:C.goldGlass},recebido:{label:"Recebido",color:C.green,bg:C.greenGlass},atrasado:{label:"Atrasado",color:C.red,bg:C.redGlass},cancelado:{label:"Cancelado",color:"rgba(26,18,9,0.85)",bg:C.glass}};
                 const s=sc[p.se]||sc.pendente;
@@ -2646,8 +2720,8 @@ function AppMain({user, onLogout}) {
                     </div>
                   </div>
                 );
-              })
-            }
+              });
+            })()}
             </>}
           </div>
         )}
