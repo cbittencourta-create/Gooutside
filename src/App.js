@@ -1333,6 +1333,18 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
 
 // ── Bloco de Notas (papel com clipe) ──────────────────────────────────────────
 function NotepadWidget({value, onChange}) {
+  const [minimizado, setMinimizado] = useState(false);
+
+  if(minimizado){
+    return (
+      <div onClick={()=>setMinimizado(false)}
+        style={{position:"fixed",bottom:24,right:24,zIndex:40,display:window.innerWidth>1300?"flex":"none",alignItems:"center",gap:8,background:"linear-gradient(135deg,#EFE8DC,#E6DDCE)",borderRadius:99,padding:"10px 16px 10px 12px",boxShadow:"0 6px 20px rgba(0,0,0,0.25)",cursor:"pointer",border:"1px solid rgba(0,0,0,0.08)"}}>
+        <div style={{width:26,height:26,borderRadius:8,background:"linear-gradient(135deg,#C4202E,#8E1620)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>📝</div>
+        <span style={{fontSize:12,fontWeight:700,color:"#3A2F22",fontFamily:"'DM Sans',sans-serif"}}>Notas</span>
+      </div>
+    );
+  }
+
   return (
     <div style={{position:"fixed",top:150,right:24,width:280,zIndex:40,display:window.innerWidth>1300?"block":"none"}}>
       <div style={{position:"relative"}}>
@@ -1340,6 +1352,7 @@ function NotepadWidget({value, onChange}) {
         <div style={{position:"relative",background:"linear-gradient(135deg,#EFE8DC,#E6DDCE)",borderRadius:"2px 2px 6px 6px",transform:"rotate(2deg)",boxShadow:"0 10px 28px rgba(0,0,0,0.28)",padding:"24px 16px 16px",minHeight:280}}>
           <div style={{position:"absolute",top:-14,right:34,width:18,height:22,border:"3px solid #8a8580",borderRadius:"50% 50% 0 0",borderBottom:"none",background:"transparent",zIndex:2}}/>
           <div style={{position:"absolute",top:-10,right:22,width:40,height:20,background:"linear-gradient(135deg,#C4202E,#8E1620)",borderRadius:3,boxShadow:"0 3px 8px rgba(0,0,0,0.35)",zIndex:3}}/>
+          <button onClick={()=>setMinimizado(true)} style={{position:"absolute",top:6,left:6,width:22,height:22,borderRadius:7,background:"rgba(0,0,0,0.08)",border:"none",color:"#3A2F22",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",lineHeight:1,zIndex:4}}>−</button>
           <textarea
             value={value}
             onChange={e=>onChange(e.target.value)}
@@ -3001,9 +3014,9 @@ function AppMain({user, onLogout}) {
                   <>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                       <button onClick={()=>setInvestIdx(idx===0?invests.length-1:idx-1)} style={{background:"rgba(255,255,255,0.75)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:36,height:36,cursor:"pointer",fontSize:17,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>‹</button>
-                      <div style={{textAlign:"center"}}>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>{catIcon} {catInfo?.label}</div>
-                        <div style={{fontSize:11,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif"}}>{idx+1} de {invests.length}</div>
+                      <div style={{background:"rgba(255,255,255,0.85)",borderRadius:12,padding:"6px 16px",boxShadow:"0 2px 8px rgba(0,0,0,0.06)",textAlign:"center"}}>
+                        <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>{catIcon} {catInfo?.label}</div>
+                        <div style={{fontSize:11,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{idx+1} de {invests.length}</div>
                       </div>
                       <button onClick={()=>setInvestIdx(idx===invests.length-1?0:idx+1)} style={{background:"rgba(255,255,255,0.75)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:36,height:36,cursor:"pointer",fontSize:17,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>›</button>
                     </div>
@@ -3087,10 +3100,10 @@ function AppMain({user, onLogout}) {
                         );
                       })()}
 
-                      <div style={{display:"flex",gap:6}}>
-                        <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>setInvestExpandido(investExpandido===i.id?null:i.id)}>{investExpandido===i.id?"▲ Fechar":"📊 Juros"}</Btn>
-                        <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("inv",i)}>Editar</Btn>
-                        <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>{remove(invests,setInvests,i.id);setInvestIdx(0);}}>Excluir</Btn>
+                      <div style={{display:"flex",gap:7}}>
+                        <button onClick={()=>setInvestExpandido(investExpandido===i.id?null:i.id)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(91,163,212,0.12)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,color:"#1A4A6E",fontSize:11.5,fontWeight:700,padding:"8px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{investExpandido===i.id?"▲ Fechar":"📊 Juros"}</button>
+                        <button onClick={()=>openM("inv",i)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:10,color:"#1A1209",fontSize:11.5,fontWeight:700,padding:"8px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>✎ Editar</button>
+                        <button onClick={()=>{remove(invests,setInvests,i.id);setInvestIdx(0);}} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.28)",borderRadius:10,color:"#8B1A1A",fontSize:11.5,fontWeight:700,padding:"8px 12px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>🗑</button>
                       </div>
                     </div>
                   </>
