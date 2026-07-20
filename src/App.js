@@ -2040,13 +2040,14 @@ function AppMain({user, onLogout}) {
     const map={};
     plantoes.forEach(p=>{
       const empC=empresas.find(e=>e.nome===p.empresa);
-      if(!map[p.empresa])map[p.empresa]={nome:p.empresa,total:0,count:0,atrasos:0,recebido:0,pendente:0,cor:empC?.cor||C.magenta};
+      if(!map[p.empresa])map[p.empresa]={nome:p.empresa,total:0,count:0,atrasos:0,recebido:0,pendente:0,cor:empC?.cor||C.magenta,horas:0,totalComHoras:0};
       map[p.empresa].total+=p.valorTotal;
       map[p.empresa].count+=1;
       const se=getPltStatus(p);
       if(se==="atrasado")map[p.empresa].atrasos+=1;
       if(se==="recebido")map[p.empresa].recebido+=p.valorTotal;
       if(["pendente","atrasado"].includes(se))map[p.empresa].pendente+=p.valorTotal;
+      if(+p.horas>0){map[p.empresa].horas+=+p.horas;map[p.empresa].totalComHoras+=p.valorTotal;}
     });
     return Object.values(map).sort((a,b)=>b.total-a.total);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2055,6 +2056,12 @@ function AppMain({user, onLogout}) {
   const maxEmpTotal=empAnalise.length?Math.max(...empAnalise.map(e=>e.total)):1;
   const maxEmpCount=empAnalise.length?Math.max(...empAnalise.map(e=>e.count)):1;
   const maxEmpAtraso=empAnalise.length?Math.max(...empAnalise.map(e=>e.atrasos),1):1;
+  const empPorHora=useMemo(()=>empAnalise
+    .filter(e=>e.horas>0)
+    .map(e=>({...e,valorHora:e.totalComHoras/e.horas}))
+    .sort((a,b)=>b.valorHora-a.valorHora),
+  [empAnalise]);
+  const maxValorHora=empPorHora.length?Math.max(...empPorHora.map(e=>e.valorHora)):1;
 
   // Donut por empresa
   const donutEmpresas=useMemo(()=>empAnalise.map((e,i)=>({label:e.nome,v:e.total,color:e.cor||CHART_COLORS[i%CHART_COLORS.length]})),[empAnalise]);
@@ -2884,6 +2891,19 @@ function AppMain({user, onLogout}) {
                     {[...empAnalise].sort((a,b)=>b.count-a.count).map(e=><HBar key={e.nome} label={e.nome} value={e.count} max={maxEmpCount} color={e.cor||C.blue} sub={`${e.count}x`}/>)}
                   </div>
                 </div>
+
+                {/* ── Ganho por hora trabalhada ── */}
+                {empPorHora.length>0&&(
+                  <div className={CARD} style={{marginBottom:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                      <SL style={{marginBottom:0}}>💰 Ganho por hora trabalhada</SL>
+                      <span style={{fontSize:10,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif"}}>só plantões com horas registradas</span>
+                    </div>
+                    {empPorHora.map((e,idx)=>(
+                      <HBar key={e.nome} label={idx===0?`🏆 ${e.nome}`:e.nome} value={e.valorHora} max={maxValorHora} color={idx===0?"#2D9A1A":(e.cor||C.magenta)} sub={`${R(e.valorHora)}/h`}/>
+                    ))}
+                  </div>
+                )}
 
                 {/* Linha 3: Mais atrasos + Resumo */}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
