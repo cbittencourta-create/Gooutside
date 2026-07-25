@@ -2668,13 +2668,20 @@ function AppMain({user, onLogout}) {
               </div>
             </div>
             {empresas.length>0&&(
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:14}}>
-                {empresas.map(e=>(
-                  <span key={e.id} onClick={()=>openM("emp",e)} style={{display:"inline-flex",alignItems:"center",gap:5,fontSize:11,fontWeight:600,padding:"5px 12px",borderRadius:99,background:"rgba(255,255,255,0.85)",color:"#1A1209",border:"1px solid rgba(0,0,0,0.08)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
-                    <span style={{width:7,height:7,borderRadius:99,background:e.cor,flexShrink:0}}/>
-                    {e.nome}
-                  </span>
-                ))}
+              <div className={CARD} style={{marginBottom:14,padding:"14px 16px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
+                  <div style={{width:26,height:26,borderRadius:8,background:"rgba(232,32,95,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🏢</div>
+                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresas</span>
+                  <span style={{fontSize:11,color:"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif"}}>({empresas.length})</span>
+                </div>
+                <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                  {empresas.map(e=>(
+                    <span key={e.id} onClick={()=>openM("emp",e)} style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:11.5,fontWeight:600,padding:"7px 13px",borderRadius:99,background:"rgba(255,255,255,0.9)",color:"#1A1209",border:"1px solid rgba(0,0,0,0.09)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 1px 3px rgba(0,0,0,0.05)",transition:"transform .12s"}}>
+                      <span style={{width:8,height:8,borderRadius:99,background:e.cor,flexShrink:0}}/>
+                      {e.nome}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
             <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:3,marginBottom:14,maxWidth:220}}>
