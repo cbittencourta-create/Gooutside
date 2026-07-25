@@ -3475,40 +3475,74 @@ function AppMain({user, onLogout}) {
         {/* ══ PREVISÃO ══ */}
         {tab==="previsao"&&(
           <div className="fade">
-            <div style={{fontSize:22,fontWeight:300,color:TXT,marginBottom:4}}>Previsão — 8 meses</div>
-            <div style={{fontSize:12,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginBottom:14}}>Plantões agendados + investimentos + histórico</div>
-            <div className={CARD} style={{marginBottom:14}}>
-              <div style={{display:"flex",alignItems:"flex-end",gap:5,height:110,marginBottom:9}}>
-                {forecast.map(f=>{const hE=maxFc>0?(f.entradas/maxFc)*100:0;const hS=maxFc>0?(f.saidas/maxFc)*100:0;const isNow=f.ym===today().slice(0,7);
-                  return <div key={f.ym} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:2}}>
-                    <div style={{display:"flex",gap:2,alignItems:"flex-end",height:95}}>
-                      <div style={{width:9,background:C.green,borderRadius:"3px 3px 0 0",height:`${Math.max(hE,2)}%`,opacity:isNow?1:.6,transition:"height .5s"}}/>
-                      <div style={{width:9,background:C.magenta,borderRadius:"3px 3px 0 0",height:`${Math.max(hS,2)}%`,opacity:isNow?1:.6,transition:"height .5s"}}/>
+            <div className={CARD} style={{marginBottom:16,padding:"18px 20px",background:"linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,255,255,0.82))"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:10}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>📅 Previsão</div>
+                  <div style={{fontSize:26,fontWeight:300,fontFamily:"'Cormorant Garamond',serif",color:"#1A1209",letterSpacing:"-.01em",lineHeight:1}}>Próximos 8 meses</div>
+                  <div style={{fontSize:11,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",marginTop:5}}>Plantões agendados · investimentos · histórico</div>
+                </div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:10,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif",marginBottom:2}}>saldo projetado total</div>
+                  <div className="num" style={{fontSize:22,fontWeight:700,color:forecast.reduce((s,f)=>s+f.saldo,0)>=0?"#215010":"#8B1A1A"}}>{R(forecast.reduce((s,f)=>s+f.saldo,0))}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className={CARD} style={{marginBottom:18,padding:"22px 20px 16px"}}>
+              <div style={{display:"flex",alignItems:"flex-end",gap:8,height:150,marginBottom:14,paddingTop:20}}>
+                {forecast.map((f,fi)=>{const hE=maxFc>0?(f.entradas/maxFc)*100:0;const hS=maxFc>0?(f.saidas/maxFc)*100:0;const isNow=f.ym===today().slice(0,7);
+                  return <div key={f.ym} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:6,position:"relative"}}>
+                    {isNow&&(
+                      <div style={{position:"absolute",top:-24,fontSize:9,fontWeight:700,color:"#8B1043",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",background:"rgba(232,32,95,0.1)",borderRadius:6,padding:"2px 6px"}}>{R(f.entradas)}</div>
+                    )}
+                    <div style={{display:"flex",gap:3,alignItems:"flex-end",height:120}}>
+                      <div style={{width:11,background:isNow?"linear-gradient(180deg,#4ABE2A,#215010)":"linear-gradient(180deg,#8FC43A99,#21501099)",borderRadius:"6px 6px 2px 2px",height:`${Math.max(hE,3)}%`,transition:"height .6s ease",boxShadow:isNow?"0 0 10px rgba(45,90,16,0.35)":"none"}}/>
+                      <div style={{width:11,background:isNow?"linear-gradient(180deg,#F0356E,#8B1043)":"linear-gradient(180deg,#F0356E99,#8B104399)",borderRadius:"6px 6px 2px 2px",height:`${Math.max(hS,3)}%`,transition:"height .6s ease",boxShadow:isNow?"0 0 10px rgba(232,32,95,0.35)":"none"}}/>
                     </div>
-                    <div style={{fontSize:8,color:isNow?TXT:TMUT,fontFamily:"'DM Sans',sans-serif",fontWeight:isNow?700:400}}>{monthLabel(f.ym).split(" ")[0]}</div>
+                    <div style={{fontSize:10,color:isNow?"#1A1209":"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif",fontWeight:isNow?700:600,textTransform:"capitalize"}}>{monthLabel(f.ym).split(" ")[0]}</div>
                   </div>;
                 })}
               </div>
-              <div style={{display:"flex",gap:12,justifyContent:"center"}}>
-                <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:C.green}}/><span style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>Entradas</span></div>
-                <div style={{display:"flex",alignItems:"center",gap:4}}><div style={{width:8,height:8,borderRadius:2,background:C.magenta}}/><span style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>Saídas</span></div>
+              <div style={{display:"flex",gap:16,justifyContent:"center",paddingTop:10,borderTop:"1px solid rgba(0,0,0,0.06)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:9,height:9,borderRadius:3,background:"linear-gradient(135deg,#4ABE2A,#215010)"}}/><span style={{fontSize:11,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Entradas</span></div>
+                <div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:9,height:9,borderRadius:3,background:"linear-gradient(135deg,#F0356E,#8B1043)"}}/><span style={{fontSize:11,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>Saídas</span></div>
               </div>
             </div>
-            {forecast.map(f=>{const isNow=f.ym===today().slice(0,7);
-              return <div key={f.ym} className={CARD} style={{marginBottom:7,background:isNow?"rgba(232,32,95,0.12)":"rgba(255,255,255,0.88)",border:`1px solid ${isNow?"rgba(232,32,95,0.5)":"rgba(255,255,255,0.95)"}`}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <div style={{fontSize:13,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:isNow?C.magenta:TXT}}>{monthLabel(f.ym)}{isNow&&<span style={{fontSize:9,marginLeft:6,background:C.magenta,color:"#fff",borderRadius:99,padding:"1px 7px"}}>Atual</span>}</div>
-                  <div className="num" style={{fontSize:15,fontWeight:700,color:f.saldo>=0?C.green:C.red}}>{R(f.saldo)}</div>
-                </div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:5}}>
-                  {[{l:"Entradas",v:f.entradas,c:C.green},{l:"Saídas",v:f.saidas,c:C.red},{l:"Rendim.",v:f.rendimentos,c:C.gold}].map(r=>(
-                    <div key={r.l} style={{background:"rgba(0,0,0,0.05)",borderRadius:7,padding:"6px 8px",textAlign:"center"}}>
-                      <div style={{fontSize:8,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,letterSpacing:".05em",marginBottom:1}}>{r.l}</div>
-                      <div className="num" style={{fontSize:11,fontWeight:700,color:r.c}}>{R(r.v)}</div>
+
+            {forecast.map((f,idx)=>{
+              const isNow=f.ym===today().slice(0,7);
+              const anterior=idx>0?forecast[idx-1]:null;
+              const trend=anterior?f.saldo-anterior.saldo:null;
+              const opacity=1-Math.min(idx*0.05,0.28);
+              return (
+                <div key={f.ym} className={CARD} style={{marginBottom:10,padding:"16px 18px",opacity,position:"relative",overflow:"hidden",
+                  background:isNow?"linear-gradient(135deg,rgba(232,32,95,0.1),rgba(240,53,110,0.06))":"rgba(255,255,255,0.85)",
+                  border:isNow?"1.5px solid rgba(232,32,95,0.4)":"1px solid rgba(0,0,0,0.06)",
+                  boxShadow:isNow?"0 6px 20px rgba(232,32,95,0.18)":"0 2px 8px rgba(0,0,0,0.04)"}}>
+                  {isNow&&<div style={{position:"absolute",top:0,left:0,width:4,height:"100%",background:"linear-gradient(180deg,#F0356E,#8B1043)"}}/>}
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                    <div style={{display:"flex",alignItems:"center",gap:9}}>
+                      <div style={{fontSize:17,fontWeight:500,fontFamily:"'Cormorant Garamond',serif",color:isNow?"#8B1043":"#1A1209",textTransform:"capitalize"}}>{monthLabel(f.ym)}</div>
+                      {isNow&&<span style={{fontSize:9,fontWeight:700,background:"linear-gradient(135deg,#F0356E,#D01050)",color:"#fff",borderRadius:99,padding:"3px 10px",letterSpacing:".04em",textTransform:"uppercase",boxShadow:"0 2px 6px rgba(232,32,95,0.3)"}}>✦ Atual</span>}
                     </div>
-                  ))}
+                    <div style={{textAlign:"right"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:5,justifyContent:"flex-end"}}>
+                        {trend!==null&&<span style={{fontSize:11,fontWeight:700,color:trend>=0?"#2D8A1A":"#B0301A"}}>{trend>=0?"▲":"▼"}</span>}
+                        <div className="num" style={{fontSize:19,fontWeight:700,color:f.saldo>=0?"#215010":"#8B1A1A"}}>{R(f.saldo)}</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+                    {[{l:"Entradas",v:f.entradas,c:"#215010",bg:"rgba(45,90,16,0.08)",bd:"rgba(45,90,16,0.2)",ic:"▲"},{l:"Saídas",v:f.saidas,c:"#8B1A1A",bg:"rgba(139,26,26,0.07)",bd:"rgba(139,26,26,0.18)",ic:"▼"},{l:"Rendim.",v:f.rendimentos,c:"#8B6000",bg:"rgba(212,168,67,0.12)",bd:"rgba(212,168,67,0.3)",ic:"📈"}].map(r=>(
+                      <div key={r.l} style={{background:r.bg,border:`1px solid ${r.bd}`,borderRadius:10,padding:"8px 10px",textAlign:"center"}}>
+                        <div style={{fontSize:9,color:r.c,fontFamily:"'DM Sans',sans-serif",fontWeight:700,letterSpacing:".05em",marginBottom:3,opacity:0.85}}>{r.ic} {r.l}</div>
+                        <div className="num" style={{fontSize:12.5,fontWeight:700,color:r.c}}>{R(r.v)}</div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>;
+              );
             })}
           </div>
         )}
