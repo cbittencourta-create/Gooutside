@@ -3196,18 +3196,29 @@ function AppMain({user, onLogout}) {
         {/* ══ DÍVIDAS ══ */}
         {tab==="dividas"&&(
           <div className="fade">
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14,flexWrap:"wrap",gap:8}}>
-              <div><div style={{fontSize:22,fontWeight:300,color:TXT}}>Dívidas</div><div className="num" style={{fontSize:12,color:C.red,fontWeight:600}}>{R(totalDividas)} em aberto</div></div>
-              <div style={{display:"flex",gap:7}}>
-                <Btn variant="secondary" style={{fontSize:11,padding:"8px 12px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("div")}>+ Dívida</Btn>
-                <Btn variant="primary" style={{fontSize:11,padding:"8px 12px"}} onClick={()=>setModal("cartaoRenegoc")}>💳 Cartão Renegociado</Btn>
+            <div className={CARD} style={{marginBottom:16,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,background:"linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,255,255,0.82))"}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>💳 Dívidas</div>
+                <div className="num" style={{fontSize:26,fontWeight:700,color:"#8B1A1A",letterSpacing:"-.02em",lineHeight:1}}>{R(totalDividas)}</div>
+                <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:3}}>em aberto</div>
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={()=>openM("div")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"10px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                  <span style={{fontSize:14,lineHeight:1}}>✚</span> Dívida
+                </button>
+                <button onClick={()=>setModal("cartaoRenegoc")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)"}}>
+                  💳 Cartão Renegociado
+                </button>
               </div>
             </div>
 
             {/* ── Cartão Renegociado (com desconto pontualidade) ── */}
             {dividas.filter(d=>d.tipo==="cartao_desconto").length>0&&(
               <div style={{marginBottom:18}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#8B1043",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>💳 Cartão Renegociado — desconto por pontualidade</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"9px 14px",background:"rgba(255,255,255,0.75)",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+                  <span style={{fontSize:14}}>💳</span>
+                  <span style={{fontSize:12,fontWeight:700,color:"#8B1043",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Cartão Renegociado — desconto por pontualidade</span>
+                </div>
                 {dividas.filter(d=>d.tipo==="cartao_desconto").map(d=>{
                   const parcelas=d.parcelasStatus||[];
                   const pagasCount=parcelas.filter(p=>p.pago).length;
@@ -3273,7 +3284,7 @@ function AppMain({user, onLogout}) {
                           ))}
                         </div>
                       )}
-                      <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(dividas,setDividas,d.id)}>Excluir</Btn>
+                      <button onClick={()=>remove(dividas,setDividas,d.id)} style={{display:"flex",alignItems:"center",gap:5,background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.28)",borderRadius:10,color:"#8B1A1A",fontSize:11.5,fontWeight:700,padding:"7px 12px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>🗑 Excluir</button>
                     </div>
                   );
                 })}
@@ -3283,7 +3294,10 @@ function AppMain({user, onLogout}) {
             {/* ── Fundo de Dívidas ── */}
             {dividas.filter(d=>d.tipo==="fundo").length>0&&(
               <div style={{marginBottom:18}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#8B6000",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>🏦 Fundo de Dívidas — acumulando para quitar</div>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"9px 14px",background:"rgba(255,255,255,0.75)",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+                  <span style={{fontSize:14}}>🏦</span>
+                  <span style={{fontSize:12,fontWeight:700,color:"#8B6000",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Fundo de Dívidas — acumulando para quitar</span>
+                </div>
                 {dividas.filter(d=>d.tipo==="fundo").map(d=>{
                   const pct=+d.total>0?Math.min(+d.pago/+d.total*100,100):0;
                   const falta=Math.max(+d.total-+d.pago,0);
@@ -3299,16 +3313,16 @@ function AppMain({user, onLogout}) {
                         <div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>de {R(+d.total)}</div>
                       </div>
                     </div>
-                    <Bar value={+d.pago} max={+d.total} color="#FFB347" h={6}/>
+                    <Bar value={+d.pago} max={+d.total} color="#FFB347" h={7}/>
                     <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}>
-                      <span>{pct.toFixed(0)}% acumulado</span>
+                      <span style={{fontWeight:700,color:"#FFB347"}}>{pct.toFixed(0)}% acumulado</span>
                       <span>Falta {R(falta)}</span>
                     </div>
                     {pct>=100&&<div style={{background:"rgba(143,196,58,0.15)",border:"1px solid rgba(143,196,58,0.4)",borderRadius:8,padding:"8px 12px",fontSize:12,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginBottom:8,fontWeight:600}}>✅ Pronto para quitar!</div>}
-                    <div style={{display:"flex",gap:6}}>
-                      <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("div",d)}>Editar</Btn>
-                      {pct>=100&&<Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>{setDividas(dividas.map(x=>x.id===d.id?{...x,quitada:true}:x));}}>Quitar agora</Btn>}
-                      <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(dividas,setDividas,d.id)}>Excluir</Btn>
+                    <div style={{display:"flex",gap:7}}>
+                      <button onClick={()=>openM("div",d)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:10,color:"#1A1209",fontSize:11.5,fontWeight:700,padding:"8px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>✎ Editar</button>
+                      {pct>=100&&<button onClick={()=>{setDividas(dividas.map(x=>x.id===d.id?{...x,quitada:true}:x));}} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(45,90,16,0.1)",border:"1px solid rgba(45,90,16,0.28)",borderRadius:10,color:"#215010",fontSize:11.5,fontWeight:700,padding:"8px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>✓ Quitar agora</button>}
+                      <button onClick={()=>remove(dividas,setDividas,d.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.28)",borderRadius:10,color:"#8B1A1A",fontSize:11.5,fontWeight:700,padding:"8px 12px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>🗑</button>
                     </div>
                   </div>;
                 })}
@@ -3316,7 +3330,10 @@ function AppMain({user, onLogout}) {
             )}
 
             {/* ── Dívidas Ativas ── */}
-            <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".08em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>💳 Dívidas Ativas — pagamento mensal</div>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"9px 14px",background:"rgba(255,255,255,0.75)",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
+              <span style={{fontSize:14}}>💳</span>
+              <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Dívidas Ativas — pagamento mensal</span>
+            </div>
             {dividas.filter(d=>!d.tipo||d.tipo==="ativa").length===0
               ?<div className={CARD} style={{textAlign:"center",padding:24,color:TMUT,fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>Nenhuma dívida ativa 🎉</div>
               :dividas.filter(d=>!d.tipo||d.tipo==="ativa").map(d=>{
@@ -3329,12 +3346,12 @@ function AppMain({user, onLogout}) {
                     </div>
                     <div style={{textAlign:"right"}}><div className="num" style={{fontSize:15,fontWeight:700,color:C.red}}>{R(+d.total-+d.pago)}</div><div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif"}}>restante</div></div>
                   </div>
-                  <Bar value={+d.pago} max={+d.total} color={C.green} h={5}/>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>Pago: {R(+d.pago)}</span><span>{pct.toFixed(0)}%</span><span>Total: {R(+d.total)}</span></div>
-                  <div style={{display:"flex",gap:6}}>
-                    <Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("pgto",null,d.id)}>+ Pagamento</Btn>
-                    <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("div",d)}>Editar</Btn>
-                    <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(dividas,setDividas,d.id)}>Excluir</Btn>
+                  <Bar value={+d.pago} max={+d.total} color={C.green} h={7}/>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>Pago: {R(+d.pago)}</span><span style={{fontWeight:700,color:"#2D6E20"}}>{pct.toFixed(0)}%</span><span>Total: {R(+d.total)}</span></div>
+                  <div style={{display:"flex",gap:7}}>
+                    <button onClick={()=>openM("pgto",null,d.id)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(45,90,16,0.1)",border:"1px solid rgba(45,90,16,0.28)",borderRadius:10,color:"#215010",fontSize:11.5,fontWeight:700,padding:"8px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>✚ Pagamento</button>
+                    <button onClick={()=>openM("div",d)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:10,color:"#1A1209",fontSize:11.5,fontWeight:700,padding:"8px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>✎ Editar</button>
+                    <button onClick={()=>remove(dividas,setDividas,d.id)} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.28)",borderRadius:10,color:"#8B1A1A",fontSize:11.5,fontWeight:700,padding:"8px 12px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>🗑</button>
                   </div>
                 </div>;
               })
