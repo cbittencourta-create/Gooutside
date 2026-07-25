@@ -3122,9 +3122,15 @@ function AppMain({user, onLogout}) {
         {/* ══ OBJETIVOS ══ */}
         {tab==="objetivos"&&(
           <div className="fade">
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-              <div style={{fontSize:22,fontWeight:300,color:TXT}}>Objetivos</div>
-              <Btn variant="primary" style={{fontSize:12,padding:"9px 14px"}} onClick={()=>openM("obj")}>+ Objetivo</Btn>
+            <div className={CARD} style={{marginBottom:16,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,255,255,0.82))"}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>🎯 Objetivos</div>
+                <div className="num" style={{fontSize:26,fontWeight:700,color:C.magenta,letterSpacing:"-.02em",lineHeight:1}}>{objetivos.length}</div>
+                <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:3}}>{objetivos.length===1?"meta cadastrada":"metas cadastradas"}</div>
+              </div>
+              <button onClick={()=>openM("obj")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)"}}>
+                <span style={{fontSize:15,lineHeight:1}}>✚</span> Objetivo
+              </button>
             </div>
             {objetivos.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Crie seus objetivos financeiros</div>
               :objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;const d=daysUntil(o.prazo);
@@ -3132,17 +3138,21 @@ function AppMain({user, onLogout}) {
                 const partes=o.partes||[];
                 const totalPartes=partes.reduce((s,p)=>s+p.valor,0);
                 const isExp=objExpandido===o.id;
-                return <div key={o.id} className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${o.cor}`}}>
+                return <div key={o.id} className={CARD} style={{marginBottom:12,borderLeft:`3px solid ${o.cor}`}}>
                   <div onClick={()=>setObjExpandido(isExp?null:o.id)} style={{display:"flex",justifyContent:"space-between",marginBottom:9,cursor:"pointer"}}>
-                    <div><div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT,display:"flex",alignItems:"center",gap:6}}>{o.nome}<span style={{fontSize:10,color:TMUT}}>{isExp?"▲":"▼"}</span></div>
+                    <div style={{display:"flex",gap:10}}>
+                      <div style={{width:34,height:34,borderRadius:10,background:`${o.cor}22`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,marginTop:1}}>🎯</div>
+                      <div>
+                        <div style={{fontSize:14,fontWeight:700,fontFamily:"'DM Sans',sans-serif",color:"#1A1209",display:"flex",alignItems:"center",gap:6}}>{o.nome}<span style={{fontSize:10,color:TMUT}}>{isExp?"▲":"▼"}</span></div>
                       {invVinc&&<div style={{fontSize:10,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",marginTop:2,fontWeight:600}}>📈 {invVinc.nome}{invVinc.banco?" · "+invVinc.banco:""}{invVinc.taxa?" · "+invVinc.taxa+"% a.a.":""}</div>}
                       {o.prazo&&<div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Prazo: {fdFull(o.prazo)}{d!==null&&<span style={{color:d<=30?C.gold:TSUB}}> · {d>0?`${d}d`:d===0?"Hoje":"Vencido"}</span>}</div>}
                       {o.obs&&<div style={{fontSize:10,color:"rgba(26,18,9,0.55)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>{o.obs}</div>}
                     </div>
+                    </div>
                     <div style={{textAlign:"right"}}><div className="num" style={{fontSize:15,fontWeight:700,color:TXT}}>{R(o.atual)}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>de {R(o.meta)}</div></div>
                   </div>
-                  <Bar value={o.atual} max={o.meta} color={o.cor} h={6}/>
-                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:4,marginBottom:10}}><span>{pct.toFixed(1)}%</span><span>Falta {R(Math.max(o.meta-o.atual,0))}</span></div>
+                  <Bar value={o.atual} max={o.meta} color={o.cor} h={7}/>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:5,marginBottom:10}}><span style={{fontWeight:700,color:o.cor}}>{pct.toFixed(1)}%</span><span>Falta {R(Math.max(o.meta-o.atual,0))}</span></div>
 
                   {isExp&&(
                     <div style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:10,border:"1px solid rgba(0,0,0,0.06)"}}>
@@ -3189,10 +3199,16 @@ function AppMain({user, onLogout}) {
                     </div>
                   )}
 
-                  <div style={{display:"flex",gap:6}}>
-                    <Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>openM("aporte",null,o.id)}>+ Aporte</Btn>
-                    <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("obj",o)}>Editar</Btn>
-                    <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(objetivos,setObjetivos,o.id)}>Excluir</Btn>
+                  <div style={{display:"flex",gap:8}}>
+                    <button onClick={()=>openM("aporte",null,o.id)} style={{flex:1.4,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,rgba(58,120,25,0.95),rgba(33,80,16,0.95))",border:"none",borderRadius:11,color:"#fff",fontSize:12,fontWeight:700,padding:"9px 12px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 3px 10px rgba(45,90,16,0.3)",transition:"transform .12s"}}>
+                      <span style={{fontSize:14,lineHeight:1}}>✚</span> Aporte
+                    </button>
+                    <button onClick={()=>openM("obj",o)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(255,255,255,0.9)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:11,color:"#1A1209",fontSize:12,fontWeight:700,padding:"9px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 6px rgba(0,0,0,0.05)"}}>
+                      ✎ Editar
+                    </button>
+                    <button onClick={()=>remove(objetivos,setObjetivos,o.id)} style={{width:42,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:11,color:"#8B1A1A",fontSize:15,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                      🗑
+                    </button>
                   </div>
                 </div>;
               })
