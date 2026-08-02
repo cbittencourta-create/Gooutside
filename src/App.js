@@ -2244,7 +2244,7 @@ function AppMain({user, onLogout}) {
         combinado = Math.max(0,Math.min(100,combinado));
         const stageCalc = combinado>=100?5 : combinado>=75?4 : combinado>=50?3 : combinado>=25?2 : combinado>=5?1 : 0;
         const relaxado = !orcamentoEstourado && stageCalc>=3 && stageCalc<5 && dividas.length>0 && progDiv>0;
-        return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado} morto={estaMorto} correndo={saidas>entradas} onClickMorto={()=>setMortoReportOpen(true)}/>;
+        return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado} morto={estaMorto} correndo={saidas>entradas&&saldoFinal<saidas} onClickMorto={()=>setMortoReportOpen(true)}/>;
       })()}
 
 
