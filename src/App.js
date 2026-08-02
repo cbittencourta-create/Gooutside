@@ -2016,6 +2016,61 @@ function AppMain({user, onLogout}) {
     const entries=Object.entries(gastosPorCat).sort((a,b)=>b[1]-a[1]);
     return entries.length?{nome:entries[0][0],valor:entries[0][1]}:null;
   },[movsDoMes]);
+  const CATS_NAO_ESSENCIAIS=["Lazer","Vestuário","Educação"];
+  const KEYWORDS_SUPERFLUO=["delivery","lanche","fast food","doce","doces","bebida","presente","impulso","streaming","ifood","balada","bar ","festa"];
+  const analiseEconomia=useMemo(()=>{
+    const meses3Ant=[1,2,3].map(n=>shiftMonth(selMes,-n));
+    const gastoAtualPorCat={};
+    movsDoMes.filter(m=>m.tipo==="saida").forEach(m=>{
+      const catPai=m.categoria.includes("·")?m.categoria.split("·")[0].trim():m.categoria;
+      gastoAtualPorCat[catPai]=(gastoAtualPorCat[catPai]||0)+m.valor;
+    });
+    const gastoMedioPorCat={};
+    meses3Ant.forEach(mk=>{
+      const gastosMes={};
+      movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===mk).forEach(m=>{
+        const catPai=m.categoria.includes("·")?m.categoria.split("·")[0].trim():m.categoria;
+        gastosMes[catPai]=(gastosMes[catPai]||0)+m.valor;
+      });
+      Object.entries(gastosMes).forEach(([cat,v])=>{gastoMedioPorCat[cat]=(gastoMedioPorCat[cat]||0)+v;});
+    });
+    Object.keys(gastoMedioPorCat).forEach(cat=>{gastoMedioPorCat[cat]/=3;});
+
+    const todasCats=new Set([...Object.keys(gastoAtualPorCat),...Object.keys(gastoMedioPorCat)]);
+    const resultado=[...todasCats].map(cat=>{
+      const atual=gastoAtualPorCat[cat]||0;
+      const media=gastoMedioPorCat[cat]||0;
+      const diferenca=atual-media;
+      const percentualAcima=media>0?(diferenca/media*100):(atual>0?100:0);
+      const naoEssencial=CATS_NAO_ESSENCIAIS.some(ne=>cat.includes(ne));
+      return {cat,atual,media,diferenca,percentualAcima,naoEssencial};
+    }).filter(r=>r.atual>0)
+      .sort((a,b)=>{
+        if(a.percentualAcima>15&&b.percentualAcima<=15)return -1;
+        if(b.percentualAcima>15&&a.percentualAcima<=15)return 1;
+        return b.atual-a.atual;
+      });
+    return resultado.slice(0,5);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[movs,movsDoMes,selMes]);
+
+  const presenteVsFuturo=useMemo(()=>{
+    const saidasMes=movsDoMes.filter(m=>m.tipo==="saida");
+    const gastoSuperfluo=saidasMes.filter(m=>{
+      const catLower=m.categoria.toLowerCase();
+      const descLower=(m.descricao||"").toLowerCase();
+      return CATS_NAO_ESSENCIAIS.some(ne=>m.categoria.includes(ne)) || KEYWORDS_SUPERFLUO.some(k=>catLower.includes(k)||descLower.includes(k));
+    }).reduce((s,m)=>s+m.valor,0);
+
+    const transfAporteMes=movsDoMes.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate").reduce((s,m)=>s+m.valor,0);
+    const alocMes=alocacoes.filter(a=>monthKey(a.data)===selMes);
+    const aportadoViaDistribuicao=alocMes.flatMap(a=>a.itens.filter(it=>it.tipo!=="livre")).reduce((s,it)=>s+it.valor,0);
+    const totalFuturo=transfAporteMes+aportadoViaDistribuicao;
+
+    return {gastoSuperfluo,totalFuturo,diferenca:gastoSuperfluo-totalFuturo};
+  },[movsDoMes,alocacoes,selMes]);
+
+
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
   const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
   const transferenciasAporte=movsDoMes.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate").reduce((s,m)=>s+m.valor,0);
@@ -2867,6 +2922,63 @@ function AppMain({user, onLogout}) {
             <div style={{background:"rgba(255,255,255,0.92)",backdropFilter:"blur(12px)",borderRadius:14,padding:"12px 16px",border:"1px solid rgba(255,255,255,0.98)",marginBottom:12,boxShadow:"0 2px 12px rgba(0,0,0,0.08)"}}>
               <div style={{fontSize:22,fontWeight:300,color:"#1A1209"}}>Análise Completa</div>
             </div>
+
+            {/* Presente vs Futuro */}
+            {(presenteVsFuturo.gastoSuperfluo>0||presenteVsFuturo.totalFuturo>0)&&(
+              <div className={CARD} style={{marginBottom:10,padding:"16px 18px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                  <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🔮</div>
+                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Presente vs Futuro</span>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+                  <div style={{background:"rgba(139,26,26,0.07)",border:"1px solid rgba(139,26,26,0.18)",borderRadius:10,padding:"11px 13px"}}>
+                    <div style={{fontSize:9.5,fontWeight:700,color:"#8B1A1A",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>🍟 Gasto no agora</div>
+                    <div className="num" style={{fontSize:17,fontWeight:700,color:"#8B1A1A"}}>{R(presenteVsFuturo.gastoSuperfluo)}</div>
+                    <div style={{fontSize:9,color:"#8B1A1A",opacity:0.7,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>lazer, delivery, compras por impulso...</div>
+                  </div>
+                  <div style={{background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:10,padding:"11px 13px"}}>
+                    <div style={{fontSize:9.5,fontWeight:700,color:"#215010",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>🌱 Guardado pro futuro</div>
+                    <div className="num" style={{fontSize:17,fontWeight:700,color:"#215010"}}>{R(presenteVsFuturo.totalFuturo)}</div>
+                    <div style={{fontSize:9,color:"#215010",opacity:0.7,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>investimentos, objetivos, dívidas</div>
+                  </div>
+                </div>
+                <div style={{background:presenteVsFuturo.diferenca>0?"rgba(212,168,67,0.15)":"rgba(45,90,16,0.08)",border:`1px solid ${presenteVsFuturo.diferenca>0?"rgba(212,168,67,0.4)":"rgba(45,90,16,0.2)"}`,borderRadius:10,padding:"10px 13px",fontSize:12,color:presenteVsFuturo.diferenca>0?"#6B4C00":"#215010",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                  {presenteVsFuturo.diferenca>0
+                    ? <>⚠ Você gastou <strong>{R(presenteVsFuturo.diferenca)}</strong> a mais no agora do que guardou pro futuro esse mês. Vale repensar algumas compras do momento.</>
+                    : <>✅ Você guardou mais pro futuro do que gastou em coisas do momento — seguindo bem!</>
+                  }
+                </div>
+              </div>
+            )}
+
+            {/* Onde economizar */}
+            {analiseEconomia.length>0&&(
+              <div className={CARD} style={{marginBottom:10,padding:"16px 18px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                  <div style={{width:26,height:26,borderRadius:8,background:"rgba(212,168,67,0.18)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>💡</div>
+                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Onde você pode economizar</span>
+                </div>
+                {analiseEconomia.map((r,idx)=>(
+                  <div key={r.cat} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 4px",borderBottom:idx<analiseEconomia.length-1?"1px solid rgba(0,0,0,0.06)":"none"}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{r.cat}</div>
+                      <div style={{fontSize:10.5,color:r.percentualAcima>15?"#8B1A1A":"#5A4A3A",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>
+                        {r.percentualAcima>15
+                          ? <>⚠ {r.percentualAcima.toFixed(0)}% acima da sua média (últimos 3 meses: {R(r.media)})</>
+                          : r.naoEssencial
+                          ? <>💭 categoria não essencial — boa candidata pra cortar</>
+                          : <>dentro da sua média histórica</>
+                        }
+                      </div>
+                    </div>
+                    <div className="num" style={{fontSize:14,fontWeight:700,color:r.percentualAcima>15?"#8B1A1A":"#1A1209",marginLeft:10}}>{R(r.atual)}</div>
+                  </div>
+                ))}
+                <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(0,0,0,0.06)",fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                  Comparando com a média dos 3 meses anteriores. Categorias como Lazer e Vestuário costumam ter mais espaço pra cortar do que Moradia ou Saúde.
+                </div>
+              </div>
+            )}
 
             {/* Linha 1: Donut empresas + Donut gastos */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
