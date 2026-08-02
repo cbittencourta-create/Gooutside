@@ -751,8 +751,8 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
 // ═══════════════════════════════════════════════════════════════════
 
 function BalancoTab({movs, plantoes, cartoes, selMes}) {
-  // Últimos 12 meses
-  const meses = Array.from({length:12},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-11+i);return d.toISOString().slice(0,7);});
+  // Últimos 12 meses relativos ao mês sendo visualizado (não a hoje)
+  const meses = Array.from({length:12},(_,i)=>shiftMonth(selMes,i-11));
 
   const dataLinha = meses.map(ym=>({
     ym,
@@ -782,8 +782,9 @@ function BalancoTab({movs, plantoes, cartoes, selMes}) {
     return {...c, usado, pct};
   }).filter(c=>c.usado>0).sort((a,b)=>b.pct-a.pct);
 
-  const entM = dataLinha.find(d=>d.ym===selMes)?.ent||0;
-  const saiM = dataLinha.find(d=>d.ym===selMes)?.sai||0;
+  // Receitas/Despesas do mês selecionado — direto dos movs, sem depender da janela do gráfico
+  const entM = movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===selMes).reduce((s,m)=>s+m.valor,0);
+  const saiM = movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===selMes).reduce((s,m)=>s+m.valor,0);
 
   return (
     <div>
