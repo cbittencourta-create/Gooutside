@@ -2026,12 +2026,29 @@ function AppMain({user, onLogout}) {
     .reduce((s,m)=>s+m.valor,0);
   // Saldo mensal puro
   const saldo=entradas-saidas-transferencias;
-  const estaMorto=saldo<0;
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
 
-  // Saldo com carry-forward: cada mês parte do saldo confirmado do mês anterior
-  const saldoBaseDoMes = saldoMensal[selMes]!==undefined ? +saldoMensal[selMes] : 0;
-  const saldoFinal = saldoBaseDoMes + saldo;
+  // Saldo com carry-forward: acumula desde o mês mais antigo com dados,
+  // respeitando qualquer ajuste manual feito no meio do caminho (⚙ ajustar)
+  const saldoFinal = useMemo(()=>{
+    const chaves=[...Object.keys(saldoMensal),...movs.map(m=>monthKey(m.data))].filter(Boolean);
+    let mesAtual = chaves.length ? chaves.sort()[0] : selMes;
+    let base = saldoMensal[mesAtual]!==undefined ? +saldoMensal[mesAtual] : 0;
+    let guard=0;
+    while(mesAtual<selMes && guard<600){
+      const ent=movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
+      const sai=movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
+      const tA=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
+      const tR=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo==="resgate"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
+      const fim=base+ent-sai-tA+tR;
+      mesAtual=shiftMonth(mesAtual,1);
+      base=saldoMensal[mesAtual]!==undefined?+saldoMensal[mesAtual]:fim;
+      guard++;
+    }
+    return base+saldo;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[selMes,movs,saldoMensal]);
+  const estaMorto=saldoFinal<0;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalFundoDivida=dividas.filter(d=>d.tipo==="fundo"&&!d.investId).reduce((s,d)=>s+(+d.pago||0),0);
   const totalObjetivos=objetivos.filter(o=>!o.investId).reduce((s,o)=>s+(+o.atual||0),0);
