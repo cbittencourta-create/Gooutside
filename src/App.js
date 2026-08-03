@@ -1368,11 +1368,13 @@ function NotepadWidget({value, onChange}) {
 
 
 // ── Mascote Sol de Ouro ────────────────────────────────────────────────────
-function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto}) {
+function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto, feedTrigger, totalAlimentado}) {
   const [piscando, setPiscando] = useState(false);
   const [falando, setFalando] = useState(false);
   const [bounce, setBounce] = useState(false);
+  const [alimentando, setAlimentando] = useState(null); // {valor} enquanto mostra a animação
   const prevProgresso = useRef(progresso);
+  const prevFeedId = useRef(null);
 
   useEffect(()=>{
     const blink = ()=>{ setPiscando(true); setTimeout(()=>setPiscando(false), 160); };
@@ -1388,6 +1390,17 @@ function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto
     }
     prevProgresso.current=progresso;
   },[progresso]);
+
+  useEffect(()=>{
+    if(feedTrigger&&feedTrigger.id!==prevFeedId.current){
+      prevFeedId.current=feedTrigger.id;
+      setAlimentando({valor:feedTrigger.valor});
+      setBounce(true);
+      const t1=setTimeout(()=>setBounce(false), 900);
+      const t2=setTimeout(()=>setAlimentando(null), 1800);
+      return ()=>{clearTimeout(t1);clearTimeout(t2);};
+    }
+  },[feedTrigger]);
 
   const pct = Math.max(0, Math.min(100, progresso));
   const stage = pct>=100?5 : pct>=75?4 : pct>=50?3 : pct>=25?2 : pct>=5?1 : 0;
@@ -1451,7 +1464,7 @@ function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto
   return (
     <div style={{position:"fixed",top:150,left:24,zIndex:40,display:window.innerWidth>1300?"flex":"none",flexDirection:"column",alignItems:"center",gap:8}}>
       <div onClick={handleClick}
-        style={{cursor:"pointer",transform:morto?"rotate(18deg)":bounce?"scale(1.15)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:morto?"none":correndoAtivo?"patoPanico 0.5s ease-in-out infinite":"patoBreathe 3.4s ease-in-out infinite"}}>
+        style={{position:"relative",cursor:"pointer",transform:morto?"rotate(18deg)":bounce?"scale(1.15)":"scale(1)",transition:"transform .35s cubic-bezier(.34,1.56,.64,1)",animation:morto?"none":correndoAtivo?"patoPanico 0.5s ease-in-out infinite":"patoBreathe 3.4s ease-in-out infinite"}}>
         <svg width="170" height="190" viewBox="0 0 220 220" style={{overflow:"visible"}}>
           {/* boia rosa (só no estado relaxado) */}
           {relaxAtivo&&(
@@ -1520,6 +1533,10 @@ function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto
           {morto&&(
             <ellipse cx={bicoTipX+2} cy={bicoTipY+9} rx={4} ry={3} fill="#E86C8A"/>
           )}
+          {/* sementinha "comida" no bico (alimentando) */}
+          {alimentando&&(
+            <circle className="patoSemente" cx={bicoTipX} cy={bicoTipY} r={5} fill="#8FC43A" stroke="#5A8A1A" strokeWidth={1}/>
+          )}
           {/* bochecha rosada */}
           {mostrarBochecha&&<ellipse cx={headX-17} cy={headY+8} rx={6.5} ry={4.2} fill="#F5A0B0" opacity={0.6}/>}
           {mostrarBochecha&&<ellipse cx={headX+17} cy={headY+8} rx={5} ry={3.2} fill="#F5A0B0" opacity={0.4}/>}
@@ -1561,6 +1578,11 @@ function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto
             </>
           )}
         </svg>
+        {alimentando&&(
+          <div style={{position:"absolute",top:20,left:"50%",transform:"translateX(-50%)",fontSize:14,fontWeight:700,color:"#2D9A1A",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",animation:"patoFloatUp 1.8s ease-out forwards",textShadow:"0 1px 3px rgba(255,255,255,0.8)"}}>
+            +{R(alimentando.valor)} 🌱
+          </div>
+        )}
       </div>
       {falando&&(
         <div style={{background:"rgba(255,255,255,0.96)",borderRadius:14,padding:"10px 14px",fontSize:12,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",fontWeight:600,boxShadow:"0 4px 14px rgba(0,0,0,0.18)",maxWidth:190,textAlign:"center"}}>
@@ -1570,10 +1592,18 @@ function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto
       <div style={{background:"rgba(255,255,255,0.88)",borderRadius:99,padding:"5px 14px",fontSize:12,fontWeight:700,color:morto?"#8B1A1A":alerta?"#8B4A1A":"#3D3226",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(0,0,0,0.1)"}}>
         {morto?"💀 desmaiou":alerta?"⚠ "+pct.toFixed(0)+"% energia":correndoAtivo?"😱 muita saída":relaxAtivo?"😎 "+pct.toFixed(0)+"% tranquilo":pct.toFixed(0)+"% feliz"}
       </div>
+      {totalAlimentado>0&&(
+        <div style={{fontSize:9.5,color:"rgba(61,50,38,0.6)",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>
+          🌱 alimentado com {R(totalAlimentado)} no total
+        </div>
+      )}
       <style>{`@keyframes patoBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
         @keyframes patoPanico{0%,100%{transform:translateX(0) rotate(0deg)}25%{transform:translateX(-3px) rotate(-2deg)}75%{transform:translateX(3px) rotate(2deg)}}
         .patoAsaFlap{animation:asaFlap 0.4s ease-in-out infinite;transform-origin:100px 148px}
-        @keyframes asaFlap{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-8deg)}}`}</style>
+        @keyframes asaFlap{0%,100%{transform:rotate(0deg)}50%{transform:rotate(-8deg)}}
+        .patoSemente{animation:patoComer 1s ease-out forwards}
+        @keyframes patoComer{0%{transform:scale(1.8);opacity:1}60%{transform:scale(1);opacity:1}100%{transform:scale(0.3);opacity:0}}
+        @keyframes patoFloatUp{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-38px);opacity:0}}`}</style>
     </div>
   );
 }
@@ -1772,6 +1802,13 @@ function AppMain({user, onLogout}) {
   const [investExpandido,setInvestExpandido]=useState(null);
   const [investIdx,setInvestIdx]=useState(0);
   const [cartaoIdx,setCartaoIdx]=useState(0);
+  const [totalAlimentado,setTotalAlimentado]=useLS("v4_pato_alimentado",0,userId);
+  const [feedTrigger,setFeedTrigger]=useState(null); // {valor,id} dispara animação de alimentar
+  const alimentarPato=(valor)=>{
+    if(!valor||valor<=0)return;
+    setTotalAlimentado(+totalAlimentado+valor);
+    setFeedTrigger({valor,id:uid()});
+  };
   const [filtroMov,setFiltroMov]=useState({tipo:"todos",categoria:"todos",formaPagamento:"todos"});
   const [filtroPlt,setFiltroPlt]=useState({empresa:"todos",status:"todos",dataDe:"",dataAte:""});
   const [fJuros,setFJuros]=useState({mes:today().slice(0,7),taxa:""});
@@ -1847,6 +1884,7 @@ function AppMain({user, onLogout}) {
       setInvests(invests.map(i=>i.id===fMov.investId
         ? {...i,aporte:fMov.subtipo==="resgate"?Math.max(0,i.aporte-valorNum):i.aporte+valorNum}
         : i));
+      if(fMov.subtipo!=="resgate")alimentarPato(valorNum);
     }
     if(!edit&&fMov.tipo==="saida"&&fMov.formaPagamento==="cartao"){
       setTemDinheiroPergunta({descricao:fMov.descricao,valorTotal:valorNum});
@@ -1930,9 +1968,10 @@ function AppMain({user, onLogout}) {
     const obj=objetivos.find(o=>o.id===extra);
     setObjetivos(objetivos.map(o=>o.id===extra?{...o,atual:+o.atual+v}:o));
     if(obj?.investId) setInvests(invests.map(i=>i.id===obj.investId?{...i,aporte:i.aporte+v}:i));
+    alimentarPato(v);
     closeM();
   };
-  const savePgto=()=>{if(!fPgto.valor||!extra)return;const v=+String(fPgto.valor).replace(",",".");setDividas(dividas.map(d=>d.id===extra?{...d,pago:Math.min(+d.pago+v,+d.total)}:d));closeM();};
+  const savePgto=()=>{if(!fPgto.valor||!extra)return;const v=+String(fPgto.valor).replace(",",".");setDividas(dividas.map(d=>d.id===extra?{...d,pago:Math.min(+d.pago+v,+d.total)}:d));alimentarPato(v);closeM();};
 
   const getPltStatus=p=>{if(p.status==="recebido")return"recebido";if(p.status==="cancelado")return"cancelado";if(isPast(p.previsao))return"atrasado";return"pendente";};
 
@@ -1959,12 +1998,14 @@ function AppMain({user, onLogout}) {
       setMovs([{id:uid(),tipo:"entrada",descricao:`Plantão - ${p.empresa}`,valor:p.valorTotal,categoria:"🏥 Plantão",data:dataEsc},...movs]);
     }
     let nInv=[...invests],nObj=[...objetivos],nDiv=[...dividas];
+    let totalAlimentarAgora=0;
     const reg={id:uid(),plantaoId:p.id,data:dataEsc,empresa:p.empresa,totalRecebido:p.valorTotal,itens:[]};
     alocs.forEach(a=>{
       const val=parseFloat(a.valorEdit||0); if(val<=0)return;
       const inv=a.tipo==="investimento"?invests.find(x=>x.id===a.destinoId):null;
       const getNome=()=>{if(a.tipo==="investimento"){const i=invests.find(x=>x.id===a.destinoId);return i?`${i.nome}${i.banco?" · "+i.banco:""}`:a.destinoNome||"—";}if(a.tipo==="objetivo")return objetivos.find(x=>x.id===a.destinoId)?.nome||a.destinoNome||"—";if(a.tipo==="divida"||a.tipo==="fundo_divida")return dividas.find(x=>x.id===a.destinoId)?.credor||a.destinoNome||"—";return"Livre";};
       reg.itens.push({tipo:a.tipo,destinoId:a.destinoId,destinoNome:a.tipo==="livre"?"Livre":getNome(),banco:inv?.banco||"",valor:val});
+      if(a.tipo!=="livre")totalAlimentarAgora+=val;
       if(a.tipo==="investimento"&&a.destinoId)nInv=nInv.map(i=>i.id===a.destinoId?{...i,aporte:i.aporte+val}:i);
       if(a.tipo==="objetivo"&&a.destinoId){
         nObj=nObj.map(o=>o.id===a.destinoId?{...o,atual:+o.atual+val}:o);
@@ -1979,6 +2020,7 @@ function AppMain({user, onLogout}) {
     });
     setInvests(nInv);setObjetivos(nObj);setDividas(nDiv);
     setAlocacoes([reg,...alocacoes]);
+    if(totalAlimentarAgora>0)alimentarPato(totalAlimentarAgora);
     if(!isMov) setPltDist(null);
   };
 
@@ -2069,6 +2111,29 @@ function AppMain({user, onLogout}) {
 
     return {gastoSuperfluo,totalFuturo,diferenca:gastoSuperfluo-totalFuturo};
   },[movsDoMes,alocacoes,selMes]);
+
+  const desafioPato=useMemo(()=>{
+    const temParcelaAtrasada=dividas.some(d=>{
+      if(d.tipo==="cartao_desconto")return (d.parcelasStatus||[]).some(p=>!p.pago&&isPast(p.dataVencimento));
+      if(d.tipo==="ativa")return d.prazo&&isPast(d.prazo)&&(+d.pago<+d.total);
+      return false;
+    });
+    const fezAporteEsteMes=(movsDoMes.some(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate"))||(alocacoes.some(a=>monthKey(a.data)===selMes&&a.itens.some(it=>it.tipo!=="livre")));
+    const itens=[
+      {label:"Nenhuma categoria estourou o orçamento",feito:!orcamentoEstourado},
+      {label:"Guardou mais pro futuro do que gastou no agora",feito:presenteVsFuturo.totalFuturo>=presenteVsFuturo.gastoSuperfluo&&(presenteVsFuturo.totalFuturo>0||presenteVsFuturo.gastoSuperfluo===0)},
+      {label:"Saldo do mês positivo",feito:saldo>=0},
+    ];
+    if(dividas.length>0){
+      itens.push({label:"Nenhuma parcela de dívida atrasada",feito:!temParcelaAtrasada});
+    }
+    if(objetivos.length>0||invests.length>0||dividas.length>0){
+      itens.push({label:"Fez pelo menos um aporte (objetivo/investimento/dívida)",feito:fezAporteEsteMes});
+    }
+    const completos=itens.filter(i=>i.feito).length;
+    return {itens,completos,total:itens.length};
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[orcamentoEstourado,presenteVsFuturo,saldo,dividas,objetivos,invests,movsDoMes,alocacoes,selMes]);
 
 
   const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
@@ -2299,7 +2364,7 @@ function AppMain({user, onLogout}) {
         combinado = Math.max(0,Math.min(100,combinado));
         const stageCalc = combinado>=100?5 : combinado>=75?4 : combinado>=50?3 : combinado>=25?2 : combinado>=5?1 : 0;
         const relaxado = !orcamentoEstourado && stageCalc>=3 && stageCalc<5 && dividas.length>0 && progDiv>0;
-        return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado} morto={estaMorto} correndo={saidas>entradas&&saldoFinal<saidas} onClickMorto={()=>setMortoReportOpen(true)}/>;
+        return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado} morto={estaMorto} correndo={saidas>entradas&&saldoFinal<saidas} onClickMorto={()=>setMortoReportOpen(true)} feedTrigger={feedTrigger} totalAlimentado={totalAlimentado}/>;
       })()}
 
 
@@ -2358,6 +2423,31 @@ function AppMain({user, onLogout}) {
                   <div className="num" style={{fontSize:14,fontWeight:700,color:c.color}}>{R(c.val)}</div>
                 </div>
               ))}
+            </div>
+
+            {/* ── Desafio do Pato 100% ── */}
+            <div className={CARD} style={{marginBottom:10,padding:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <div style={{width:26,height:26,borderRadius:8,background:"rgba(255,196,32,0.2)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🌻</div>
+                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Desafio do Pato 100%</span>
+                </div>
+                <span style={{fontSize:12,fontWeight:700,color:desafioPato.completos===desafioPato.total?"#215010":"#8B6000",fontFamily:"'DM Sans',sans-serif"}}>{desafioPato.completos} de {desafioPato.total}</span>
+              </div>
+              <Bar value={desafioPato.completos} max={desafioPato.total} color={desafioPato.completos===desafioPato.total?"#2D9A1A":"#FFC420"} h={7}/>
+              <div style={{marginTop:12}}>
+                {desafioPato.itens.map((item,idx)=>(
+                  <div key={idx} style={{display:"flex",alignItems:"center",gap:9,padding:"6px 0",borderBottom:idx<desafioPato.itens.length-1?"1px solid rgba(0,0,0,0.05)":"none"}}>
+                    <div style={{width:20,height:20,borderRadius:6,background:item.feito?"rgba(45,90,16,0.15)":"rgba(0,0,0,0.06)",border:`1px solid ${item.feito?"rgba(45,90,16,0.35)":"rgba(0,0,0,0.12)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,flexShrink:0}}>{item.feito?"✓":""}</div>
+                    <span style={{fontSize:12.5,color:item.feito?"#215010":"#5A4A3A",fontFamily:"'DM Sans',sans-serif",fontWeight:item.feito?600:500}}>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+              {desafioPato.completos===desafioPato.total&&(
+                <div style={{marginTop:10,background:"rgba(255,196,32,0.15)",border:"1px solid rgba(255,196,32,0.4)",borderRadius:10,padding:"9px 12px",fontSize:12,color:"#8B6000",fontFamily:"'DM Sans',sans-serif",fontWeight:600,textAlign:"center"}}>
+                  🎉 Desafio completo esse mês! Seu pato agradece.
+                </div>
+              )}
             </div>
 
             {/* ── Resumo de Cartões ── */}
