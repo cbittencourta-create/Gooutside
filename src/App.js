@@ -2112,6 +2112,18 @@ function AppMain({user, onLogout}) {
     return {gastoSuperfluo,totalFuturo,diferenca:gastoSuperfluo-totalFuturo};
   },[movsDoMes,alocacoes,selMes]);
 
+  const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
+  const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
+  const transferenciasAporte=movsDoMes.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate").reduce((s,m)=>s+m.valor,0);
+  const transferenciasResgate=movsDoMes.filter(m=>m.tipo==="transferencia"&&m.subtipo==="resgate").reduce((s,m)=>s+m.valor,0);
+  const transferencias=transferenciasAporte-transferenciasResgate;
+  // Transferências acumuladas até o mês selecionado (total investido)
+  const transferenciasAcumuladas=movs
+    .filter(m=>m.tipo==="transferencia"&&m.data&&monthKey(m.data)<=selMes)
+    .reduce((s,m)=>s+m.valor,0);
+  // Saldo mensal puro
+  const saldo=entradas-saidas-transferencias;
+
   const desafioPato=useMemo(()=>{
     const temParcelaAtrasada=dividas.some(d=>{
       if(d.tipo==="cartao_desconto")return (d.parcelasStatus||[]).some(p=>!p.pago&&isPast(p.dataVencimento));
@@ -2135,18 +2147,6 @@ function AppMain({user, onLogout}) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[orcamentoEstourado,presenteVsFuturo,saldo,dividas,objetivos,invests,movsDoMes,alocacoes,selMes]);
 
-
-  const entradas=movsDoMes.filter(m=>m.tipo==="entrada").reduce((s,m)=>s+m.valor,0);
-  const saidas=movsDoMes.filter(m=>m.tipo==="saida").reduce((s,m)=>s+m.valor,0);
-  const transferenciasAporte=movsDoMes.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate").reduce((s,m)=>s+m.valor,0);
-  const transferenciasResgate=movsDoMes.filter(m=>m.tipo==="transferencia"&&m.subtipo==="resgate").reduce((s,m)=>s+m.valor,0);
-  const transferencias=transferenciasAporte-transferenciasResgate;
-  // Transferências acumuladas até o mês selecionado (total investido)
-  const transferenciasAcumuladas=movs
-    .filter(m=>m.tipo==="transferencia"&&m.data&&monthKey(m.data)<=selMes)
-    .reduce((s,m)=>s+m.valor,0);
-  // Saldo mensal puro
-  const saldo=entradas-saidas-transferencias;
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
 
   // Saldo com carry-forward: acumula desde o mês mais antigo com dados,
