@@ -1819,8 +1819,14 @@ function AppMain({user, onLogout}) {
 
   const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:"",formaPagamento:"dinheiro",cartaoId:"",parcelado:false,numParcelas:"2"});
   const [fEmp,setFEmp]=useState({nome:"",contato:"",prazo:"30",cor:"#E8205F"});
-  const [fPlt,setFPlt]=useState({empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
-  const [fPltLote,setFPltLote]=useState({empresa:"",valorTotal:"",horas:"",previsao:"",diasSelecionados:[],mesLote:today().slice(0,7)});
+  const [fPlt,setFPlt]=useState({empresa:"",data:"",horaInicio:"",horaFim:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
+  const [fPltLote,setFPltLote]=useState({empresa:"",valorTotal:"",horas:"",horaInicio:"",horaFim:"",previsao:"",diasSelecionados:[],mesLote:today().slice(0,7)});
+  const [agendaView,setAgendaView]=useState("7");
+  const [agendaInicio,setAgendaInicio]=useState(()=>{
+    const hoje=new Date(today()+"T12:00:00");
+    hoje.setDate(hoje.getDate()-hoje.getDay());
+    return hoje.toISOString().slice(0,10);
+  });
   const [fInv,setFInv]=useState({nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
   const [fObj,setFObj]=useState({nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
   const [fDiv,setFDiv]=useState({credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
@@ -1899,11 +1905,12 @@ function AppMain({user, onLogout}) {
     const valorTotal=+String(f.valorTotal).replace(",",".");
     const novos=f.diasSelecionados.map(dia=>({
       id:uid(), empresa:f.empresa, data:`${f.mesLote}-${String(dia).padStart(2,"0")}`,
+      horaInicio:f.horaInicio||"", horaFim:f.horaFim||"",
       horas:f.horas||"", valorH:f.horas&&valorTotal?(valorTotal/(+f.horas)).toFixed(2):"",
       valorTotal, previsao:f.previsao||"", status:"pendente", obs:"",
     }));
     setPlantoes([...novos,...plantoes]);
-    setFPltLote({empresa:"",valorTotal:"",horas:"",previsao:"",diasSelecionados:[],mesLote:today().slice(0,7)});
+    setFPltLote({empresa:"",valorTotal:"",horas:"",horaInicio:"",horaFim:"",previsao:"",diasSelecionados:[],mesLote:today().slice(0,7)});
     closeM();
   };
   const saveInv=()=>{
@@ -2184,6 +2191,33 @@ function AppMain({user, onLogout}) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[plantoes]);
 
+  const agendaDias=useMemo(()=>{
+    const n=+agendaView;
+    const minTot=t=>{const [h,m]=t.split(":").map(Number);return h*60+m;};
+    return Array.from({length:n},(_,i)=>{
+      const d=new Date(agendaInicio+"T12:00:00");
+      d.setDate(d.getDate()+i);
+      const dataStr=d.toISOString().slice(0,10);
+      const plantoesDia=plantoes.filter(p=>p.data===dataStr&&p.horaInicio&&p.horaFim).map(p=>{
+        const emp=empresas.find(e=>e.nome===p.empresa);
+        let ini=minTot(p.horaInicio), fim=minTot(p.horaFim);
+        if(fim<=ini)fim=24*60; // corta à meia-noite (simplificação p/ plantões noturnos)
+        return {...p,iniMin:ini,fimMin:fim,cor:emp?.cor||C.magenta};
+      }).sort((a,b)=>a.iniMin-b.iniMin);
+
+      // Calcula períodos livres (gaps) dentro de 00:00–24:00
+      const livres=[];
+      let cursor=0;
+      plantoesDia.forEach(p=>{
+        if(p.iniMin>cursor+30)livres.push({ini:cursor,fim:p.iniMin});
+        cursor=Math.max(cursor,p.fimMin);
+      });
+      if(cursor<24*60-30)livres.push({ini:cursor,fim:24*60});
+
+      return {data:dataStr, diaSemana:d.getDay(), diaNum:d.getDate(), plantoes:plantoesDia, livres};
+    });
+  },[agendaView,agendaInicio,plantoes,empresas]);
+
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
 
   // Saldo com carry-forward: acumula desde o mês mais antigo com dados,
@@ -2270,6 +2304,7 @@ function AppMain({user, onLogout}) {
 
   const TABS=[
     {id:"dashboard",icon:"◈",label:"Início"},
+    {id:"agenda",icon:"▦",label:"Agenda"},
     {id:"balanco",icon:"◈",label:"Balanço"},
     {id:"orcamento",icon:"◎",label:"Orçamento"},
     {id:"movimentos",icon:"⇅",label:"Movimentos"},
@@ -3834,6 +3869,98 @@ function AppMain({user, onLogout}) {
           </div>
         )}
 
+        {/* ══ AGENDA ══ */}
+        {tab==="agenda"&&(
+          <div className="fade">
+            <div className={CARD} style={{marginBottom:14,padding:"16px 18px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:12}}>
+                <div>
+                  <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>▦ Agenda</div>
+                  <div style={{fontSize:20,fontWeight:300,fontFamily:"'Cormorant Garamond',serif",color:"#1A1209"}}>
+                    {fd(agendaDias[0]?.data)} – {fd(agendaDias[agendaDias.length-1]?.data)}
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <div style={{display:"flex",background:"#EDE8E0",borderRadius:10,padding:3}}>
+                    {[["7","7 dias"],["14","14 dias"]].map(([v,l])=>(
+                      <button key={v} onClick={()=>setAgendaView(v)} style={{background:agendaView===v?"#E8205F":"transparent",color:agendaView===v?"#fff":"#5A4A3A",border:"none",borderRadius:8,padding:"7px 12px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
+                    ))}
+                  </div>
+                  <button onClick={()=>{const d=new Date(agendaInicio+"T12:00:00");d.setDate(d.getDate()-(+agendaView));setAgendaInicio(d.toISOString().slice(0,10));}} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:14}}>‹</button>
+                  <button onClick={()=>{const hoje=new Date(today()+"T12:00:00");hoje.setDate(hoje.getDate()-hoje.getDay());setAgendaInicio(hoje.toISOString().slice(0,10));}} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,padding:"0 10px",height:32,cursor:"pointer",fontSize:11,fontWeight:700,color:"#1A1209"}}>Hoje</button>
+                  <button onClick={()=>{const d=new Date(agendaInicio+"T12:00:00");d.setDate(d.getDate()+(+agendaView));setAgendaInicio(d.toISOString().slice(0,10));}} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:14}}>›</button>
+                </div>
+              </div>
+
+              {/* Grid de calendário */}
+              <div style={{display:"flex",overflowX:"auto"}}>
+                <div style={{width:40,flexShrink:0,paddingTop:34}}>
+                  {Array.from({length:24},(_,h)=>(
+                    <div key={h} style={{height:26,fontSize:8.5,color:"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",textAlign:"right",paddingRight:4,transform:"translateY(-6px)"}}>{String(h).padStart(2,"0")}h</div>
+                  ))}
+                </div>
+                <div style={{display:"flex",flex:1,minWidth:agendaDias.length*90}}>
+                  {agendaDias.map(dia=>{
+                    const hoje=dia.data===today();
+                    const nomeDia=["dom","seg","ter","qua","qui","sex","sáb"][dia.diaSemana];
+                    return (
+                      <div key={dia.data} style={{flex:1,minWidth:88,borderLeft:"1px solid rgba(0,0,0,0.06)"}}>
+                        <div style={{textAlign:"center",paddingBottom:6,marginBottom:2}}>
+                          <div style={{fontSize:9,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,textTransform:"uppercase"}}>{nomeDia}</div>
+                          <div style={{width:24,height:24,borderRadius:99,background:hoje?"#E8205F":"transparent",color:hoje?"#fff":"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",margin:"2px auto 0",fontSize:12,fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>{dia.diaNum}</div>
+                        </div>
+                        <div style={{position:"relative",height:24*26,background:"repeating-linear-gradient(to bottom, transparent, transparent 25px, rgba(0,0,0,0.04) 25px, rgba(0,0,0,0.04) 26px)"}}>
+                          {dia.plantoes.map(p=>(
+                            <div key={p.id} title={`${p.empresa} · ${p.horaInicio}–${p.horaFim}`}
+                              style={{position:"absolute",top:(p.iniMin/1440*24*26),height:Math.max(((p.fimMin-p.iniMin)/1440*24*26),16),left:2,right:2,background:p.cor,opacity:0.88,borderRadius:5,padding:"3px 5px",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>
+                              <div style={{fontSize:8.5,fontWeight:700,color:"#fff",lineHeight:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.empresa}</div>
+                              <div style={{fontSize:7.5,color:"rgba(255,255,255,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{p.horaInicio}–{p.horaFim}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Períodos livres */}
+            <div className={CARD} style={{padding:"16px 18px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🔮</div>
+                <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Meus períodos livres</span>
+              </div>
+              {agendaDias.map(dia=>{
+                if(dia.plantoes.length===0&&dia.livres.length===1&&dia.livres[0].fim-dia.livres[0].ini>=1439){
+                  return (
+                    <div key={dia.data} style={{display:"flex",justifyContent:"space-between",padding:"8px 4px",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
+                      <span style={{fontSize:12.5,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:600,textTransform:"capitalize"}}>{["dom","seg","ter","qua","qui","sex","sáb"][dia.diaSemana]}, {fd(dia.data)}</span>
+                      <span style={{fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>livre o dia todo</span>
+                    </div>
+                  );
+                }
+                if(dia.livres.length===0)return null;
+                return (
+                  <div key={dia.data} style={{padding:"8px 4px",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
+                    <div style={{fontSize:12.5,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:600,marginBottom:3,textTransform:"capitalize"}}>{["dom","seg","ter","qua","qui","sex","sáb"][dia.diaSemana]}, {fd(dia.data)}</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {dia.livres.map((l,li)=>(
+                        <span key={li} style={{fontSize:11,color:"#1A4A6E",background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.25)",borderRadius:7,padding:"3px 8px",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>
+                          {String(Math.floor(l.ini/60)).padStart(2,"0")}h – {l.fim>=1440?"24h":String(Math.floor(l.fim/60)).padStart(2,"0")+"h"}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(0,0,0,0.06)",fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>
+                Só considera plantões com horário de início e fim preenchidos.
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ══ BALANÇO ══ */}
         {tab==="balanco"&&(
           <div className="fade">
@@ -3954,6 +4081,28 @@ function AppMain({user, onLogout}) {
           <Sel label="Empresa" value={fPlt.empresa} onChange={e=>setFPlt({...fPlt,empresa:e.target.value})}><option value="">Selecione...</option>{empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}<option value="__outro">— Digitar nome —</option></Sel>
           {fPlt.empresa==="__outro"&&<Inp label="Nome" placeholder="Digite o nome" value={fPlt._empManual||""} onChange={e=>setFPlt({...fPlt,_empManual:e.target.value,empresa:e.target.value})}/>}
           <G2><Inp label="Data do plantão" type="date" value={fPlt.data} onChange={e=>setFPlt({...fPlt,data:e.target.value})}/><Sel label="Prazo pgto" value={fPlt.prazo} onChange={e=>setFPlt({...fPlt,prazo:e.target.value})}>{["15","30","45","60","90"].map(d=><option key={d} value={d}>{d} dias</option>)}</Sel></G2>
+          <G2>
+            <Inp label="Início" type="time" value={fPlt.horaInicio} onChange={e=>{
+              const horaInicio=e.target.value;
+              let horas=fPlt.horas;
+              if(horaInicio&&fPlt.horaFim){
+                let diff=(parseInt(fPlt.horaFim.split(":")[0])*60+parseInt(fPlt.horaFim.split(":")[1]))-(parseInt(horaInicio.split(":")[0])*60+parseInt(horaInicio.split(":")[1]));
+                if(diff<=0)diff+=24*60;
+                horas=(diff/60).toFixed(1).replace(/\.0$/,"");
+              }
+              setFPlt({...fPlt,horaInicio,horas});
+            }}/>
+            <Inp label="Fim" type="time" value={fPlt.horaFim} onChange={e=>{
+              const horaFim=e.target.value;
+              let horas=fPlt.horas;
+              if(fPlt.horaInicio&&horaFim){
+                let diff=(parseInt(horaFim.split(":")[0])*60+parseInt(horaFim.split(":")[1]))-(parseInt(fPlt.horaInicio.split(":")[0])*60+parseInt(fPlt.horaInicio.split(":")[1]));
+                if(diff<=0)diff+=24*60;
+                horas=(diff/60).toFixed(1).replace(/\.0$/,"");
+              }
+              setFPlt({...fPlt,horaFim,horas});
+            }}/>
+          </G2>
           <G2><Inp label="Horas" placeholder="Ex: 12" type="number" value={fPlt.horas} onChange={e=>setFPlt({...fPlt,horas:e.target.value})}/><Inp label="R$/hora" placeholder="Ex: 150" type="number" value={fPlt.valorH} onChange={e=>setFPlt({...fPlt,valorH:e.target.value})}/></G2>
           <Inp label="Valor total (R$)" placeholder="Calculado automaticamente" type="number" value={fPlt.valorTotal} onChange={e=>setFPlt({...fPlt,valorTotal:e.target.value})}/>
           <G2><Inp label="Previsão pgto" type="date" value={fPlt.previsao} onChange={e=>setFPlt({...fPlt,previsao:e.target.value})}/><Sel label="Status" value={fPlt.status} onChange={e=>setFPlt({...fPlt,status:e.target.value})}><option value="pendente">Pendente</option><option value="recebido">Recebido</option><option value="cancelado">Cancelado</option></Sel></G2>
@@ -4047,7 +4196,29 @@ function AppMain({user, onLogout}) {
           </Sel>
           <G2>
             <Inp label="Valor por plantão (R$)" placeholder="0,00" value={fPltLote.valorTotal} onChange={e=>setFPltLote({...fPltLote,valorTotal:e.target.value})}/>
-            <Inp label="Horas por plantão (opcional)" placeholder="Ex: 12" value={fPltLote.horas} onChange={e=>setFPltLote({...fPltLote,horas:e.target.value})}/>
+            <Inp label="Horas por plantão" placeholder="Ex: 12" value={fPltLote.horas} onChange={e=>setFPltLote({...fPltLote,horas:e.target.value})}/>
+          </G2>
+          <G2>
+            <Inp label="Início (opcional)" type="time" value={fPltLote.horaInicio} onChange={e=>{
+              const horaInicio=e.target.value;
+              let horas=fPltLote.horas;
+              if(horaInicio&&fPltLote.horaFim){
+                let diff=(parseInt(fPltLote.horaFim.split(":")[0])*60+parseInt(fPltLote.horaFim.split(":")[1]))-(parseInt(horaInicio.split(":")[0])*60+parseInt(horaInicio.split(":")[1]));
+                if(diff<=0)diff+=24*60;
+                horas=(diff/60).toFixed(1).replace(/\.0$/,"");
+              }
+              setFPltLote({...fPltLote,horaInicio,horas});
+            }}/>
+            <Inp label="Fim (opcional)" type="time" value={fPltLote.horaFim} onChange={e=>{
+              const horaFim=e.target.value;
+              let horas=fPltLote.horas;
+              if(fPltLote.horaInicio&&horaFim){
+                let diff=(parseInt(horaFim.split(":")[0])*60+parseInt(horaFim.split(":")[1]))-(parseInt(fPltLote.horaInicio.split(":")[0])*60+parseInt(fPltLote.horaInicio.split(":")[1]));
+                if(diff<=0)diff+=24*60;
+                horas=(diff/60).toFixed(1).replace(/\.0$/,"");
+              }
+              setFPltLote({...fPltLote,horaFim,horas});
+            }}/>
           </G2>
           <Inp label="Data de previsão de pagamento" type="date" value={fPltLote.previsao} onChange={e=>setFPltLote({...fPltLote,previsao:e.target.value})}/>
 
