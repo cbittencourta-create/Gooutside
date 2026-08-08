@@ -1820,6 +1820,7 @@ function AppMain({user, onLogout}) {
   const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:"",formaPagamento:"dinheiro",cartaoId:"",parcelado:false,numParcelas:"2"});
   const [fEmp,setFEmp]=useState({nome:"",contato:"",prazo:"30",cor:"#E8205F"});
   const [fPlt,setFPlt]=useState({empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
+  const [fPltLote,setFPltLote]=useState({empresa:"",valorTotal:"",horas:"",previsao:"",diasSelecionados:[],mesLote:today().slice(0,7)});
   const [fInv,setFInv]=useState({nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
   const [fObj,setFObj]=useState({nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
   const [fDiv,setFDiv]=useState({credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
@@ -1892,6 +1893,19 @@ function AppMain({user, onLogout}) {
   };
   const saveEmp=()=>{if(!fEmp.nome)return;upsert(empresas,setEmpresas,fEmp);};
   const savePlt=()=>{if(!fPlt.empresa||!fPlt.data||!fPlt.valorTotal)return;upsert(plantoes,setPlantoes,{...fPlt,valorTotal:+fPlt.valorTotal});};
+  const savePltLote=()=>{
+    const f=fPltLote;
+    if(!f.empresa||!f.valorTotal||f.diasSelecionados.length===0)return;
+    const valorTotal=+String(f.valorTotal).replace(",",".");
+    const novos=f.diasSelecionados.map(dia=>({
+      id:uid(), empresa:f.empresa, data:`${f.mesLote}-${String(dia).padStart(2,"0")}`,
+      horas:f.horas||"", valorH:f.horas&&valorTotal?(valorTotal/(+f.horas)).toFixed(2):"",
+      valorTotal, previsao:f.previsao||"", status:"pendente", obs:"",
+    }));
+    setPlantoes([...novos,...plantoes]);
+    setFPltLote({empresa:"",valorTotal:"",horas:"",previsao:"",diasSelecionados:[],mesLote:today().slice(0,7)});
+    closeM();
+  };
   const saveInv=()=>{
     if(!fInv.nome||!fInv.aporte)return;
     upsert(invests,setInvests,{...fInv,aporte:+String(fInv.aporte).replace(",","."),percCDI:fInv.taxaModo==="cdi"?+String(fInv.percCDI||0).replace(",","."):"",taxa:fInv.taxaModo==="fixo"?fInv.taxa:""});
@@ -2823,6 +2837,10 @@ function AppMain({user, onLogout}) {
                 <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 18px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)",transition:"transform .15s"}}
                   onMouseEnter={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
                   <span style={{fontSize:15,lineHeight:1}}>✚</span> Plantão
+                </button>
+                <button onClick={()=>setModal("pltLote")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"rgba(91,163,212,0.15)",border:"1.5px solid rgba(91,163,212,0.4)",borderRadius:12,padding:"10px 18px",fontSize:12.5,fontWeight:700,color:"#1A4A6E",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"transform .15s"}}
+                  onMouseEnter={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
+                  <span style={{fontSize:14,lineHeight:1}}>📅</span> Vários
                 </button>
                 <button onClick={()=>openM("emp")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:"10px 18px",fontSize:12.5,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",transition:"transform .15s"}}
                   onMouseEnter={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
@@ -3966,6 +3984,54 @@ function AppMain({user, onLogout}) {
           <G2><Inp label="Prazo" type="date" value={fDiv.prazo} onChange={e=>setFDiv({...fDiv,prazo:e.target.value})}/><Inp label="Parcelas" placeholder="Ex: 12x de R$500" value={fDiv.parcelas} onChange={e=>setFDiv({...fDiv,parcelas:e.target.value})}/></G2>
           <Inp label="Observações" placeholder="Opcional" value={fDiv.obs} onChange={e=>setFDiv({...fDiv,obs:e.target.value})}/>
           <Btn variant="primary" onClick={saveDiv}>Salvar</Btn>
+        </div>
+      </Modal>
+
+      <Modal open={modal==="pltLote"} onClose={closeM} title="📅 Vários Plantões">
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{background:"rgba(91,163,212,0.08)",border:"1px solid rgba(91,163,212,0.2)",borderRadius:10,padding:"9px 13px",fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif"}}>
+            Marca os dias que trabalhou nessa empresa esse mês — cria um plantão pra cada dia de uma vez.
+          </div>
+          <Sel label="Empresa" value={fPltLote.empresa} onChange={e=>setFPltLote({...fPltLote,empresa:e.target.value})}>
+            <option value="">Selecione...</option>
+            {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
+          </Sel>
+          <G2>
+            <Inp label="Valor por plantão (R$)" placeholder="0,00" value={fPltLote.valorTotal} onChange={e=>setFPltLote({...fPltLote,valorTotal:e.target.value})}/>
+            <Inp label="Horas por plantão (opcional)" placeholder="Ex: 12" value={fPltLote.horas} onChange={e=>setFPltLote({...fPltLote,horas:e.target.value})}/>
+          </G2>
+          <Inp label="Data de previsão de pagamento" type="date" value={fPltLote.previsao} onChange={e=>setFPltLote({...fPltLote,previsao:e.target.value})}/>
+
+          <div style={{background:C.inputBg,border:`1.5px solid ${C.inputBorder}`,borderRadius:10,padding:"12px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <button onClick={()=>setFPltLote({...fPltLote,mesLote:shiftMonth(fPltLote.mesLote,-1),diasSelecionados:[]})} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:14,color:C.modalText}}>‹</button>
+              <div style={{fontSize:13,fontWeight:700,color:C.modalText,fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{monthLabel(fPltLote.mesLote)}</div>
+              <button onClick={()=>setFPltLote({...fPltLote,mesLote:shiftMonth(fPltLote.mesLote,1),diasSelecionados:[]})} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:14,color:C.modalText}}>›</button>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:5}}>
+              {(()=>{
+                const [y,m]=fPltLote.mesLote.split("-").map(Number);
+                const numDias=new Date(y,m,0).getDate();
+                return Array.from({length:numDias},(_,i)=>i+1).map(dia=>{
+                  const sel=fPltLote.diasSelecionados.includes(dia);
+                  return (
+                    <button key={dia} onClick={()=>{
+                      const novos=sel?fPltLote.diasSelecionados.filter(d=>d!==dia):[...fPltLote.diasSelecionados,dia];
+                      setFPltLote({...fPltLote,diasSelecionados:novos});
+                    }} style={{aspectRatio:"1",background:sel?"#E8205F":"rgba(255,255,255,0.7)",color:sel?"#fff":C.modalText,border:`1px solid ${sel?"#E8205F":"rgba(0,0,0,0.1)"}`,borderRadius:8,fontSize:11.5,fontWeight:sel?700:500,cursor:"pointer",fontFamily:"inherit"}}>{dia}</button>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+
+          {fPltLote.diasSelecionados.length>0&&fPltLote.valorTotal&&(
+            <div style={{background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:10,padding:"10px 13px",fontSize:12,color:"#215010",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>
+              {fPltLote.diasSelecionados.length} {fPltLote.diasSelecionados.length===1?"dia selecionado":"dias selecionados"} · Total: {R(fPltLote.diasSelecionados.length*(+String(fPltLote.valorTotal).replace(",",".")))}
+            </div>
+          )}
+
+          <Btn variant="primary" onClick={savePltLote}>Criar {fPltLote.diasSelecionados.length>0?fPltLote.diasSelecionados.length:""} plantões</Btn>
         </div>
       </Modal>
 
