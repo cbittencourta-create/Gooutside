@@ -2198,12 +2198,17 @@ function AppMain({user, onLogout}) {
       const d=new Date(agendaInicio+"T12:00:00");
       d.setDate(d.getDate()+i);
       const dataStr=d.toISOString().slice(0,10);
-      const plantoesDia=plantoes.filter(p=>p.data===dataStr&&p.horaInicio&&p.horaFim).map(p=>{
+      const todosDoDia=plantoes.filter(p=>p.data===dataStr);
+      const plantoesDia=todosDoDia.filter(p=>p.horaInicio&&p.horaFim).map(p=>{
         const emp=empresas.find(e=>e.nome===p.empresa);
         let ini=minTot(p.horaInicio), fim=minTot(p.horaFim);
         if(fim<=ini)fim=24*60; // corta à meia-noite (simplificação p/ plantões noturnos)
         return {...p,iniMin:ini,fimMin:fim,cor:emp?.cor||C.magenta};
       }).sort((a,b)=>a.iniMin-b.iniMin);
+      const plantoesSemHorario=todosDoDia.filter(p=>!p.horaInicio||!p.horaFim).map(p=>{
+        const emp=empresas.find(e=>e.nome===p.empresa);
+        return {...p,cor:emp?.cor||C.magenta};
+      });
 
       // Calcula períodos livres (gaps) dentro de 00:00–24:00
       const livres=[];
@@ -2214,7 +2219,7 @@ function AppMain({user, onLogout}) {
       });
       if(cursor<24*60-30)livres.push({ini:cursor,fim:24*60});
 
-      return {data:dataStr, diaSemana:d.getDay(), diaNum:d.getDate(), plantoes:plantoesDia, livres};
+      return {data:dataStr, diaSemana:d.getDay(), diaNum:d.getDate(), plantoes:plantoesDia, plantoesSemHorario, livres};
     });
   },[agendaView,agendaInicio,plantoes,empresas]);
 
@@ -3909,6 +3914,16 @@ function AppMain({user, onLogout}) {
                           <div style={{fontSize:9,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,textTransform:"uppercase"}}>{nomeDia}</div>
                           <div style={{width:24,height:24,borderRadius:99,background:hoje?"#E8205F":"transparent",color:hoje?"#fff":"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",margin:"2px auto 0",fontSize:12,fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>{dia.diaNum}</div>
                         </div>
+                        {dia.plantoesSemHorario.length>0&&(
+                          <div style={{padding:"0 2px 4px"}}>
+                            {dia.plantoesSemHorario.map(p=>(
+                              <div key={p.id} title={`${p.empresa}${p.horas?" · "+p.horas+"h":""} (sem horário definido)`}
+                                style={{background:p.cor,opacity:0.85,borderRadius:5,padding:"3px 5px",marginBottom:2,overflow:"hidden"}}>
+                                <div style={{fontSize:8.5,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.empresa}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         <div style={{position:"relative",height:24*26,background:"repeating-linear-gradient(to bottom, transparent, transparent 25px, rgba(0,0,0,0.04) 25px, rgba(0,0,0,0.04) 26px)"}}>
                           {dia.plantoes.map(p=>(
                             <div key={p.id} title={`${p.empresa} · ${p.horaInicio}–${p.horaFim}`}
@@ -3932,6 +3947,14 @@ function AppMain({user, onLogout}) {
                 <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Meus períodos livres</span>
               </div>
               {agendaDias.map(dia=>{
+                if(dia.plantoesSemHorario.length>0){
+                  return (
+                    <div key={dia.data} style={{display:"flex",justifyContent:"space-between",padding:"8px 4px",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
+                      <span style={{fontSize:12.5,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:600,textTransform:"capitalize"}}>{["dom","seg","ter","qua","qui","sex","sáb"][dia.diaSemana]}, {fd(dia.data)}</span>
+                      <span style={{fontSize:11,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>tem plantão sem horário definido</span>
+                    </div>
+                  );
+                }
                 if(dia.plantoes.length===0&&dia.livres.length===1&&dia.livres[0].fim-dia.livres[0].ini>=1439){
                   return (
                     <div key={dia.data} style={{display:"flex",justifyContent:"space-between",padding:"8px 4px",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
