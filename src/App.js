@@ -4008,11 +4008,18 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:13,fontWeight:700,color:C.modalText,fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{monthLabel(fPltLote.mesLote)}</div>
               <button onClick={()=>setFPltLote({...fPltLote,mesLote:shiftMonth(fPltLote.mesLote,1),diasSelecionados:[]})} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,width:28,height:28,cursor:"pointer",fontSize:14,color:C.modalText}}>›</button>
             </div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:5,marginBottom:5}}>
+              {["D","S","T","Q","Q","S","S"].map((d,i)=>(
+                <div key={i} style={{textAlign:"center",fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif"}}>{d}</div>
+              ))}
+            </div>
             <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:5}}>
               {(()=>{
                 const [y,m]=fPltLote.mesLote.split("-").map(Number);
                 const numDias=new Date(y,m,0).getDate();
-                return Array.from({length:numDias},(_,i)=>i+1).map(dia=>{
+                const primeiroDiaSemana=new Date(y,m-1,1).getDay(); // 0=domingo
+                const espacos=Array.from({length:primeiroDiaSemana},(_,i)=><div key={`e${i}`}/>);
+                const dias=Array.from({length:numDias},(_,i)=>i+1).map(dia=>{
                   const sel=fPltLote.diasSelecionados.includes(dia);
                   return (
                     <button key={dia} onClick={()=>{
@@ -4021,6 +4028,7 @@ function AppMain({user, onLogout}) {
                     }} style={{aspectRatio:"1",background:sel?"#E8205F":"rgba(255,255,255,0.7)",color:sel?"#fff":C.modalText,border:`1px solid ${sel?"#E8205F":"rgba(0,0,0,0.1)"}`,borderRadius:8,fontSize:11.5,fontWeight:sel?700:500,cursor:"pointer",fontFamily:"inherit"}}>{dia}</button>
                   );
                 });
+                return [...espacos,...dias];
               })()}
             </div>
           </div>
