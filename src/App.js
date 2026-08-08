@@ -2161,6 +2161,29 @@ function AppMain({user, onLogout}) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[orcamentoEstourado,presenteVsFuturo,saldo,dividas,objetivos,invests,movsDoMes,alocacoes,selMes]);
 
+  const semanasLivres=useMemo(()=>{
+    // Início da semana atual (domingo)
+    const hoje=new Date(today()+"T12:00:00");
+    const inicioSemanaAtual=new Date(hoje);
+    inicioSemanaAtual.setDate(hoje.getDate()-hoje.getDay());
+
+    const semanas=Array.from({length:6},(_,i)=>{
+      const inicio=new Date(inicioSemanaAtual);
+      inicio.setDate(inicioSemanaAtual.getDate()+i*7);
+      const fim=new Date(inicio);
+      fim.setDate(inicio.getDate()+6);
+      const inicioStr=inicio.toISOString().slice(0,10);
+      const fimStr=fim.toISOString().slice(0,10);
+      const plantoesSemana=plantoes.filter(p=>p.data&&p.data>=inicioStr&&p.data<=fimStr&&+p.horas>0);
+      const horas=plantoesSemana.reduce((s,p)=>s+(+p.horas||0),0);
+      return {inicio:inicioStr,fim:fimStr,horas,qtdPlantoes:plantoesSemana.length,ehAtual:i===0};
+    });
+
+    const mediaHoras=semanas.reduce((s,sem)=>s+sem.horas,0)/semanas.length;
+    return semanas.map(sem=>({...sem,temEspaco:mediaHoras>0&&sem.horas<mediaHoras*0.6}));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[plantoes]);
+
   const totalAlocadoMes=alocacoes.filter(a=>monthKey(a.data)===selMes).reduce((s,a)=>s+a.totalRecebido,0);
 
   // Saldo com carry-forward: acumula desde o mês mais antigo com dados,
@@ -2438,6 +2461,32 @@ function AppMain({user, onLogout}) {
                 </div>
               ))}
             </div>
+
+            {/* ── Semanas com espaço livre ── */}
+            {semanasLivres.some(s=>s.horas>0)&&(
+              <div className={CARD} style={{marginBottom:10,padding:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
+                  <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>🗓️</div>
+                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Suas próximas semanas</span>
+                </div>
+                {semanasLivres.map((sem,idx)=>(
+                  <div key={idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 4px",borderBottom:idx<semanasLivres.length-1?"1px solid rgba(0,0,0,0.05)":"none"}}>
+                    <div>
+                      <div style={{fontSize:12.5,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>
+                        {sem.ehAtual?"Essa semana":`${fd(sem.inicio)} – ${fd(sem.fim)}`}
+                      </div>
+                      <div style={{fontSize:10.5,color:sem.temEspaco?"#1A4A6E":"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",marginTop:1}}>
+                        {sem.temEspaco?"💡 Espaço livre — dá pra pegar mais plantão":`${sem.qtdPlantoes} ${sem.qtdPlantoes===1?"plantão":"plantões"} agendado${sem.qtdPlantoes===1?"":"s"}`}
+                      </div>
+                    </div>
+                    <div className="num" style={{fontSize:14,fontWeight:700,color:sem.temEspaco?"#1A4A6E":"#1A1209"}}>{sem.horas}h</div>
+                  </div>
+                ))}
+                <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(0,0,0,0.06)",fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>
+                  Comparando com sua média de horas agendadas nas próximas 6 semanas. Só considera plantões com horas preenchidas.
+                </div>
+              </div>
+            )}
 
             {/* ── Desafio do Pato 100% ── */}
             <div className={CARD} style={{marginBottom:10,padding:16}}>
