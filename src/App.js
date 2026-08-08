@@ -1844,7 +1844,7 @@ function AppMain({user, onLogout}) {
     setEdit(item);setExtra(ex);setModal(m);
     if(m==="mov")   setFMov(item?{...item,subtipo:item.subtipo||"aporte",investId:item.investId||"",formaPagamento:item.formaPagamento||"dinheiro",cartaoId:item.cartaoId||"",parcelado:false,numParcelas:"2"}:{tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:"",formaPagamento:"dinheiro",cartaoId:"",parcelado:false,numParcelas:"2"});
     if(m==="emp")   setFEmp(item?{...item}:{nome:"",contato:"",prazo:"30",cor:"#E8205F"});
-    if(m==="plt")   setFPlt(item?{...item}:{empresa:"",data:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
+    if(m==="plt")   setFPlt(item?{...item,horaInicio:item.horaInicio||"",horaFim:item.horaFim||""}:{empresa:"",data:"",horaInicio:"",horaFim:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
     if(m==="inv")   setFInv(item?{...item,taxaModo:item.taxaModo||"fixo"}:{nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
     if(m==="obj")   setFObj(item?{...item}:{nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
     if(m==="div")   setFDiv(item?{...item}:{credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
@@ -3032,7 +3032,7 @@ function AppMain({user, onLogout}) {
                     <div style={{textAlign:"center",padding:"24px 0",color:"rgba(26,18,9,0.45)",fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>Nenhum plantão em {monthLabel(mk)}</div>
                   ):(
                     <>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
+                      <div style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
                         <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
                         <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Dia</div>
                         <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Valor</div>
@@ -3043,7 +3043,7 @@ function AppMain({user, onLogout}) {
                       {grupo.map((p,idx)=>{
                         const emp=empNome(p.empresa);
                         return (
-                          <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px",gap:6,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.02)":"transparent",borderRadius:8}}>
+                          <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px 26px",gap:6,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.02)":"transparent",borderRadius:8}}>
                             <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}>
                               <div style={{width:8,height:8,borderRadius:99,background:emp.cor||C.magenta,flexShrink:0}}/>
                               <select value={p.empresa} onChange={e=>updatePlantao(p.id,{empresa:e.target.value})}
@@ -3065,6 +3065,7 @@ function AppMain({user, onLogout}) {
                             ):(
                               <button onClick={()=>marcarRecebido(p.id)} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.35)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#E8205F",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%"}}>Receber</button>
                             )}
+                            <button onClick={()=>openM("plt",p)} title="Editar (inclui horário)" style={{background:p.horaInicio?"rgba(45,90,16,0.1)":"rgba(91,163,212,0.12)",border:"none",borderRadius:6,color:p.horaInicio?"#215010":"#1A4A6E",fontSize:12,cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>{p.horaInicio?"🕐":"✎"}</button>
                             <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:14,cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
                           </div>
                         );
