@@ -2048,6 +2048,18 @@ function AppMain({user, onLogout}) {
   // ── Derived ────────────────────────────────────────────────────────────────
   const plantoesEfetivos=useMemo(()=>plantoes.map(p=>({...p,se:getPltStatus(p)})),[plantoes]);
   const movsDoMes=useMemo(()=>movs.filter(m=>monthKey(m.data)===selMes),[movs,selMes]);
+  // Valores distribuídos via "distribuir plantão" para investimento/objetivo/dívida.
+  // Esse dinheiro sai do caixa disponível mas não vira "saída"/"transferência" em movs,
+  // então precisa ser descontado do saldo separadamente por mês.
+  const distribuidoNaoLivrePorMes=useMemo(()=>{
+    const m={};
+    alocacoes.forEach(a=>{
+      const mk=monthKey(a.data);
+      const val=a.itens.filter(it=>it.tipo!=="livre").reduce((s,it)=>s+it.valor,0);
+      m[mk]=(m[mk]||0)+val;
+    });
+    return m;
+  },[alocacoes]);
   const categoriasEstouradas=useMemo(()=>{
     const categoriasD=cats?.despesa||DEFAULT_CATS.despesa;
     const gastosPorCat={};
@@ -2066,10 +2078,10 @@ function AppMain({user, onLogout}) {
       const sai=movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===mk).reduce((s,m)=>s+m.valor,0);
       const tA=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate"&&monthKey(m.data)===mk).reduce((s,m)=>s+m.valor,0);
       const tR=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo==="resgate"&&monthKey(m.data)===mk).reduce((s,m)=>s+m.valor,0);
-      return ent-sai-tA+tR;
+      return ent-sai-tA+tR-(distribuidoNaoLivrePorMes[mk]||0);
     });
     return valores.reduce((s,v)=>s+v,0)/valores.length;
-  },[movs]);
+  },[movs,distribuidoNaoLivrePorMes]);
   const categoriaMaiorGasto=useMemo(()=>{
     const gastosPorCat={};
     movsDoMes.filter(m=>m.tipo==="saida").forEach(m=>{
@@ -2143,7 +2155,7 @@ function AppMain({user, onLogout}) {
     .filter(m=>m.tipo==="transferencia"&&m.data&&monthKey(m.data)<=selMes)
     .reduce((s,m)=>s+m.valor,0);
   // Saldo mensal puro
-  const saldo=entradas-saidas-transferencias;
+  const saldo=entradas-saidas-transferencias-(distribuidoNaoLivrePorMes[selMes]||0);
 
   const desafioPato=useMemo(()=>{
     const temParcelaAtrasada=dividas.some(d=>{
@@ -2237,14 +2249,14 @@ function AppMain({user, onLogout}) {
       const sai=movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
       const tA=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
       const tR=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo==="resgate"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
-      const fim=base+ent-sai-tA+tR;
+      const fim=base+ent-sai-tA+tR-(distribuidoNaoLivrePorMes[mesAtual]||0);
       mesAtual=shiftMonth(mesAtual,1);
       base=saldoMensal[mesAtual]!==undefined?+saldoMensal[mesAtual]:fim;
       guard++;
     }
     return base+saldo;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[selMes,movs,saldoMensal]);
+  },[selMes,movs,saldoMensal,distribuidoNaoLivrePorMes]);
   const estaMorto=saldoFinal<0;
   const totalInvestido=invests.reduce((s,i)=>s+i.aporte,0);
   const totalFundoDivida=dividas.filter(d=>d.tipo==="fundo"&&!d.investId).reduce((s,d)=>s+(+d.pago||0),0);
