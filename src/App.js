@@ -4486,7 +4486,7 @@ function AppMain({user, onLogout}) {
         plantao={movDist?{...movDist,empresa:movDist.descricao,valorTotal:movDist.valor}:null}
         regras={regras} invests={invests} objetivos={objetivos} dividas={dividas}
         onConfirm={alocs=>{
-          confirmarDistribuicao({...movDist,empresa:movDist.descricao,valorTotal:movDist.valor,id:movDist.id+"_dist"},alocs,true);
+          confirmarDistribuicao({...movDist,empresa:movDist.descricao,valorTotal:movDist.valor,id:movDist.id+"_dist",_dataEscolhida:movDist.data},alocs,true);
           setMovDist(null);
         }}/>
       <Modal open={!!recebModal} onClose={()=>setRecebModal(null)} title="Quando você recebeu?">
