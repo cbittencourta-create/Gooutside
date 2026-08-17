@@ -1898,7 +1898,16 @@ function AppMain({user, onLogout}) {
     }
   };
   const saveEmp=()=>{if(!fEmp.nome)return;upsert(empresas,setEmpresas,fEmp);};
-  const savePlt=()=>{if(!fPlt.empresa||!fPlt.data||!fPlt.valorTotal)return;upsert(plantoes,setPlantoes,{...fPlt,valorTotal:+fPlt.valorTotal});};
+  const savePlt=()=>{
+    if(!fPlt.empresa||!fPlt.data||!fPlt.valorTotal)return;
+    const estavaEditando=!!edit;
+    const novoPlt={...fPlt,valorTotal:+fPlt.valorTotal};
+    upsert(plantoes,setPlantoes,novoPlt);
+    if(estavaEditando){
+      const novaChave=monthKey(novoPlt.previsao||novoPlt.data);
+      if(novaChave)setPltMes(novaChave);
+    }
+  };
   const savePltLote=()=>{
     const f=fPltLote;
     if(!f.empresa||!f.valorTotal||f.diasSelecionados.length===0)return;
@@ -3065,12 +3074,22 @@ function AppMain({user, onLogout}) {
                                 {!empresas.find(e=>e.nome===p.empresa)&&<option value={p.empresa}>{p.empresa}</option>}
                               </select>
                             </div>
-                            <input type="date" value={p.data||""} onChange={e=>updatePlantao(p.id,{data:e.target.value})}
+                            <input type="date" value={p.data||""} onChange={e=>{
+                              const novaData=e.target.value;
+                              updatePlantao(p.id,{data:novaData});
+                              const novaChave=monthKey(p.previsao||novaData);
+                              if(novaChave&&novaChave!==pltMes)setPltMes(novaChave);
+                            }}
                               style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 4px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
                             <input type="number" value={p.valorTotal} onChange={e=>updatePlantao(p.id,{valorTotal:+e.target.value})}
                               className="plt-numinput"
                               style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 5px",fontSize:13,color:"#2D5A10",fontWeight:700,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
-                            <input type="date" value={p.previsao||""} onChange={e=>updatePlantao(p.id,{previsao:e.target.value})}
+                            <input type="date" value={p.previsao||""} onChange={e=>{
+                              const novaPrevisao=e.target.value;
+                              updatePlantao(p.id,{previsao:novaPrevisao});
+                              const novaChave=monthKey(novaPrevisao||p.data);
+                              if(novaChave&&novaChave!==pltMes)setPltMes(novaChave);
+                            }}
                               style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 4px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
                             {p.status==="recebido"?(
                               <div style={{background:"rgba(143,196,58,0.2)",border:"1px solid rgba(45,90,16,0.3)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#2D5A10",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}>✓ Recebido</div>
