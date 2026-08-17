@@ -6,7 +6,7 @@ import {
   GraduationCap, Pencil, Circle, FileText, Unlock, Lock, Hourglass, Flower2, Search, Banknote,
   Smartphone, PenLine, TrendingDown, ClipboardList, Sparkles, Sparkle, Trophy, Square, Sun, Dog,
   Gift, FolderOpen, Bot, Key, FileEdit, AlertCircle, GlassWater, User, Building2, Clock,
-  MessageCircle, Bell, Timer, Scissors, Plus, Check,
+  MessageCircle, Bell, Timer, Scissors, Plus, Check, SlidersHorizontal, Eye, EyeOff,
 } from "lucide-react";
 
 // ── Mapa emoji → ícone de linha (lucide) ─────────────────────────────────────
@@ -142,6 +142,21 @@ const DEST_COLORS = {
   fundo_divida: {color:"#FFB347", bg:"rgba(255,179,71,0.15)",  icon:Landmark},
   livre:        {color:"#FFD580", bg:"rgba(255,213,128,0.15)", icon:Wallet},
 };
+
+// Cards da aba Início que o usuário pode escolher mostrar/esconder
+const DASH_CARDS = [
+  {id:"resumo",        label:"Resumo (A Receber / Patrimônio / Dívidas)"},
+  {id:"semanasLivres", label:"Semanas com espaço livre"},
+  {id:"desafioPato",   label:"Desafio do Pato 100%"},
+  {id:"cartoes",       label:"Resumo de cartões"},
+  {id:"graficoGastos", label:"Gráfico de gastos"},
+  {id:"graficoEmpresas", label:"Gráfico por empresa"},
+  {id:"calendario",    label:"Calendário"},
+  {id:"recebimentos",  label:"Próximos recebimentos"},
+  {id:"ranking",       label:"Ranking de empresas"},
+  {id:"alocacao",      label:"Alocação de receita"},
+  {id:"objetivos",     label:"Objetivos"},
+];
 
 const CHART_COLORS = ["#E8205F","#8FC43A","#5BA3D4","#D4A843","#A07BC8","#E05252","#38B2AC","#ED8936","#48BB78"];
 
@@ -1779,6 +1794,7 @@ export default function App() {
 function AppMain({user, onLogout}) {
   const userId = user.id;
   const [bgId,      setBgId]      = useLS("v4_bg",     "tartan", userId);
+  const [dashCards, setDashCards] = useLS("v4_dash_cards", {}, userId);
   const [cats,      setCats]      = useLS("v4_cats",   DEFAULT_CATS, userId);
   const [orcamento, setOrcamento] = useLS("v4_orc",    {}, userId);
   const [movs,      setMovs]      = useLS("v4_movs",   [], userId);
@@ -2392,6 +2408,7 @@ function AppMain({user, onLogout}) {
     {id:"categorias",icon:"☰",label:"Categorias"},
   ];
   const navTo=id=>{setTab(id);setSideOpen(false);};
+  const showCard=id=>dashCards[id]!==false;
 
   const CARD="card"; // className shorthand
   const TXT="#1A1209";
@@ -2553,11 +2570,13 @@ function AppMain({user, onLogout}) {
         {/* ══ DASHBOARD ══ */}
         {tab==="dashboard"&&(
           <div className="fade">
-            <div style={{display:"flex",justifyContent:"flex-end",marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:10}}>
+              <button onClick={()=>setModal("dashCustom")} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 10px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}} title="Escolher o que mostrar"><SlidersHorizontal size={14} strokeWidth={2.2}/></button>
               <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}><Glyph e="📥" size={14}/>Importar Extrato</button>
             </div>
 
             {/* ── Linha 1: Cards resumo ── */}
+            {showCard("resumo")&&(
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
               {[
                 {label:"A Receber", val:totalPendPlant, color:"#FFD580",  bg:"rgba(0,0,0,0.35)", bdr:"rgba(212,168,67,0.5)"},
@@ -2570,9 +2589,10 @@ function AppMain({user, onLogout}) {
                 </div>
               ))}
             </div>
+            )}
 
             {/* ── Semanas com espaço livre ── */}
-            {semanasLivres.some(s=>s.horas>0)&&(
+            {showCard("semanasLivres")&&semanasLivres.some(s=>s.horas>0)&&(
               <div className={CARD} style={{marginBottom:10,padding:16}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                   <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#1A4A6E"}}><CalendarDays size={13} strokeWidth={2.2}/></div>
@@ -2598,6 +2618,7 @@ function AppMain({user, onLogout}) {
             )}
 
             {/* ── Desafio do Pato 100% ── */}
+            {showCard("desafioPato")&&(
             <div className={CARD} style={{marginBottom:10,padding:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <div style={{display:"flex",alignItems:"center",gap:8}}>
@@ -2621,9 +2642,10 @@ function AppMain({user, onLogout}) {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Resumo de Cartões ── */}
-            {cartoes.length>0&&(
+            {showCard("cartoes")&&cartoes.length>0&&(
               <div className={CARD} style={{marginBottom:10,padding:14}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                   <SL style={{marginBottom:0}}>▭ Cartões</SL>
@@ -2645,9 +2667,11 @@ function AppMain({user, onLogout}) {
                 })}
               </div>
             )}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            {(showCard("graficoGastos")||showCard("graficoEmpresas"))&&(
+            <div style={{display:"grid",gridTemplateColumns:(showCard("graficoGastos")&&showCard("graficoEmpresas"))?"1fr 1fr":"1fr",gap:10,marginBottom:10}}>
 
               {/* Pizza gastos */}
+              {showCard("graficoGastos")&&(
               <div className={CARD} style={{padding:14}}>
                 <SL>Gastos</SL>
                 {donutGastos.length>0 ? (
@@ -2678,8 +2702,10 @@ function AppMain({user, onLogout}) {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Pizza receita por empresa */}
+              {showCard("graficoEmpresas")&&(
               <div className={CARD} style={{padding:14}}>
                 <SL>Empresas</SL>
                 {donutEmpresas.length>0 ? (
@@ -2711,13 +2737,19 @@ function AppMain({user, onLogout}) {
                   </div>
                 )}
               </div>
+              )}
             </div>
+            )}
 
             {/* ── Linha 3: Calendário + Próximos recebimentos ── */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
+            {(showCard("calendario")||showCard("recebimentos"))&&(
+            <div style={{display:"grid",gridTemplateColumns:(showCard("calendario")&&showCard("recebimentos"))?"1fr 1fr":"1fr",gap:10,marginBottom:10}}>
+              {showCard("calendario")&&(
               <div className={CARD} style={{padding:12}}>
                 <MultiCalendar plantoes={plantoes} movs={movs} onAddWithDate={(tipo,data)=>{if(tipo==="plantao"){openM("plt");setFPlt(f=>({...f,data}));}else{openM("mov");setFMov(f=>({...f,tipo,data}));}}}/>
               </div>
+              )}
+              {showCard("recebimentos")&&(
               <div className={CARD} style={{padding:14}}>
                 <SL>Recebimentos</SL>
                 {plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)&&p.previsao).length>0 ? (
@@ -2744,9 +2776,12 @@ function AppMain({user, onLogout}) {
                   </div>
                 )}
               </div>
+              )}
             </div>
+            )}
 
             {/* ── Ranking empresas: quem paga mais / quem atrasa mais ── */}
+            {showCard("ranking")&&(
             <div className={CARD} style={{marginBottom:10}}>
               <SL>Ranking de empresas</SL>
               {empAnalise.length>0 ? (
@@ -2772,8 +2807,10 @@ function AppMain({user, onLogout}) {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Alocação ── */}
+            {showCard("alocacao")&&(
             <div className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${C.magenta}`}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <SL>Alocação de receita</SL>
@@ -2825,8 +2862,10 @@ function AppMain({user, onLogout}) {
                 </div>
               )}
             </div>
+            )}
 
             {/* ── Objetivos ── */}
+            {showCard("objetivos")&&(
             <div className={CARD}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <SL>Objetivos</SL>
@@ -2845,6 +2884,7 @@ function AppMain({user, onLogout}) {
                 </div>
               )}
             </div>
+            )}
 
           </div>
         )}
@@ -4574,6 +4614,24 @@ function AppMain({user, onLogout}) {
       </Modal>
       <RegrasModal open={modal==="regras"} onClose={closeM} regras={regras} setRegras={setRegras} invests={invests} objetivos={objetivos} dividas={dividas}/>
       <AlocacaoModal open={!!pltDist} onClose={()=>setPltDist(null)} plantao={pltDist} regras={regras} invests={invests} objetivos={objetivos} dividas={dividas} onConfirm={(alocs)=>confirmarDistribuicao(pltDist,alocs,false)}/>
+      <Modal open={modal==="dashCustom"} onClose={closeM} title="O que mostrar no Início">
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          <div style={{fontSize:12.5,color:C.modalSub,fontFamily:"'DM Sans',sans-serif",marginBottom:4,lineHeight:1.5}}>
+            Escolha quais cards você quer ver na aba Início.
+          </div>
+          {DASH_CARDS.map(dc=>{
+            const visivel=dashCards[dc.id]!==false;
+            return (
+              <button key={dc.id} onClick={()=>setDashCards({...dashCards,[dc.id]:!visivel})}
+                style={{display:"flex",alignItems:"center",gap:10,background:visivel?"rgba(232,32,95,0.06)":"rgba(0,0,0,0.04)",border:`1px solid ${visivel?"rgba(232,32,95,0.2)":"rgba(0,0,0,0.1)"}`,borderRadius:10,padding:"10px 12px",cursor:"pointer",textAlign:"left",fontFamily:"inherit"}}>
+                {visivel?<Eye size={16} strokeWidth={2.2} color={C.magenta}/>:<EyeOff size={16} strokeWidth={2.2} color="rgba(26,18,9,0.4)"/>}
+                <span style={{fontSize:13,fontWeight:600,color:visivel?"#1A1209":"rgba(26,18,9,0.5)",flex:1}}>{dc.label}</span>
+              </button>
+            );
+          })}
+          <Btn variant="secondary" style={{marginTop:6}} onClick={()=>setDashCards({})}>Mostrar todos</Btn>
+        </div>
+      </Modal>
     </div>
   );
 }
