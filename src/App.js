@@ -140,9 +140,9 @@ const addMonths = (ds,n) => { const d=new Date(ds+"T12:00:00"); d.setMonth(d.get
 const daysUntil = ds => ds ? Math.ceil((new Date(ds+"T12:00:00")-new Date())/86400000) : null;
 const isPast = ds => ds && new Date(ds+"T23:59:59")<new Date();
 const monthKey = ds => ds ? ds.slice(0,7) : "";
-const months8 = () => { const a=[]; const d=new Date(); for(let i=0;i<8;i++){const dd=new Date(d);dd.setMonth(dd.getMonth()+i);a.push(dd.toISOString().slice(0,7));} return a; };
 const monthLabel = ym => { const [y,m]=ym.split("-"); return ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"][+m-1]+" "+y.slice(2); };
-const shiftMonth = (ym,n) => { const [y,m]=ym.split("-").map(Number); const d=new Date(y,m-1+n,1); return d.toISOString().slice(0,7); };
+const shiftMonth = (ym,n) => { const [y,m]=ym.split("-").map(Number); const total=y*12+(m-1)+n; const ny=Math.floor(total/12); const nm=(total%12)+1; return `${ny}-${String(nm).padStart(2,"0")}`; };
+const months8 = () => { const base=today().slice(0,7); const a=[]; for(let i=0;i<8;i++)a.push(shiftMonth(base,i)); return a; };
 const uid = () => Date.now()+Math.random().toString(36).slice(2);
 const CATS_OUT = ["🍔 Alimentação","🚗 Transporte","🏠 Moradia","💊 Saúde","🎭 Lazer","👕 Vestuário","📚 Educação","💡 Contas","📦 Outros"];
 const CATS_IN  = ["🏥 Plantão","💼 Consultório","🎓 Ensino","💰 Investimento","🎁 Presente","📦 Outros"];
