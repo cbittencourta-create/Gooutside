@@ -3997,8 +3997,9 @@ function AppMain({user, onLogout}) {
                         {dia.plantoesSemHorario.length>0&&(
                           <div style={{padding:"0 2px 4px"}}>
                             {dia.plantoesSemHorario.map(p=>(
-                              <div key={p.id} title={`${p.empresa}${p.horas?" · "+p.horas+"h":""} (sem horário definido)`}
-                                style={{background:p.cor,opacity:0.85,borderRadius:5,padding:"3px 5px",marginBottom:2,overflow:"hidden"}}>
+                              <div key={p.id} title={`${p.empresa}${p.horas?" · "+p.horas+"h":""} (sem horário definido) — clique para editar`}
+                                onClick={()=>openM("plt",p)}
+                                style={{background:p.cor,opacity:0.85,borderRadius:5,padding:"3px 5px",marginBottom:2,overflow:"hidden",cursor:"pointer"}}>
                                 <div style={{fontSize:8.5,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.empresa}</div>
                               </div>
                             ))}
@@ -4006,8 +4007,9 @@ function AppMain({user, onLogout}) {
                         )}
                         <div style={{position:"relative",height:24*26,background:"repeating-linear-gradient(to bottom, transparent, transparent 25px, rgba(0,0,0,0.04) 25px, rgba(0,0,0,0.04) 26px)"}}>
                           {dia.plantoes.map(p=>(
-                            <div key={p.id} title={`${p.empresa} · ${p.horaInicio}–${p.horaFim}`}
-                              style={{position:"absolute",top:(p.iniMin/1440*24*26),height:Math.max(((p.fimMin-p.iniMin)/1440*24*26),16),left:2,right:2,background:p.cor,opacity:0.88,borderRadius:5,padding:"3px 5px",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.15)"}}>
+                            <div key={p.id} title={`${p.empresa} · ${p.horaInicio}–${p.horaFim} — clique para editar`}
+                              onClick={()=>openM("plt",p)}
+                              style={{position:"absolute",top:(p.iniMin/1440*24*26),height:Math.max(((p.fimMin-p.iniMin)/1440*24*26),16),left:2,right:2,background:p.cor,opacity:0.88,borderRadius:5,padding:"3px 5px",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.15)",cursor:"pointer"}}>
                               <div style={{fontSize:8.5,fontWeight:700,color:"#fff",lineHeight:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.empresa}</div>
                               <div style={{fontSize:7.5,color:"rgba(255,255,255,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{p.horaInicio}–{p.horaFim}</div>
                             </div>
