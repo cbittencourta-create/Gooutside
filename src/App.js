@@ -7,7 +7,12 @@ import {
   Smartphone, PenLine, TrendingDown, ClipboardList, Sparkles, Sparkle, Trophy, Square, Sun, Dog,
   Gift, FolderOpen, Bot, Key, FileEdit, AlertCircle, GlassWater, User, Building2, Clock,
   MessageCircle, Bell, Timer, Scissors, Plus, Check, SlidersHorizontal, Eye, EyeOff,
+  GripVertical, LayoutGrid, X,
 } from "lucide-react";
+import { Responsive as ResponsiveGridLayoutBase, WidthProvider } from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+const ResponsiveGridLayout = WidthProvider(ResponsiveGridLayoutBase);
 
 // ── Mapa emoji → ícone de linha (lucide) ─────────────────────────────────────
 const EMOJI_ICON = {
@@ -158,6 +163,33 @@ const DASH_CARDS = [
   {id:"objetivos",     label:"Objetivos"},
 ];
 
+// Altura padrão (em unidades de linha do grid) de cada card do Início
+const DASH_H = {
+  resumo:4, semanasLivres:8, desafioPato:9, cartoes:8, graficoGastos:9,
+  graficoEmpresas:9, calendario:9, recebimentos:9, ranking:10, alocacao:12, objetivos:8,
+};
+const DASH_BREAKPOINTS = {lg:996, md:768, sm:480};
+const DASH_COLS = {lg:3, md:2, sm:1};
+
+// Gera um layout padrão (empacotamento simples por coluna mais curta) pra um dado nº de colunas
+function genDashLayout(cols, visibleIds) {
+  const colH = Array(cols).fill(0);
+  const layout = [];
+  visibleIds.forEach(id=>{
+    const h = DASH_H[id]||8;
+    if(id==="resumo"){
+      const y = Math.max(...colH);
+      layout.push({i:id, x:0, y, w:cols, h});
+      colH.fill(y+h);
+      return;
+    }
+    let col=0; for(let c=1;c<cols;c++) if(colH[c]<colH[col]) col=c;
+    layout.push({i:id, x:col, y:colH[col], w:1, h});
+    colH[col]+=h;
+  });
+  return layout;
+}
+
 const CHART_COLORS = ["#E8205F","#8FC43A","#5BA3D4","#D4A843","#A07BC8","#E05252","#38B2AC","#ED8936","#48BB78"];
 
 const TARTAN_CSS = `background-color:#C4A96A;background-image:repeating-linear-gradient(0deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px),repeating-linear-gradient(90deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px);background-size:160px 160px;`;
@@ -171,6 +203,8 @@ const BG_OPTIONS = [
   { id:"listras",   label:"Listras",  emoji:"🎀", isCss:true, css:LISTRAS_CSS },
   { id:"sol",       label:"Sol",      emoji:"☀️", isCss:true, css:SOL_STRIPES_CSS },
   { id:"cachorro",  label:"Dálmata",  emoji:"🐶", url:"/wallpapers/bg-cachorro-azul.jpg", contain:true, bgColor:"#2E4C82", position:"left bottom", containSize:"auto 90%" },
+  { id:"veleiro",   label:"Veleiro",  url:"/wallpapers/bg-veleiro-azul.jpg", position:"center" },
+  { id:"peixinhos", label:"Peixinhos", url:"/wallpapers/bg-peixinhos.jpg", position:"center" },
 ];
 
 function bgToStyle(bg) {
@@ -413,6 +447,11 @@ const Btn=({variant="primary",children,...p})=>{
   return <button style={{...styles[variant],borderRadius:12,fontSize:14,fontWeight:600,padding:"11px 16px",cursor:"pointer",transition:"all .15s",fontFamily:"inherit",...p.style}} {...p}>{children}</button>;
 };
 const SL=({children,style:st})=><div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.55)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:10,...st}}>{children}</div>;
+const DashDragHandle=()=>(
+  <div className="dash-drag-handle" style={{position:"absolute",top:6,right:6,width:24,height:24,borderRadius:7,background:"rgba(232,32,95,0.12)",border:"1px solid rgba(232,32,95,0.3)",display:"flex",alignItems:"center",justifyContent:"center",color:"#C4185A",cursor:"grab",zIndex:5}}>
+    <GripVertical size={13} strokeWidth={2.2}/>
+  </div>
+);
 
 
 // ── Alocação Modal ────────────────────────────────────────────────────────────
@@ -1795,6 +1834,8 @@ function AppMain({user, onLogout}) {
   const userId = user.id;
   const [bgId,      setBgId]      = useLS("v4_bg",     "tartan", userId);
   const [dashCards, setDashCards] = useLS("v4_dash_cards", {}, userId);
+  const [dashLayouts, setDashLayouts] = useLS("v4_dash_layout", {}, userId);
+  const [dashEditMode, setDashEditMode] = useState(false);
   const [cats,      setCats]      = useLS("v4_cats",   DEFAULT_CATS, userId);
   const [orcamento, setOrcamento] = useLS("v4_orc",    {}, userId);
   const [movs,      setMovs]      = useLS("v4_movs",   [], userId);
@@ -2409,6 +2450,13 @@ function AppMain({user, onLogout}) {
   ];
   const navTo=id=>{setTab(id);setSideOpen(false);};
   const showCard=id=>dashCards[id]!==false;
+  const visibleDashIds=DASH_CARDS.filter(dc=>showCard(dc.id)&&!(dc.id==="cartoes"&&cartoes.length===0)).map(dc=>dc.id);
+  const dashLayoutsResolved={};
+  Object.entries(DASH_COLS).forEach(([bp,cols])=>{
+    const stored=dashLayouts[bp]||[];
+    const base=genDashLayout(cols,visibleDashIds);
+    dashLayoutsResolved[bp]=base.map(item=>stored.find(it=>it.i===item.i)||item);
+  });
 
   const CARD="card"; // className shorthand
   const TXT="#1A1209";
@@ -2571,29 +2619,57 @@ function AppMain({user, onLogout}) {
         {tab==="dashboard"&&(
           <div className="fade">
             <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:10}}>
+              <button onClick={()=>setDashEditMode(!dashEditMode)} style={{background:dashEditMode?C.magenta:"rgba(255,255,255,0.88)",border:`1px solid ${dashEditMode?C.magenta:"rgba(0,0,0,0.12)"}`,borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:dashEditMode?"#fff":"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                {dashEditMode?<Check size={14} strokeWidth={2.5}/>:<LayoutGrid size={14} strokeWidth={2.2}/>}
+                {dashEditMode?"Concluir":"Reorganizar"}
+              </button>
               <button onClick={()=>setModal("dashCustom")} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 10px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}} title="Escolher o que mostrar"><SlidersHorizontal size={14} strokeWidth={2.2}/></button>
               <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}><Glyph e="📥" size={14}/>Importar Extrato</button>
             </div>
 
-            {/* ── Linha 1: Cards resumo ── */}
-            {showCard("resumo")&&(
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:10}}>
-              {[
-                {label:"A Receber", val:totalPendPlant, color:"#FFD580",  bg:"rgba(0,0,0,0.35)", bdr:"rgba(212,168,67,0.5)"},
-                {label:"Patrimônio", val:totalPatrimonio, color:"#2D5A10", bg:"rgba(143,196,58,0.18)", bdr:"rgba(143,196,58,0.4)"},
-                {label:"Em Dívidas", val:totalDividas,   color:"#8B1A1A",  bg:"rgba(224,82,82,0.15)", bdr:"rgba(224,82,82,0.4)"},
-              ].map(c=>(
-                <div key={c.label} className={CARD} style={{padding:"10px 10px",background:c.bg,border:`1px solid ${c.bdr}`,textAlign:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",borderRadius:12}}>
-                  <div style={{fontSize:8,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:c.color,fontFamily:"'DM Sans',sans-serif",marginBottom:3,opacity:0.8}}>{c.label}</div>
-                  <div className="num" style={{fontSize:14,fontWeight:700,color:c.color}}>{R(c.val)}</div>
-                </div>
-              ))}
-            </div>
+            {dashEditMode&&(
+              <div style={{background:"rgba(232,32,95,0.08)",border:"1px solid rgba(232,32,95,0.25)",borderRadius:10,padding:"9px 13px",marginBottom:10,fontSize:12,color:"#8B1043",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>
+                Arraste pelo <GripVertical size={11} strokeWidth={2.2} style={{display:"inline-block",verticalAlign:"-2px",margin:"0 2px"}}/> pra mover, e puxe o canto inferior direito de cada card pra redimensionar.
+              </div>
             )}
 
-            {/* ── Semanas com espaço livre ── */}
-            {showCard("semanasLivres")&&semanasLivres.some(s=>s.horas>0)&&(
-              <div className={CARD} style={{marginBottom:10,padding:16}}>
+            <ResponsiveGridLayout
+              layouts={dashLayoutsResolved}
+              breakpoints={DASH_BREAKPOINTS}
+              cols={DASH_COLS}
+              rowHeight={26}
+              margin={[10,10]}
+              isDraggable={dashEditMode}
+              isResizable={dashEditMode}
+              draggableHandle=".dash-drag-handle"
+              onLayoutChange={(cur,all)=>setDashLayouts(all)}
+            >
+
+              {/* ── Linha 1: Cards resumo ── */}
+              {showCard("resumo")&&(
+              <div key="resumo" style={{height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,height:"100%"}}>
+                  {[
+                    {label:"A Receber", val:totalPendPlant, color:"#FFD580",  bg:"rgba(0,0,0,0.35)", bdr:"rgba(212,168,67,0.5)"},
+                    {label:"Patrimônio", val:totalPatrimonio, color:"#2D5A10", bg:"rgba(143,196,58,0.18)", bdr:"rgba(143,196,58,0.4)"},
+                    {label:"Em Dívidas", val:totalDividas,   color:"#8B1A1A",  bg:"rgba(224,82,82,0.15)", bdr:"rgba(224,82,82,0.4)"},
+                  ].map(c=>(
+                    <div key={c.label} className={CARD} style={{padding:"10px 10px",background:c.bg,border:`1px solid ${c.bdr}`,textAlign:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",borderRadius:12}}>
+                      <div style={{fontSize:8,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:c.color,fontFamily:"'DM Sans',sans-serif",marginBottom:3,opacity:0.8}}>{c.label}</div>
+                      <div className="num" style={{fontSize:14,fontWeight:700,color:c.color}}>{R(c.val)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              )}
+
+              {/* ── Semanas com espaço livre ── */}
+              {showCard("semanasLivres")&&(
+              <div key="semanasLivres" className={CARD} style={{padding:16,height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
+                {semanasLivres.some(s=>s.horas>0)?(
+                <>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                   <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#1A4A6E"}}><CalendarDays size={13} strokeWidth={2.2}/></div>
                   <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Suas próximas semanas</span>
@@ -2614,39 +2690,48 @@ function AppMain({user, onLogout}) {
                 <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(0,0,0,0.06)",fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>
                   Comparando com sua média de horas agendadas nas próximas 6 semanas. Só considera plantões com horas preenchidas.
                 </div>
-              </div>
-            )}
-
-            {/* ── Desafio do Pato 100% ── */}
-            {showCard("desafioPato")&&(
-            <div className={CARD} style={{marginBottom:10,padding:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                  <div style={{width:26,height:26,borderRadius:8,background:"rgba(255,196,32,0.2)",display:"flex",alignItems:"center",justifyContent:"center",color:"#8B6000"}}><Flower2 size={13} strokeWidth={2.2}/></div>
-                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Desafio do Pato 100%</span>
-                </div>
-                <span style={{fontSize:12,fontWeight:700,color:desafioPato.completos===desafioPato.total?"#215010":"#8B6000",fontFamily:"'DM Sans',sans-serif"}}>{desafioPato.completos} de {desafioPato.total}</span>
-              </div>
-              <Bar value={desafioPato.completos} max={desafioPato.total} color={desafioPato.completos===desafioPato.total?"#2D9A1A":"#FFC420"} h={7}/>
-              <div style={{marginTop:12}}>
-                {desafioPato.itens.map((item,idx)=>(
-                  <div key={idx} style={{display:"flex",alignItems:"center",gap:9,padding:"6px 0",borderBottom:idx<desafioPato.itens.length-1?"1px solid rgba(0,0,0,0.05)":"none"}}>
-                    <div style={{width:20,height:20,borderRadius:6,background:item.feito?"rgba(45,90,16,0.15)":"rgba(0,0,0,0.06)",border:`1px solid ${item.feito?"rgba(45,90,16,0.35)":"rgba(0,0,0,0.12)"}`,display:"flex",alignItems:"center",justifyContent:"center",color:"#215010",flexShrink:0}}>{item.feito&&<Check size={12} strokeWidth={3}/>}</div>
-                    <span style={{fontSize:12.5,color:item.feito?"#215010":"#5A4A3A",fontFamily:"'DM Sans',sans-serif",fontWeight:item.feito?600:500}}>{item.label}</span>
+                </>
+                ):(
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",height:"100%",gap:6,color:"rgba(26,18,9,0.4)"}}>
+                    <CalendarDays size={22} strokeWidth={1.6} style={{opacity:.4}}/>
+                    <div style={{fontSize:11,fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>Nenhuma semana com espaço livre no momento</div>
                   </div>
-                ))}
+                )}
               </div>
-              {desafioPato.completos===desafioPato.total&&(
-                <div style={{marginTop:10,background:"rgba(255,196,32,0.15)",border:"1px solid rgba(255,196,32,0.4)",borderRadius:10,padding:"9px 12px",fontSize:12,color:"#8B6000",fontFamily:"'DM Sans',sans-serif",fontWeight:600,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                  <PartyPopper size={13} strokeWidth={2.2}/>Desafio completo esse mês! Seu pato agradece.
-                </div>
               )}
-            </div>
-            )}
 
-            {/* ── Resumo de Cartões ── */}
-            {showCard("cartoes")&&cartoes.length>0&&(
-              <div className={CARD} style={{marginBottom:10,padding:14}}>
+              {/* ── Desafio do Pato 100% ── */}
+              {showCard("desafioPato")&&(
+              <div key="desafioPato" className={CARD} style={{padding:16,height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <div style={{width:26,height:26,borderRadius:8,background:"rgba(255,196,32,0.2)",display:"flex",alignItems:"center",justifyContent:"center",color:"#8B6000"}}><Flower2 size={13} strokeWidth={2.2}/></div>
+                    <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Desafio do Pato 100%</span>
+                  </div>
+                  <span style={{fontSize:12,fontWeight:700,color:desafioPato.completos===desafioPato.total?"#215010":"#8B6000",fontFamily:"'DM Sans',sans-serif"}}>{desafioPato.completos} de {desafioPato.total}</span>
+                </div>
+                <Bar value={desafioPato.completos} max={desafioPato.total} color={desafioPato.completos===desafioPato.total?"#2D9A1A":"#FFC420"} h={7}/>
+                <div style={{marginTop:12}}>
+                  {desafioPato.itens.map((item,idx)=>(
+                    <div key={idx} style={{display:"flex",alignItems:"center",gap:9,padding:"6px 0",borderBottom:idx<desafioPato.itens.length-1?"1px solid rgba(0,0,0,0.05)":"none"}}>
+                      <div style={{width:20,height:20,borderRadius:6,background:item.feito?"rgba(45,90,16,0.15)":"rgba(0,0,0,0.06)",border:`1px solid ${item.feito?"rgba(45,90,16,0.35)":"rgba(0,0,0,0.12)"}`,display:"flex",alignItems:"center",justifyContent:"center",color:"#215010",flexShrink:0}}>{item.feito&&<Check size={12} strokeWidth={3}/>}</div>
+                      <span style={{fontSize:12.5,color:item.feito?"#215010":"#5A4A3A",fontFamily:"'DM Sans',sans-serif",fontWeight:item.feito?600:500}}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+                {desafioPato.completos===desafioPato.total&&(
+                  <div style={{marginTop:10,background:"rgba(255,196,32,0.15)",border:"1px solid rgba(255,196,32,0.4)",borderRadius:10,padding:"9px 12px",fontSize:12,color:"#8B6000",fontFamily:"'DM Sans',sans-serif",fontWeight:600,textAlign:"center",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                    <PartyPopper size={13} strokeWidth={2.2}/>Desafio completo esse mês! Seu pato agradece.
+                  </div>
+                )}
+              </div>
+              )}
+
+              {/* ── Resumo de Cartões ── */}
+              {showCard("cartoes")&&cartoes.length>0&&(
+              <div key="cartoes" className={CARD} style={{padding:14,height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                   <SL style={{marginBottom:0}}>▭ Cartões</SL>
                   <button onClick={()=>navTo("cartoes")} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Ver todos</button>
@@ -2666,13 +2751,12 @@ function AppMain({user, onLogout}) {
                   );
                 })}
               </div>
-            )}
-            {(showCard("graficoGastos")||showCard("graficoEmpresas"))&&(
-            <div style={{display:"grid",gridTemplateColumns:(showCard("graficoGastos")&&showCard("graficoEmpresas"))?"1fr 1fr":"1fr",gap:10,marginBottom:10}}>
+              )}
 
               {/* Pizza gastos */}
               {showCard("graficoGastos")&&(
-              <div className={CARD} style={{padding:14}}>
+              <div key="graficoGastos" className={CARD} style={{padding:14,height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
                 <SL>Gastos</SL>
                 {donutGastos.length>0 ? (
                   <>
@@ -2706,7 +2790,8 @@ function AppMain({user, onLogout}) {
 
               {/* Pizza receita por empresa */}
               {showCard("graficoEmpresas")&&(
-              <div className={CARD} style={{padding:14}}>
+              <div key="graficoEmpresas" className={CARD} style={{padding:14,height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
                 <SL>Empresas</SL>
                 {donutEmpresas.length>0 ? (
                   <>
@@ -2738,19 +2823,19 @@ function AppMain({user, onLogout}) {
                 )}
               </div>
               )}
-            </div>
-            )}
 
-            {/* ── Linha 3: Calendário + Próximos recebimentos ── */}
-            {(showCard("calendario")||showCard("recebimentos"))&&(
-            <div style={{display:"grid",gridTemplateColumns:(showCard("calendario")&&showCard("recebimentos"))?"1fr 1fr":"1fr",gap:10,marginBottom:10}}>
+              {/* Calendário */}
               {showCard("calendario")&&(
-              <div className={CARD} style={{padding:12}}>
+              <div key="calendario" className={CARD} style={{padding:12,height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
                 <MultiCalendar plantoes={plantoes} movs={movs} onAddWithDate={(tipo,data)=>{if(tipo==="plantao"){openM("plt");setFPlt(f=>({...f,data}));}else{openM("mov");setFMov(f=>({...f,tipo,data}));}}}/>
               </div>
               )}
+
+              {/* Próximos recebimentos */}
               {showCard("recebimentos")&&(
-              <div className={CARD} style={{padding:14}}>
+              <div key="recebimentos" className={CARD} style={{padding:14,height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
                 <SL>Recebimentos</SL>
                 {plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)&&p.previsao).length>0 ? (
                   plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)&&p.previsao).sort((a,b)=>a.previsao.localeCompare(b.previsao)).slice(0,4).map(p=>{
@@ -2777,114 +2862,117 @@ function AppMain({user, onLogout}) {
                 )}
               </div>
               )}
-            </div>
-            )}
 
-            {/* ── Ranking empresas: quem paga mais / quem atrasa mais ── */}
-            {showCard("ranking")&&(
-            <div className={CARD} style={{marginBottom:10}}>
-              <SL>Ranking de empresas</SL>
-              {empAnalise.length>0 ? (
-                <>
-                  <div style={{marginBottom:12}}>
-                    <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",letterSpacing:".05em",marginBottom:7}}><Wallet size={10} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-2px"}}/>MAIOR RECEITA</div>
-                    {empAnalise.slice(0,3).map((e,i)=><HBar key={e.nome} label={e.nome} value={e.total} max={empAnalise[0].total} color={e.cor||CHART_COLORS[i]}/>)}
-                  </div>
-                  {empAnalise.some(e=>e.atrasos>0)&&(
-                    <>
-                      <div style={{height:1,background:"rgba(0,0,0,0.08)",marginBottom:12}}/>
-                      <div>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",letterSpacing:".05em",marginBottom:7}}><Glyph e="⚠" size={10} style={{marginRight:3}}/>MAIS ATRASOS</div>
-                        {[...empAnalise].filter(e=>e.atrasos>0).sort((a,b)=>b.atrasos-a.atrasos).slice(0,3).map(e=><HBar key={e.nome} label={e.nome} value={e.atrasos} max={Math.max(...empAnalise.map(x=>x.atrasos))} color={C.red} sub={`${e.atrasos}x`}/>)}
-                      </div>
-                    </>
-                  )}
-                </>
-              ):(
-                <div style={{textAlign:"center",padding:"16px 0",color:"rgba(26,18,9,0.55)",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>
-                  <Cross size={24} strokeWidth={1.6} style={{display:"block",marginBottom:6,opacity:.4}}/>
-                  Cadastre plantões para ver o ranking
-                </div>
-              )}
-            </div>
-            )}
-
-            {/* ── Alocação ── */}
-            {showCard("alocacao")&&(
-            <div className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${C.magenta}`}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <SL>Alocação de receita</SL>
-                <div style={{display:"flex",gap:6}}>
-                  {alocacoes.length>0&&<button onClick={()=>setAlocExpanded(!alocExpanded)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{alocExpanded?"▲ Fechar":"▼ Extrato"}</button>}
-                  <button onClick={()=>setModal("regras")} style={{background:"#E8205F",border:"none",borderRadius:8,color:"#fff",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Settings size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Regras</button>
-                </div>
-              </div>
-              {alocacoes.length>0 ? (
-                <>
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:10}}>
-                    {Object.entries(resumoAloc).filter(([,v])=>v>0).map(([tipo,val])=>{const dc=DEST_COLORS[tipo];return <div key={tipo} style={{background:dc.bg,border:`1px solid ${dc.color}30`,borderRadius:10,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:700,color:dc.color,fontFamily:"'DM Sans',sans-serif",marginBottom:2,display:"flex",alignItems:"center",gap:4}}><dc.icon size={11} strokeWidth={2.2}/>{tipo.toUpperCase()}</div><div className="num" style={{fontSize:13,fontWeight:700,color:dc.color}}>{R(val)}</div></div>;})}
-                  </div>
-                  {alocExpanded ? (
-                    <div style={{borderTop:"1px solid rgba(0,0,0,0.07)",paddingTop:10}}>
-                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Extrato de distribuições</div>
-                      {alocacoes.map(a=>(
-                        <div key={a.id} style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:8,border:"1px solid rgba(0,0,0,0.06)"}}>
-                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                            <div><div style={{fontSize:12,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{a.empresa}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>{a.data?new Date(a.data+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}):"—"}</div></div>
-                            <div className="num" style={{fontSize:13,fontWeight:700,color:"#2D5A10"}}>{R(a.totalRecebido)}</div>
-                          </div>
-                          {a.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;const inv=it.tipo==="investimento"?invests.find(x=>x.id===it.destinoId):null;return(
-                            <div key={j} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderTop:"1px solid rgba(0,0,0,0.04)"}}>
-                              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                                <span style={{color:dc.color,display:"flex"}}><dc.icon size={13} strokeWidth={2.2}/></span>
-                                <div><div style={{fontSize:11,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{it.destinoNome}</div>
-                                <div style={{fontSize:9,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif"}}>{it.banco&&<span>{it.banco}</span>}{inv?.taxa&&<span style={{color:"#2D5A10",fontWeight:700}}> · {inv.taxa}% a.a.</span>}{!it.banco&&!inv?.taxa&&<span>{it.tipo}</span>}</div></div>
-                              </div>
-                              <div className="num" style={{fontSize:12,fontWeight:700,color:dc.color}}>{R(it.valor)}</div>
-                            </div>
-                          );})}
-                        </div>
-                      ))}
+              {/* ── Ranking empresas: quem paga mais / quem atrasa mais ── */}
+              {showCard("ranking")&&(
+              <div key="ranking" className={CARD} style={{height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
+                <SL>Ranking de empresas</SL>
+                {empAnalise.length>0 ? (
+                  <>
+                    <div style={{marginBottom:12}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",letterSpacing:".05em",marginBottom:7}}><Wallet size={10} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-2px"}}/>MAIOR RECEITA</div>
+                      {empAnalise.slice(0,3).map((e,i)=><HBar key={e.nome} label={e.nome} value={e.total} max={empAnalise[0].total} color={e.cor||CHART_COLORS[i]}/>)}
                     </div>
-                  ) : (
-                    alocacoes.slice(0,1).map(a=>(
-                      <div key={a.id} style={{background:"rgba(0,0,0,0.03)",borderRadius:10,border:"1px solid rgba(0,0,0,0.06)",padding:"9px 11px"}}>
-                        <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:"#1A1209"}}>{a.empresa}</span><span className="num" style={{fontSize:12,fontWeight:700,color:"#2D5A10"}}>{R(a.totalRecebido)}</span></div>
-                        {a.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;return <div key={j} style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:3}}><dc.icon size={11} strokeWidth={2.2}/>{it.destinoNome}</span><span className="num" style={{fontSize:10,fontWeight:700,color:dc.color}}>{R(it.valor)}</span></div>;})}
-                      </div>
-                    ))
-                  )}
-                </>
-              ):(
-                <div style={{textAlign:"center",padding:"10px 0",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",fontSize:12}}>
-                  Sem distribuições ainda —{" "}
-                  <button onClick={()=>setModal("regras")} style={{background:"none",border:"none",color:C.magenta,fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>configurar regras →</button>
-                </div>
-              )}
-            </div>
-            )}
-
-            {/* ── Objetivos ── */}
-            {showCard("objetivos")&&(
-            <div className={CARD}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <SL>Objetivos</SL>
-                <button onClick={()=>navTo("objetivos")} style={{background:"rgba(0,0,0,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:600,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Ver todos</button>
+                    {empAnalise.some(e=>e.atrasos>0)&&(
+                      <>
+                        <div style={{height:1,background:"rgba(0,0,0,0.08)",marginBottom:12}}/>
+                        <div>
+                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",letterSpacing:".05em",marginBottom:7}}><Glyph e="⚠" size={10} style={{marginRight:3}}/>MAIS ATRASOS</div>
+                          {[...empAnalise].filter(e=>e.atrasos>0).sort((a,b)=>b.atrasos-a.atrasos).slice(0,3).map(e=><HBar key={e.nome} label={e.nome} value={e.atrasos} max={Math.max(...empAnalise.map(x=>x.atrasos))} color={C.red} sub={`${e.atrasos}x`}/>)}
+                        </div>
+                      </>
+                    )}
+                  </>
+                ):(
+                  <div style={{textAlign:"center",padding:"16px 0",color:"rgba(26,18,9,0.55)",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>
+                    <Cross size={24} strokeWidth={1.6} style={{display:"block",marginBottom:6,opacity:.4}}/>
+                    Cadastre plantões para ver o ranking
+                  </div>
+                )}
               </div>
-              {objetivos.length>0 ? objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;
-                return <div key={o.id} style={{marginBottom:10}}>
-                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{o.nome}</span><span className="num" style={{fontSize:10,color:"rgba(26,18,9,0.85)"}}>{pct.toFixed(0)}%</span></div>
-                  <Bar value={o.atual} max={o.meta} color={o.cor} h={5}/>
-                  <div style={{fontSize:9,color:"rgba(26,18,9,0.55)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>falta {R(o.meta-o.atual)}</div>
-                </div>;
-              }):(
-                <div style={{textAlign:"center",padding:"14px 0",color:"rgba(26,18,9,0.55)",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>
-                  <Target size={22} strokeWidth={1.6} style={{display:"block",marginBottom:6,opacity:.4}}/>
-                  <button onClick={()=>navTo("objetivos")} style={{background:"none",border:"none",color:C.magenta,fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>Criar primeiro objetivo →</button>
-                </div>
               )}
-            </div>
-            )}
+
+              {/* ── Alocação ── */}
+              {showCard("alocacao")&&(
+              <div key="alocacao" className={CARD} style={{borderLeft:`3px solid ${C.magenta}`,height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <SL>Alocação de receita</SL>
+                  <div style={{display:"flex",gap:6}}>
+                    {alocacoes.length>0&&<button onClick={()=>setAlocExpanded(!alocExpanded)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{alocExpanded?"▲ Fechar":"▼ Extrato"}</button>}
+                    <button onClick={()=>setModal("regras")} style={{background:"#E8205F",border:"none",borderRadius:8,color:"#fff",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Settings size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Regras</button>
+                  </div>
+                </div>
+                {alocacoes.length>0 ? (
+                  <>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7,marginBottom:10}}>
+                      {Object.entries(resumoAloc).filter(([,v])=>v>0).map(([tipo,val])=>{const dc=DEST_COLORS[tipo];return <div key={tipo} style={{background:dc.bg,border:`1px solid ${dc.color}30`,borderRadius:10,padding:"8px 10px"}}><div style={{fontSize:9,fontWeight:700,color:dc.color,fontFamily:"'DM Sans',sans-serif",marginBottom:2,display:"flex",alignItems:"center",gap:4}}><dc.icon size={11} strokeWidth={2.2}/>{tipo.toUpperCase()}</div><div className="num" style={{fontSize:13,fontWeight:700,color:dc.color}}>{R(val)}</div></div>;})}
+                    </div>
+                    {alocExpanded ? (
+                      <div style={{borderTop:"1px solid rgba(0,0,0,0.07)",paddingTop:10}}>
+                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Extrato de distribuições</div>
+                        {alocacoes.map(a=>(
+                          <div key={a.id} style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:8,border:"1px solid rgba(0,0,0,0.06)"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                              <div><div style={{fontSize:12,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{a.empresa}</div><div style={{fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>{a.data?new Date(a.data+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}):"—"}</div></div>
+                              <div className="num" style={{fontSize:13,fontWeight:700,color:"#2D5A10"}}>{R(a.totalRecebido)}</div>
+                            </div>
+                            {a.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;const inv=it.tipo==="investimento"?invests.find(x=>x.id===it.destinoId):null;return(
+                              <div key={j} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"5px 0",borderTop:"1px solid rgba(0,0,0,0.04)"}}>
+                                <div style={{display:"flex",alignItems:"center",gap:6}}>
+                                  <span style={{color:dc.color,display:"flex"}}><dc.icon size={13} strokeWidth={2.2}/></span>
+                                  <div><div style={{fontSize:11,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{it.destinoNome}</div>
+                                  <div style={{fontSize:9,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif"}}>{it.banco&&<span>{it.banco}</span>}{inv?.taxa&&<span style={{color:"#2D5A10",fontWeight:700}}> · {inv.taxa}% a.a.</span>}{!it.banco&&!inv?.taxa&&<span>{it.tipo}</span>}</div></div>
+                                </div>
+                                <div className="num" style={{fontSize:12,fontWeight:700,color:dc.color}}>{R(it.valor)}</div>
+                              </div>
+                            );})}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      alocacoes.slice(0,1).map(a=>(
+                        <div key={a.id} style={{background:"rgba(0,0,0,0.03)",borderRadius:10,border:"1px solid rgba(0,0,0,0.06)",padding:"9px 11px"}}>
+                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}><span style={{fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:"#1A1209"}}>{a.empresa}</span><span className="num" style={{fontSize:12,fontWeight:700,color:"#2D5A10"}}>{R(a.totalRecebido)}</span></div>
+                          {a.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;return <div key={j} style={{display:"flex",justifyContent:"space-between",marginBottom:2}}><span style={{fontSize:10,color:"rgba(26,18,9,0.7)",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:3}}><dc.icon size={11} strokeWidth={2.2}/>{it.destinoNome}</span><span className="num" style={{fontSize:10,fontWeight:700,color:dc.color}}>{R(it.valor)}</span></div>;})}
+                        </div>
+                      ))
+                    )}
+                  </>
+                ):(
+                  <div style={{textAlign:"center",padding:"10px 0",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",fontSize:12}}>
+                    Sem distribuições ainda —{" "}
+                    <button onClick={()=>setModal("regras")} style={{background:"none",border:"none",color:C.magenta,fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>configurar regras →</button>
+                  </div>
+                )}
+              </div>
+              )}
+
+              {/* ── Objetivos ── */}
+              {showCard("objetivos")&&(
+              <div key="objetivos" className={CARD} style={{height:"100%",overflow:"auto",position:"relative"}}>
+                {dashEditMode&&<DashDragHandle/>}
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <SL>Objetivos</SL>
+                  <button onClick={()=>navTo("objetivos")} style={{background:"rgba(0,0,0,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:600,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Ver todos</button>
+                </div>
+                {objetivos.length>0 ? objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;
+                  return <div key={o.id} style={{marginBottom:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:12,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{o.nome}</span><span className="num" style={{fontSize:10,color:"rgba(26,18,9,0.85)"}}>{pct.toFixed(0)}%</span></div>
+                    <Bar value={o.atual} max={o.meta} color={o.cor} h={5}/>
+                    <div style={{fontSize:9,color:"rgba(26,18,9,0.55)",marginTop:2,fontFamily:"'DM Sans',sans-serif"}}>falta {R(o.meta-o.atual)}</div>
+                  </div>;
+                }):(
+                  <div style={{textAlign:"center",padding:"14px 0",color:"rgba(26,18,9,0.55)",fontSize:12,fontFamily:"'DM Sans',sans-serif"}}>
+                    <Target size={22} strokeWidth={1.6} style={{display:"block",marginBottom:6,opacity:.4}}/>
+                    <button onClick={()=>navTo("objetivos")} style={{background:"none",border:"none",color:C.magenta,fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>Criar primeiro objetivo →</button>
+                  </div>
+                )}
+              </div>
+              )}
+
+            </ResponsiveGridLayout>
 
           </div>
         )}
