@@ -4449,12 +4449,6 @@ function AppMain({user, onLogout}) {
           <Inp label="Saldo inicial deste mês (R$)" type="text" inputMode="decimal" value={editSaldoMes||""}
             onChange={e=>setEditSaldoMes(e.target.value.replace(",","."))}/>
           <Btn variant="primary" onClick={()=>{setSaldoMensal({...saldoMensal,[selMes]:+editSaldoMes||0});setEditSaldoMes(null);}}>✓ Salvar ajuste</Btn>
-          {Object.keys(saldoMensal).length>0&&(
-            <>
-              <div style={{fontSize:11,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>ou, se o saldo está muito errado em algum mês antigo:</div>
-              <Btn variant="danger" onClick={()=>{setSaldoMensal({});setEditSaldoMes(null);}}>🗑 Zerar todos os ajustes de saldo</Btn>
-            </>
-          )}
         </div>
       </Modal>
       <Modal open={mortoReportOpen} onClose={()=>setMortoReportOpen(false)} title="💀 Relatório do mês">
