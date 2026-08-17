@@ -1838,13 +1838,21 @@ function AppMain({user, onLogout}) {
   const [fPgto,setFPgto]=useState({valor:"",data:today()});
 
   useEffect(()=>{const h=parseFloat(fPlt.horas),v=parseFloat(fPlt.valorH);if(h&&v)setFPlt(f=>({...f,valorTotal:(h*v).toFixed(2)}));},[fPlt.horas,fPlt.valorH]);
-  useEffect(()=>{if(fPlt.data&&fPlt.prazo)setFPlt(f=>({...f,previsao:addDays(f.data,parseInt(f.prazo)||30)}));},[fPlt.data,fPlt.prazo]);
+  const pularRecalcPrevisao=useRef(false);
+  useEffect(()=>{
+    if(pularRecalcPrevisao.current){pularRecalcPrevisao.current=false;return;}
+    if(fPlt.data&&fPlt.prazo)setFPlt(f=>({...f,previsao:addDays(f.data,parseInt(f.prazo)||30)}));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[fPlt.data,fPlt.prazo]);
 
   const openM=(m,item=null,ex=null)=>{
     setEdit(item);setExtra(ex);setModal(m);
     if(m==="mov")   setFMov(item?{...item,subtipo:item.subtipo||"aporte",investId:item.investId||"",formaPagamento:item.formaPagamento||"dinheiro",cartaoId:item.cartaoId||"",parcelado:false,numParcelas:"2"}:{tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:"",formaPagamento:"dinheiro",cartaoId:"",parcelado:false,numParcelas:"2"});
     if(m==="emp")   setFEmp(item?{...item}:{nome:"",contato:"",prazo:"30",cor:"#E8205F"});
-    if(m==="plt")   setFPlt(item?{...item,horaInicio:item.horaInicio||"",horaFim:item.horaFim||""}:{empresa:"",data:"",horaInicio:"",horaFim:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
+    if(m==="plt"){
+      if(item)pularRecalcPrevisao.current=true;
+      setFPlt(item?{...item,horaInicio:item.horaInicio||"",horaFim:item.horaFim||""}:{empresa:"",data:"",horaInicio:"",horaFim:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
+    }
     if(m==="inv")   setFInv(item?{...item,taxaModo:item.taxaModo||"fixo"}:{nome:"",tipo:"CDB",banco:"",aporte:"",taxa:"",taxaModo:"fixo",percCDI:"",data:today(),obs:""});
     if(m==="obj")   setFObj(item?{...item}:{nome:"",meta:"",atual:"0",prazo:"",cor:C.green,obs:"",investId:""});
     if(m==="div")   setFDiv(item?{...item}:{credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
