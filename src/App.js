@@ -2317,6 +2317,29 @@ function AppMain({user, onLogout}) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[plantoes]);
 
+  // Horas trabalhadas por semana — histórico (passadas + atual)
+  const horasPorSemana=useMemo(()=>{
+    const hoje=new Date(today()+"T12:00:00");
+    const inicioSemanaAtual=new Date(hoje);
+    inicioSemanaAtual.setDate(hoje.getDate()-hoje.getDay());
+
+    const semanas=Array.from({length:8},(_,i)=>{
+      const offset=i-6; // 6 semanas passadas + atual + 1 futura
+      const inicio=new Date(inicioSemanaAtual);
+      inicio.setDate(inicioSemanaAtual.getDate()+offset*7);
+      const fim=new Date(inicio);
+      fim.setDate(inicio.getDate()+6);
+      const inicioStr=inicio.toISOString().slice(0,10);
+      const fimStr=fim.toISOString().slice(0,10);
+      const plantoesSemana=plantoes.filter(p=>p.data&&p.data>=inicioStr&&p.data<=fimStr&&+p.horas>0);
+      const horas=plantoesSemana.reduce((s,p)=>s+(+p.horas||0),0);
+      return {inicio:inicioStr,fim:fimStr,horas,qtdPlantoes:plantoesSemana.length,ehAtual:offset===0};
+    });
+    const semanasComDados=semanas.filter(s=>s.horas>0);
+    const mediaHoras=semanasComDados.length?semanasComDados.reduce((s,sem)=>s+sem.horas,0)/semanasComDados.length:0;
+    return {semanas,mediaHoras,semanaAtual:semanas.find(s=>s.ehAtual)};
+  },[plantoes]);
+
   const agendaDias=useMemo(()=>{
     const n=+agendaView;
     const minTot=t=>{const [h,m]=t.split(":").map(Number);return h*60+m;};
@@ -4151,6 +4174,44 @@ function AppMain({user, onLogout}) {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* Horas trabalhadas por semana */}
+            <div className={CARD} style={{marginBottom:14,padding:"16px 18px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+                <div style={{width:26,height:26,borderRadius:8,background:"rgba(45,90,16,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>⏱</div>
+                <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Horas trabalhadas por semana</span>
+              </div>
+
+              <div style={{display:"flex",gap:10,marginBottom:16}}>
+                <div style={{flex:1,background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+                  <div style={{fontSize:9.5,fontWeight:700,color:"#215010",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>Essa semana</div>
+                  <div className="num" style={{fontSize:24,fontWeight:700,color:"#215010"}}>{horasPorSemana.semanaAtual?.horas||0}h</div>
+                </div>
+                <div style={{flex:1,background:"rgba(0,0,0,0.04)",border:"1px solid rgba(0,0,0,0.08)",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
+                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.55)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>Média (8 semanas)</div>
+                  <div className="num" style={{fontSize:24,fontWeight:700,color:"#1A1209"}}>{horasPorSemana.mediaHoras.toFixed(0)}h</div>
+                </div>
+              </div>
+
+              <div style={{display:"flex",alignItems:"flex-end",gap:6,height:90,marginBottom:8}}>
+                {horasPorSemana.semanas.map((sem,idx)=>{
+                  const maxH=Math.max(...horasPorSemana.semanas.map(s=>s.horas),1);
+                  const alturaPct=(sem.horas/maxH)*100;
+                  return (
+                    <div key={idx} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                      <div style={{width:"100%",display:"flex",alignItems:"flex-end",height:70}}>
+                        <div title={`${fd(sem.inicio)} – ${fd(sem.fim)}: ${sem.horas}h`}
+                          style={{width:"100%",height:`${Math.max(alturaPct,3)}%`,background:sem.ehAtual?"linear-gradient(180deg,#4ABE2A,#215010)":"linear-gradient(180deg,#8FC43A99,#21501099)",borderRadius:"5px 5px 2px 2px",transition:"height .5s"}}/>
+                      </div>
+                      <div style={{fontSize:8,color:sem.ehAtual?"#1A1209":"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",fontWeight:sem.ehAtual?700:600}}>{fd(sem.inicio).split(" ")[0]}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>
+                6 semanas passadas · essa semana em destaque · 1 semana futura
               </div>
             </div>
 
