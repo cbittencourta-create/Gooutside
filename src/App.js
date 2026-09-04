@@ -4093,7 +4093,10 @@ function AppMain({user, onLogout}) {
                     {fd(agendaDias[0]?.data)} – {fd(agendaDias[agendaDias.length-1]?.data)}
                   </div>
                 </div>
-                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                  <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 3px 10px rgba(232,32,95,0.3)"}}>
+                    <span style={{fontSize:14,lineHeight:1}}>✚</span> Plantão
+                  </button>
                   <div style={{display:"flex",background:"#EDE8E0",borderRadius:10,padding:3}}>
                     {[["7","7 dias"],["14","14 dias"]].map(([v,l])=>(
                       <button key={v} onClick={()=>setAgendaView(v)} style={{background:agendaView===v?"#E8205F":"transparent",color:agendaView===v?"#fff":"#5A4A3A",border:"none",borderRadius:8,padding:"7px 12px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
@@ -4126,17 +4129,18 @@ function AppMain({user, onLogout}) {
                           <div style={{padding:"0 2px 4px"}}>
                             {dia.plantoesSemHorario.map(p=>(
                               <div key={p.id} title={`${p.empresa}${p.horas?" · "+p.horas+"h":""} (sem horário definido) — clique para editar`}
-                                onClick={()=>openM("plt",p)}
+                                onClick={e=>{e.stopPropagation();openM("plt",p);}}
                                 style={{background:p.cor,opacity:0.85,borderRadius:5,padding:"3px 5px",marginBottom:2,overflow:"hidden",cursor:"pointer"}}>
                                 <div style={{fontSize:8.5,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.empresa}</div>
                               </div>
                             ))}
                           </div>
                         )}
-                        <div style={{position:"relative",height:24*26,background:"repeating-linear-gradient(to bottom, transparent, transparent 25px, rgba(0,0,0,0.04) 25px, rgba(0,0,0,0.04) 26px)"}}>
+                        <div onClick={()=>{openM("plt");setFPlt(f=>({...f,data:dia.data}));}} title="Clique para adicionar plantão nesse dia"
+                          style={{position:"relative",height:24*26,cursor:"copy",background:"repeating-linear-gradient(to bottom, transparent, transparent 25px, rgba(0,0,0,0.04) 25px, rgba(0,0,0,0.04) 26px)"}}>
                           {dia.plantoes.map(p=>(
                             <div key={p.id} title={`${p.empresa} · ${p.horaInicio}–${p.horaFim} — clique para editar`}
-                              onClick={()=>openM("plt",p)}
+                              onClick={e=>{e.stopPropagation();openM("plt",p);}}
                               style={{position:"absolute",top:(p.iniMin/1440*24*26),height:Math.max(((p.fimMin-p.iniMin)/1440*24*26),16),left:2,right:2,background:p.cor,opacity:0.88,borderRadius:5,padding:"3px 5px",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.15)",cursor:"pointer"}}>
                               <div style={{fontSize:8.5,fontWeight:700,color:"#fff",lineHeight:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.empresa}</div>
                               <div style={{fontSize:7.5,color:"rgba(255,255,255,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{p.horaInicio}–{p.horaFim}</div>
