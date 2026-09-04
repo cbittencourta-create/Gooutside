@@ -2323,8 +2323,8 @@ function AppMain({user, onLogout}) {
     const inicioSemanaAtual=new Date(hoje);
     inicioSemanaAtual.setDate(hoje.getDate()-hoje.getDay());
 
-    const semanas=Array.from({length:8},(_,i)=>{
-      const offset=i-6; // 6 semanas passadas + atual + 1 futura
+    const semanas=Array.from({length:9},(_,i)=>{
+      const offset=i-4; // 4 semanas passadas + atual + 4 semanas futuras
       const inicio=new Date(inicioSemanaAtual);
       inicio.setDate(inicioSemanaAtual.getDate()+offset*7);
       const fim=new Date(inicio);
@@ -2333,7 +2333,7 @@ function AppMain({user, onLogout}) {
       const fimStr=fim.toISOString().slice(0,10);
       const plantoesSemana=plantoes.filter(p=>p.data&&p.data>=inicioStr&&p.data<=fimStr&&+p.horas>0);
       const horas=plantoesSemana.reduce((s,p)=>s+(+p.horas||0),0);
-      return {inicio:inicioStr,fim:fimStr,horas,qtdPlantoes:plantoesSemana.length,ehAtual:offset===0};
+      return {inicio:inicioStr,fim:fimStr,horas,qtdPlantoes:plantoesSemana.length,ehAtual:offset===0,ehFutura:offset>0};
     });
     const semanasComDados=semanas.filter(s=>s.horas>0);
     const mediaHoras=semanasComDados.length?semanasComDados.reduce((s,sem)=>s+sem.horas,0)/semanasComDados.length:0;
@@ -4202,16 +4202,20 @@ function AppMain({user, onLogout}) {
                   return (
                     <div key={idx} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
                       <div style={{width:"100%",display:"flex",alignItems:"flex-end",height:70}}>
-                        <div title={`${fd(sem.inicio)} – ${fd(sem.fim)}: ${sem.horas}h`}
-                          style={{width:"100%",height:`${Math.max(alturaPct,3)}%`,background:sem.ehAtual?"linear-gradient(180deg,#4ABE2A,#215010)":"linear-gradient(180deg,#8FC43A99,#21501099)",borderRadius:"5px 5px 2px 2px",transition:"height .5s"}}/>
+                        <div title={`${fd(sem.inicio)} – ${fd(sem.fim)}: ${sem.horas}h${sem.ehFutura?" (agendado)":""}`}
+                          style={{width:"100%",height:`${Math.max(alturaPct,3)}%`,
+                            background:sem.ehAtual?"linear-gradient(180deg,#4ABE2A,#215010)":sem.ehFutura?"rgba(91,163,212,0.3)":"linear-gradient(180deg,#8FC43A99,#21501099)",
+                            border:sem.ehFutura?"1.5px dashed #5BA3D4":"none",
+                            borderRadius:"5px 5px 2px 2px",transition:"height .5s"}}/>
                       </div>
-                      <div style={{fontSize:8,color:sem.ehAtual?"#1A1209":"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",fontWeight:sem.ehAtual?700:600}}>{fd(sem.inicio).split(" ")[0]}</div>
+                      <div style={{fontSize:8,color:sem.ehAtual?"#1A1209":sem.ehFutura?"#1A4A6E":"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",fontWeight:sem.ehAtual?700:600}}>{fd(sem.inicio).split(" ")[0]}</div>
                     </div>
                   );
                 })}
               </div>
-              <div style={{fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>
-                6 semanas passadas · essa semana em destaque · 1 semana futura
+              <div style={{display:"flex",gap:14,justifyContent:"center",fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>
+                <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:2,background:"#8FC43A"}}/>Já trabalhado</span>
+                <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:2,background:"rgba(91,163,212,0.3)",border:"1px dashed #5BA3D4"}}/>Agendado (futuro)</span>
               </div>
             </div>
 
