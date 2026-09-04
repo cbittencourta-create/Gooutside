@@ -1919,6 +1919,7 @@ function AppMain({user, onLogout}) {
   const [fPlt,setFPlt]=useState({empresa:"",data:"",horaInicio:"",horaFim:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
   const [fPltLote,setFPltLote]=useState({empresa:"",valorTotal:"",horas:"",horaInicio:"",horaFim:"",previsao:"",diasSelecionados:[],mesLote:today().slice(0,7)});
   const [agendaView,setAgendaView]=useState("7");
+  const [hoveredWeek,setHoveredWeek]=useState(null);
   const [agendaInicio,setAgendaInicio]=useState(()=>{
     const hoje=new Date(today()+"T12:00:00");
     hoje.setDate(hoje.getDate()-hoje.getDay());
@@ -4199,13 +4200,23 @@ function AppMain({user, onLogout}) {
                 {horasPorSemana.semanas.map((sem,idx)=>{
                   const maxH=Math.max(...horasPorSemana.semanas.map(s=>s.horas),1);
                   const alturaPct=(sem.horas/maxH)*100;
+                  const isHovered=hoveredWeek===idx;
                   return (
-                    <div key={idx} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
-                      <div style={{width:"100%",display:"flex",alignItems:"flex-end",height:70}}>
-                        <div title={`${fd(sem.inicio)} – ${fd(sem.fim)}: ${sem.horas}h${sem.ehFutura?" (agendado)":""}`}
+                    <div key={idx} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
+                      {isHovered&&(
+                        <div style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",marginBottom:8,background:"#1A1209",color:"#fff",borderRadius:9,padding:"7px 11px",fontSize:11,fontWeight:600,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",boxShadow:"0 4px 14px rgba(0,0,0,0.25)",zIndex:10,pointerEvents:"none"}}>
+                          <div style={{fontWeight:700}}>{sem.horas}h {sem.ehFutura?"agendadas":"trabalhadas"}</div>
+                          <div style={{fontSize:9.5,opacity:0.75,marginTop:1}}>{fd(sem.inicio)} – {fd(sem.fim)}</div>
+                          <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",width:0,height:0,borderLeft:"5px solid transparent",borderRight:"5px solid transparent",borderTop:"5px solid #1A1209"}}/>
+                        </div>
+                      )}
+                      <div onMouseEnter={()=>setHoveredWeek(idx)} onMouseLeave={()=>setHoveredWeek(null)} onClick={()=>setHoveredWeek(isHovered?null:idx)}
+                        style={{width:"100%",display:"flex",alignItems:"flex-end",height:70,cursor:"pointer"}}>
+                        <div
                           style={{width:"100%",height:`${Math.max(alturaPct,3)}%`,
                             background:sem.ehAtual?"linear-gradient(180deg,#4ABE2A,#215010)":sem.ehFutura?"rgba(91,163,212,0.3)":"linear-gradient(180deg,#8FC43A99,#21501099)",
                             border:sem.ehFutura?"1.5px dashed #5BA3D4":"none",
+                            outline:isHovered?"2px solid rgba(232,32,95,0.5)":"none",outlineOffset:1,
                             borderRadius:"5px 5px 2px 2px",transition:"height .5s"}}/>
                       </div>
                       <div style={{fontSize:8,color:sem.ehAtual?"#1A1209":sem.ehFutura?"#1A4A6E":"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",fontWeight:sem.ehAtual?700:600}}>{fd(sem.inicio).split(" ")[0]}</div>
