@@ -2555,6 +2555,7 @@ function AppMain({user, onLogout}) {
         .card button{font-family:'DM Sans',sans-serif}
         /* Force all card content to be dark */
         .card, .card div, .card span, .card p, .card label, .card small { color: #1A1209 !important; }
+        .card .chartTooltip, .card .chartTooltip div, .card .chartTooltip span { color: #fff !important; }
         /* Exception: colored value numbers keep their accent color via inline style - override below */
         .card svg text { fill: #1A1209 !important; }
       `}</style>
@@ -4204,7 +4205,7 @@ function AppMain({user, onLogout}) {
                   return (
                     <div key={idx} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
                       {isHovered&&(
-                        <div style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",marginBottom:8,background:"#1A1209",color:"#fff",borderRadius:9,padding:"7px 11px",fontSize:11,fontWeight:600,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",boxShadow:"0 4px 14px rgba(0,0,0,0.25)",zIndex:10,pointerEvents:"none"}}>
+                        <div className="chartTooltip" style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",marginBottom:8,background:"#1A1209",color:"#fff",borderRadius:9,padding:"7px 11px",fontSize:11,fontWeight:600,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",boxShadow:"0 4px 14px rgba(0,0,0,0.25)",zIndex:10,pointerEvents:"none"}}>
                           <div style={{fontWeight:700}}>{sem.horas}h {sem.ehFutura?"agendadas":"trabalhadas"}</div>
                           <div style={{fontSize:9.5,opacity:0.75,marginTop:1}}>{fd(sem.inicio)} – {fd(sem.fim)}</div>
                           <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",width:0,height:0,borderLeft:"5px solid transparent",borderRight:"5px solid transparent",borderTop:"5px solid #1A1209"}}/>
