@@ -1044,14 +1044,21 @@ function BalancoTab({movs, plantoes, cartoes, selMes}) {
 
 // ── Importação de Extrato ────────────────────────────────────────────────────
 const KEYWORD_CATS = [
-  {cat:"🍔 Alimentação", keys:["ifood","rappi","uber eat","delivery","restaur","lanchon","mcdonalds","burger","subway","pizza","padaria","mercado","supermercado","pao de acucar","carrefour","atacadao","hortifruti","acougue","sushi","churrasco"]},
-  {cat:"🚗 Transporte",  keys:["uber","99app","taxi","táxi","gasolina","combustiv","posto ","shell","ipiranga","br distribu","estacionam","pedágio","pedagio","metro","ônibus","onibus","trem","brt"]},
-  {cat:"🏠 Moradia",     keys:["aluguel","condomin","iptu","água","agua","sabesp","celesc","copel","cemig","coelba","energia","luz ","esgoto"]},
-  {cat:"💊 Saúde",       keys:["farmácia","farmacia","drogaria","droga raia","hospital","clínica","clinica","médico","medico","plano de saude","unimed","hapvida","amil","sulamerica","academia","smart fit","bio ritmo","bodytech","consultorio"]},
-  {cat:"🎭 Lazer",       keys:["netflix","spotify","amazon prime","disney","hbo","deezer","youtube","cinema","teatro","ingresso","airbnb","booking"]},
-  {cat:"👕 Vestuário",   keys:["renner","riachuelo","c&a","zara","h&m","roupas","calçados","calcados","sapatos","americanas","marisa"]},
-  {cat:"📚 Educação",    keys:["escola","faculdade","universidade","curso","livro","saraiva","estácio","estacio","anhanguera","unip"]},
-  {cat:"💡 Contas",      keys:["claro","vivo","tim ","oi ","net ","giga","internet","celular","telefone","google ","apple ","icloud","microsoft","recarga"]},
+  {cat:"🍔 Alimentação", keys:["ifood","rappi","uber eat","delivery","restaur","lanchon","mcdonalds","burger","subway","pizza","padaria","mercado","supermercado","pao de acucar","carrefour","atacadao","hortifruti","acougue","sushi","churrasco","habib","bob's","bobs","spoleto","giraffas","outback","coco bambu","cafe","cafeteria","starbucks","kopenhagen","cacau show","doceria","sorveteria","hamburgueria","padoca","empório","emporio","adega","hortifrutti","zona sul","pao acucar","assai","extra ","dia %","dia supermercado"]},
+  {cat:"🚗 Transporte",  keys:["uber","99app","99 ","taxi","táxi","gasolina","combustiv","posto ","shell","ipiranga","br distribu","estacionam","pedágio","pedagio","metro","ônibus","onibus","trem","brt","zona azul","estapar","multipark","bh trans","move buh","move bh"]},
+  {cat:"🏠 Moradia",     keys:["aluguel","condomin","iptu","água","agua","sabesp","celesc","copel","cemig","coelba","energia","luz ","esgoto","gás","gas encanado","comgas","light ","enel","cedae","copasa","síndico","sindico","imobiliária","imobiliaria"]},
+  {cat:"💊 Saúde",       keys:["farmácia","farmacia","drogaria","droga raia","drogasil","pacheco","panvel","hospital","clínica","clinica","médico","medico","plano de saude","unimed","hapvida","amil","sulamerica","sul america","bradesco saude","academia","smart fit","bio ritmo","bodytech","consultorio","consultório","dentista","odonto","laboratório","laboratorio","exame","psicólog","psicolog","terapia","fisioterapia"]},
+  {cat:"💅 Cuidados Pessoais", keys:["salão","salao","cabelei","manicure","unha","depilação","depilacao","estética","estetica","barbearia","spa ","massagem","nail","sobrancelha"]},
+  {cat:"🎭 Lazer",       keys:["netflix","spotify","amazon prime","disney","hbo","deezer","youtube premium","youtube","cinema","teatro","ingresso","airbnb","booking","show ","balada","bar ","festa","viagem","hotel","pousada","cvc","decolar","latam","gol linhas","azul linhas","despegar"]},
+  {cat:"👕 Vestuário",   keys:["renner","riachuelo","c&a","zara","h&m","roupas","calçados","calcados","sapatos","americanas","marisa","shein","centauro","nike","adidas","hering","forever 21"]},
+  {cat:"📚 Educação",    keys:["escola","faculdade","universidade","curso","livro","saraiva","estácio","estacio","anhanguera","unip","alura","udemy","coursera","hotmart"]},
+  {cat:"💡 Contas",      keys:["claro","vivo","tim ","oi ","net ","giga","internet","celular","telefone","google ","apple ","icloud","microsoft","recarga","nubank fatura","fatura nubank"]},
+];
+
+const KEYWORD_CATS_RECEITA = [
+  {cat:"🏥 Plantão", keys:["plantao","plantão","upa ","hospital","pronto socorro","pronto atendimento"]},
+  {cat:"💼 Consultório", keys:["consultorio","consultório","particular"]},
+  {cat:"💰 Investimento", keys:["rendimento","dividendo","resgate","juros"]},
 ];
 
 const TRANSFER_KEYS = ["aplicação em fundo","aplicacao em fundo","aplicacao fundo","invest","resgate fundo","cdb","lci","lca","tesouro","poupança","poupanca","fundo de invest","pagamento fatura","pagamento de fatura","fatura cartao","fatura cartão","transferencia entre contas","transferência entre contas"];
@@ -1061,12 +1068,44 @@ function isTransfer(desc) {
   return TRANSFER_KEYS.some(k=>d.includes(k));
 }
 
-function guessCat(desc) {
+// guessCat: retorna {categoria, confiante} — confiante=false quando caiu no fallback genérico "Outros"
+function guessCat(desc, tipo) {
   const d = (desc||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-  for(const {cat, keys} of KEYWORD_CATS) {
-    if(keys.some(k=>d.includes(k))) return cat;
+  const lista = tipo==="entrada" ? KEYWORD_CATS_RECEITA : KEYWORD_CATS;
+  for(const {cat, keys} of lista) {
+    if(keys.some(k=>d.includes(k))) return {categoria:cat, confiante:true};
   }
-  return "📦 Outros";
+  return {categoria:"📦 Outros", confiante:false};
+}
+
+// Extrai as "palavras significativas" de uma descrição (ignora números, datas, palavras muito curtas)
+function palavrasChave(desc) {
+  return (desc||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(w=>w.length>=3&&!/^\d+$/.test(w));
+}
+
+// Categorização inteligente: primeiro tenta achar algo parecido no histórico da pessoa
+// (o que ela já categorizou antes é mais confiável que qualquer lista fixa de palavras-chave).
+// Retorna {categoria, confiante} — confiante=false quando nada bateu e caiu no "Outros" genérico.
+function guessCatSmart(desc, movsHistorico, tipo) {
+  const palavrasNovo = palavrasChave(desc);
+  if(palavrasNovo.length>0 && movsHistorico && movsHistorico.length>0){
+    const candidatos=[];
+    movsHistorico.forEach(m=>{
+      if(tipo&&m.tipo!==tipo)return; // só compara com o mesmo tipo (entrada com entrada, saída com saída)
+      if(m.tipo!=="saida"&&m.tipo!=="entrada")return;
+      const palavrasHist = palavrasChave(m.descricao);
+      if(palavrasHist.length===0)return;
+      const comuns = palavrasNovo.filter(p=>palavrasHist.includes(p)).length;
+      if(comuns>0) candidatos.push({categoria:m.categoria,comuns,data:m.data||""});
+    });
+    if(candidatos.length>0){
+      // Prioriza: mais palavras em comum, depois o mais recente
+      candidatos.sort((a,b)=>b.comuns-a.comuns||b.data.localeCompare(a.data));
+      return {categoria:candidatos[0].categoria, confiante:true};
+    }
+  }
+  return guessCat(desc,tipo);
 }
 
 function parseOFX(text) {
@@ -1079,7 +1118,11 @@ function parseOFX(text) {
     const dtRaw = get("DTPOSTED")||get("DTAVAIL")||"";
     let data = "";
     if(dtRaw.length>=8) data=`${dtRaw.slice(0,4)}-${dtRaw.slice(4,6)}-${dtRaw.slice(6,8)}`;
-    if(amt!==0) txns.push({desc:memo, valor:Math.abs(amt), tipo:isTransfer(memo)?"transferencia":amt>0?"entrada":"saida", data, categoria:isTransfer(memo)?"🔄 Transferência":guessCat(memo)});
+    if(amt===0)return;
+    const tipo=amt>0?"entrada":"saida";
+    const transf=isTransfer(memo);
+    const g=transf?{categoria:"🔄 Transferência",confiante:true}:guessCat(memo,tipo);
+    txns.push({desc:memo, valor:Math.abs(amt), tipo:transf?"transferencia":tipo, data, categoria:g.categoria, confiante:g.confiante});
   });
   return txns;
 }
@@ -1090,22 +1133,34 @@ function parseCSV(text) {
   if(linhas.length<2) return txns;
   const sep = linhas[0].includes(";") ? ";" : ",";
   const cols = linhas[0].split(sep).map(c=>c.trim().toLowerCase().replace(/"/g,""));
-  const iData  = cols.findIndex(c=>c.includes("data")||c==="date");
-  const iDesc  = cols.findIndex(c=>c.includes("descri")||c.includes("histór")||c.includes("histor")||c.includes("title")||c.includes("memo")||c.includes("lançamento")||c.includes("lancamento"));
-  const iValor = cols.findIndex(c=>c==="valor"||c==="amount"||c.includes("vlr"));
-  const iCred  = cols.findIndex(c=>c.includes("crédit")||c.includes("credit"));
-  const iDeb   = cols.findIndex(c=>c.includes("débit")||c.includes("debit"));
+  const iData  = cols.findIndex(c=>c.includes("data")||c==="date"||c.includes("dia"));
+  const iDesc  = cols.findIndex(c=>c.includes("descri")||c.includes("histór")||c.includes("histor")||c.includes("title")||c.includes("memo")||c.includes("lançamento")||c.includes("lancamento")||c.includes("estabelec")||c.includes("nome"));
+  let iValor = cols.findIndex(c=>c==="valor"||c==="amount"||c.includes("vlr")||c.includes("valor("));
+  const iCred  = cols.findIndex(c=>c.includes("crédit")||c.includes("credit")||c.includes("entrada"));
+  const iDeb   = cols.findIndex(c=>c.includes("débit")||c.includes("debit")||c.includes("saída")||c.includes("saida"));
+  // Fallback: se não achou nenhuma coluna de valor pelo nome, tenta descobrir testando os dados reais
+  if(iValor<0&&iCred<0&&iDeb<0&&linhas.length>1){
+    const linhaTeste = linhas[1].split(sep).map(p=>p.trim().replace(/^"|"$/g,""));
+    for(let c=0;c<linhaTeste.length;c++){
+      if(c===iData||c===iDesc)continue;
+      const v = linhaTeste[c].replace(/[R$\s]/g,"");
+      if(/^-?\d{1,3}(\.\d{3})*,\d{2}$/.test(v)||/^-?\d+,\d{2}$/.test(v)||/^-?\d+\.\d{2}$/.test(v)){iValor=c;break;}
+    }
+  }
   for(let i=1;i<linhas.length;i++){
     const parts = linhas[i].split(sep).map(p=>p.trim().replace(/^"|"$/g,""));
     if(parts.length<2) continue;
-    let desc = iDesc>=0 ? parts[iDesc] : parts[1]||"";
+    let desc = iDesc>=0 ? parts[iDesc] : (parts.find((p,idx)=>idx!==iData&&idx!==iValor&&isNaN(+p.replace(",","."))&&p.length>2)||parts[1]||"");
     if(!desc||desc.toLowerCase().includes("saldo")) continue;
     let data="";
     if(iData>=0){const raw=parts[iData]||"";if(raw.includes("/")){const[d,m,y]=raw.split("/");data=`${y.length===2?"20"+y:y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;}else if(raw.includes("-")){data=raw.slice(0,10);}}
     let valor=0,tipo="saida";
-    if(iValor>=0){const v=(parts[iValor]||"").replace(/[R$\s]/g,"").replace(".","").replace(",",".");valor=Math.abs(parseFloat(v)||0);tipo=parseFloat(v)>0?"entrada":"saida";}
-    else if(iCred>=0||iDeb>=0){const cred=parseFloat((parts[iCred]||"").replace(".","").replace(",","."))||0;const deb=parseFloat((parts[iDeb]||"").replace(".","").replace(",","."))||0;if(cred>0){valor=cred;tipo="entrada";}else if(deb>0){valor=deb;tipo="saida";}}
-    if(valor>0) txns.push({desc,valor,tipo:isTransfer(desc)?"transferencia":tipo,data,categoria:isTransfer(desc)?"🔄 Transferência":guessCat(desc)});
+    if(iValor>=0){const v=(parts[iValor]||"").replace(/[R$\s]/g,"").replace(/\.(?=\d{3})/g,"").replace(",",".");valor=Math.abs(parseFloat(v)||0);tipo=parseFloat(v)>0?"entrada":"saida";}
+    else if(iCred>=0||iDeb>=0){const cred=parseFloat((parts[iCred]||"").replace(/\.(?=\d{3})/g,"").replace(",","."))||0;const deb=parseFloat((parts[iDeb]||"").replace(/\.(?=\d{3})/g,"").replace(",","."))||0;if(cred>0){valor=cred;tipo="entrada";}else if(deb>0){valor=deb;tipo="saida";}}
+    if(valor<=0)continue;
+    const transf=isTransfer(desc);
+    const g=transf?{categoria:"🔄 Transferência",confiante:true}:guessCat(desc,tipo);
+    txns.push({desc,valor,tipo:transf?"transferencia":tipo,data,categoria:g.categoria,confiante:g.confiante});
   }
   return txns;
 }
@@ -1172,12 +1227,14 @@ function parseTextoBancario(text) {
     // Tipo: crédito ou débito
     const credKeys = /pix receb|crédito|credit|depósit|salário|pagamento receb|transferência receb/i;
     const tipo = credKeys.test(line)?"entrada":"saida";
-    txns.push({desc,valor,tipo:isTransfer(desc)?"transferencia":tipo,data,categoria:isTransfer(desc)?"🔄 Transferência":guessCat(desc)});
+    const transf=isTransfer(desc);
+    const g=transf?{categoria:"🔄 Transferência",confiante:true}:guessCat(desc,tipo);
+    txns.push({desc,valor,tipo:transf?"transferencia":tipo,data,categoria:g.categoria,confiante:g.confiante});
   });
   return txns;
 }
 
-function ImportacaoModal({open, onClose, onImport, cats}) {
+function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
   const [step,     setStep]     = useState(1);
   const [modo,     setModo]     = useState("arquivo"); // arquivo | foto
   const [loading,  setLoading]  = useState(false);
@@ -1194,7 +1251,11 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
   const reset = () => {setStep(1);setTxns([]);setErro("");setLoading(false);setPdfFile(null);setPdfSenha("");setPedeSenha(false);};
 
   const applyTxns = parsed => {
-    setTxns(parsed.map((t,i)=>({...t,id:i,selected:true,categoria:t.categoria||guessCat(t.desc||"")})));
+    setTxns(parsed.map((t,i)=>{
+      if(t.categoria==="🔄 Transferência") return {...t,id:i,selected:true,confiante:true};
+      const g = guessCatSmart(t.desc||"", movsHistorico, t.tipo);
+      return {...t,id:i,selected:true,categoria:g.categoria,confiante:g.confiante};
+    }));
     setStep(2);
   };
 
@@ -1379,6 +1440,11 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
                 </div>
               ))}
             </div>
+            {txns.some(t=>!t.confiante)&&(
+              <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:10,padding:"9px 12px",marginBottom:10,fontSize:11.5,color:"#6B4C00",fontFamily:"'DM Sans',sans-serif",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+                ❓ {txns.filter(t=>!t.confiante).length} transaç{txns.filter(t=>!t.confiante).length===1?"ão":"ões"} sem categoria certa — confira as marcadas em amarelo abaixo
+              </div>
+            )}
             <div style={{display:"flex",gap:6,marginBottom:10}}>
               <button onClick={()=>toggleAll(true)} style={{flex:1,background:"rgba(45,90,16,0.1)",border:"1px solid rgba(45,90,16,0.25)",borderRadius:8,padding:"6px",fontSize:11,fontWeight:700,color:"#2D5A10",cursor:"pointer",fontFamily:"inherit"}}>Selecionar tudo</button>
               <button onClick={()=>toggleAll(false)} style={{flex:1,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"6px",fontSize:11,fontWeight:700,color:"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>Desmarcar tudo</button>
@@ -1386,7 +1452,7 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
             </div>
             <div style={{maxHeight:340,overflowY:"auto",display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
               {txns.map((t,i)=>(
-                <div key={t.id} style={{background:t.selected?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.04)",border:`1px solid ${t.selected?"rgba(0,0,0,0.1)":"rgba(0,0,0,0.06)"}`,borderRadius:12,padding:"10px 12px",opacity:t.selected?1:0.5}}>
+                <div key={t.id} style={{background:!t.confiante&&t.selected?"rgba(212,168,67,0.12)":t.selected?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.04)",border:`1px solid ${!t.confiante&&t.selected?"rgba(212,168,67,0.5)":t.selected?"rgba(0,0,0,0.1)":"rgba(0,0,0,0.06)"}`,borderRadius:12,padding:"10px 12px",opacity:t.selected?1:0.5}}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
                     <input type="checkbox" checked={t.selected} onChange={()=>setTxns(txns.map((x,j)=>j===i?{...x,selected:!x.selected}:x))} style={{marginTop:2,cursor:"pointer",accentColor:"#E8205F"}}/>
                     <div style={{flex:1,minWidth:0}}>
@@ -1403,9 +1469,10 @@ function ImportacaoModal({open, onClose, onImport, cats}) {
                           <option value="saida">↓ Saída</option>
                           <option value="transferencia">Transfer.</option>
                         </select>
-                        <select value={t.categoria} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,categoria:e.target.value}:x))}
+                        {!t.confiante&&<span style={{fontSize:9,fontWeight:700,color:"#8B6000"}}>❓</span>}
+                        <select value={t.categoria} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,categoria:e.target.value,confiante:true}:x))}
                           className="plt-select"
-                          style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:"#1A1209",cursor:"pointer",fontFamily:"inherit",flex:1,minWidth:0}}>
+                          style={{fontSize:10,border:`1px solid ${!t.confiante?"rgba(212,168,67,0.6)":"rgba(0,0,0,0.12)"}`,borderRadius:6,padding:"1px 4px",background:!t.confiante?"rgba(212,168,67,0.15)":"transparent",color:"#1A1209",cursor:"pointer",fontFamily:"inherit",flex:1,minWidth:0,fontWeight:!t.confiante?700:400}}>
                           <optgroup label="Despesas">{CATS_DESP.map(c=><option key={c} value={c}>{c}</option>)}</optgroup>
                           <optgroup label="Receitas">{CATS_REC.map(c=><option key={c} value={c}>{c}</option>)}</optgroup>
                         </select>
@@ -4649,7 +4716,7 @@ function AppMain({user, onLogout}) {
         </div>
       </Modal>
 
-      <ImportacaoModal open={importOpen} onClose={()=>setImportOpen(false)} onImport={importarMovs} cats={cats}/>
+      <ImportacaoModal open={importOpen} onClose={()=>setImportOpen(false)} onImport={importarMovs} cats={cats} movsHistorico={movs}/>
       <Modal open={!!temDinheiroPergunta} onClose={()=>setTemDinheiroPergunta(null)} title={<><CreditCard size={16} strokeWidth={2.2} style={{marginRight:6,verticalAlign:"-3px"}}/>Compra no cartão</>}>
         {temDinheiroPergunta&&(
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
