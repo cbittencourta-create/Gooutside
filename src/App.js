@@ -1061,6 +1061,37 @@ const KEYWORD_CATS_RECEITA = [
   {cat:"💰 Investimento", keys:["rendimento","dividendo","resgate","juros"]},
 ];
 
+// Mapeia as categorias que o PRÓPRIO cartão/banco já manda no extrato/fatura pras nossas categorias.
+// Usamos isso com prioridade máxima — o banco já sabe onde foi gasto, é mais confiável que adivinhar.
+const CATEGORIA_BANCO_MAP = [
+  {match:["automotivo","posto","combustivel","pedagio","estacionamento"], cat:"🚗 Transporte"},
+  {match:["transporte","uber","taxi","aplicativo de transporte"], cat:"🚗 Transporte"},
+  {match:["companhia aerea","cia aerea","aereo","hospedagem"], cat:"🎭 Lazer"},
+  {match:["vestuario","roupas","calcados"], cat:"👕 Vestuário"},
+  {match:["assistencia medica","farmacia","saude","odontolog"], cat:"💊 Saúde"},
+  {match:["cuidados pessoais","salao","beleza","estetica"], cat:"💅 Cuidados Pessoais"},
+  {match:["entretenimento","lazer","streaming"], cat:"🎭 Lazer"},
+  {match:["supermercado","mercearia","padaria","conveniencia"], cat:"🍔 Alimentação"},
+  {match:["restaurante","lanchonete","bar","alimentacao"], cat:"🍔 Alimentação"},
+  {match:["educacao","livraria","curso","ensino"], cat:"📚 Educação"},
+  {match:["moradia","condominio","aluguel","casa"], cat:"🏠 Moradia"},
+  {match:["telefonia","internet","assinatura de servicos"], cat:"💡 Contas"},
+];
+function mapCategoriaBanco(catBanco) {
+  if(!catBanco||catBanco.trim()==="-") return null;
+  const d = catBanco.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  for(const {match,cat} of CATEGORIA_BANCO_MAP) {
+    if(match.some(k=>d.includes(k))) return cat;
+  }
+  return null;
+}
+// Linhas de "inclusão de pagamento" / "pagamento de fatura" são o pagamento do cartão em si — não uma compra
+const PAYMENT_KEYS = ["inclusao de pagamento","inclusão de pagamento","pagamento recebido","pagto recebido"];
+function isFaturaPayment(desc, categoriaBanco) {
+  const d = (desc||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  return PAYMENT_KEYS.some(k=>d.includes(k)) && (!categoriaBanco||categoriaBanco.trim()==="-");
+}
+
 const TRANSFER_KEYS = ["aplicação em fundo","aplicacao em fundo","aplicacao fundo","invest","resgate fundo","cdb","lci","lca","tesouro","poupança","poupanca","fundo de invest","pagamento fatura","pagamento de fatura","fatura cartao","fatura cartão","transferencia entre contas","transferência entre contas"];
 
 function isTransfer(desc) {
@@ -1152,10 +1183,28 @@ function parseCSV(text) {
 
   const cols = temCabecalho ? linha0Cells.map(c=>c.toLowerCase().replace(/"/g,"")) : [];
   const iData  = cols.findIndex(c=>c.includes("data")||c==="date"||c.includes("dia"));
-  const iDesc  = cols.findIndex(c=>c.includes("descri")||c.includes("histór")||c.includes("histor")||c.includes("title")||c.includes("memo")||c.includes("lançamento")||c.includes("lancamento")||c.includes("estabelec")||c.includes("nome"));
-  let iValor = cols.findIndex(c=>c==="valor"||c==="amount"||c.includes("vlr")||c.includes("valor("));
+  const DESC_PATTERNS = [
+    c=>c.includes("descri"),
+    c=>c.includes("histór")||c.includes("histor"),
+    c=>c.includes("lançamento")||c.includes("lancamento"),
+    c=>c.includes("memo")||c.includes("title"),
+    c=>c.includes("estabelec"),
+    c=>c.includes("nome")&&!c.includes("cart")&&!c.includes("titular"), // evita pegar "Nome no Cartão"
+  ];
+  let iDesc = -1;
+  for(const pat of DESC_PATTERNS){ const idx=cols.findIndex(pat); if(idx>=0){iDesc=idx;break;} }
+  // Pode ter mais de uma coluna com "valor" (ex: Valor em US$ e Valor em R$) — prioriza a que é em Reais
+  const colunasValor = cols.map((c,idx)=>({c,idx})).filter(({c})=>c==="valor"||c==="amount"||c.includes("vlr")||c.includes("valor"));
+  let iValor = -1;
+  if(colunasValor.length>0){
+    const comReais = colunasValor.find(({c})=>c.includes("r$")||c.includes("reais")||c.includes("(brl)"));
+    const semMoedaEstrangeira = colunasValor.find(({c})=>!c.includes("us$")&&!c.includes("usd")&&!c.includes("dolar")&&!c.includes("dólar")&&!c.includes("cotaç")&&!c.includes("cotac"));
+    iValor = comReais ? comReais.idx : (semMoedaEstrangeira ? semMoedaEstrangeira.idx : colunasValor[0].idx);
+  }
   const iCred  = cols.findIndex(c=>c.includes("crédit")||c.includes("credit")||c.includes("entrada"));
   const iDeb   = cols.findIndex(c=>c.includes("débit")||c.includes("debit")||c.includes("saída")||c.includes("saida"));
+  const iCategoria = cols.findIndex(c=>c==="categoria"||c.includes("categoria"));
+  const iParcela = cols.findIndex(c=>c==="parcela"||c.includes("parcela"));
 
   const linhaDados = temCabecalho ? (linhas[1]||"") : linhas[0];
   // Fallback: se não achou nenhuma coluna de valor pelo nome, tenta descobrir testando os dados reais
@@ -1169,6 +1218,7 @@ function parseCSV(text) {
   }
 
   const inicio = temCabecalho ? 1 : 0;
+  const ehFatura = iParcela>=0; // presença de coluna "Parcela" indica fatura de cartão, não extrato de conta
   for(let i=inicio;i<linhas.length;i++){
     const parts = linhas[i].split(sep).map(p=>p.trim().replace(/^"|"$/g,""));
     if(parts.length<2) continue;
@@ -1181,6 +1231,8 @@ function parseCSV(text) {
       return isNaN(+t.replace(",","."))&&t.length>2;
     })||parts[1]||"");
     if(!desc||desc.toLowerCase().includes("saldo")) continue;
+    const catBanco = iCategoria>=0 ? parts[iCategoria] : null;
+    if(isFaturaPayment(desc,catBanco)) continue; // pula "Inclusão de Pagamento" — não é uma compra
     let data="";
     if(iData>=0){const raw=parts[iData]||"";if(raw.includes("/")){const[d,m,y]=raw.split("/");data=`${y.length===2?"20"+y:y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;}else if(raw.includes("-")){data=raw.slice(0,10);}}
     else{
@@ -1189,12 +1241,27 @@ function parseCSV(text) {
       if(raw){const[d,m,y]=raw.match(/(\d{2})\/(\d{2})\/(\d{2,4})/).slice(1);data=`${y.length===2?"20"+y:y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;}
     }
     let valor=0,tipo="saida";
-    if(iValor>=0){const v=(parts[iValor]||"").replace(/[R$\s]/g,"").replace(/\.(?=\d{3})/g,"").replace(",",".");valor=Math.abs(parseFloat(v)||0);tipo=parseFloat(v)>0?"entrada":"saida";}
+    if(iValor>=0){
+      const v=(parts[iValor]||"").replace(/[R$\s]/g,"").replace(/\.(?=\d{3})/g,"").replace(",",".");
+      const vNum=parseFloat(v)||0;
+      valor=Math.abs(vNum);
+      tipo = ehFatura ? (vNum>0?"saida":"entrada") : (vNum>0?"entrada":"saida");
+    }
     else if(iCred>=0||iDeb>=0){const cred=parseFloat((parts[iCred]||"").replace(/\.(?=\d{3})/g,"").replace(",","."))||0;const deb=parseFloat((parts[iDeb]||"").replace(/\.(?=\d{3})/g,"").replace(",","."))||0;if(cred>0){valor=cred;tipo="entrada";}else if(deb>0){valor=deb;tipo="saida";}}
     if(valor<=0)continue;
+    if(iParcela>=0){
+      const parc=parts[iParcela];
+      if(parc&&!/^unica$|^única$/i.test(parc.trim())) desc=`${desc} (${parc})`;
+    }
     const transf=isTransfer(desc);
-    const g=transf?{categoria:"🔄 Transferência",confiante:true}:guessCat(desc,tipo);
-    txns.push({desc,valor,tipo:transf?"transferencia":tipo,data,categoria:g.categoria,confiante:g.confiante});
+    let categoria,confiante;
+    if(transf){ categoria="🔄 Transferência"; confiante=true; }
+    else {
+      const catMapeada=mapCategoriaBanco(catBanco);
+      if(catMapeada){ categoria=catMapeada; confiante=true; }
+      else { const g=guessCat(desc,tipo); categoria=g.categoria; confiante=g.confiante; }
+    }
+    txns.push({desc,valor,tipo:transf?"transferencia":tipo,data,categoria,confiante});
   }
   return txns;
 }
