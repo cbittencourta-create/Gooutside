@@ -1119,13 +1119,13 @@ function palavrasChave(desc) {
 // (o que ela já categorizou antes é mais confiável que qualquer lista fixa de palavras-chave).
 // Retorna {categoria, confiante} — confiante=false quando nada bateu e caiu no "Outros" genérico.
 function guessCatSmart(desc, movsHistorico, tipo) {
-  const palavrasNovo = palavrasChave(desc);
+  const palavrasNovo = [...new Set(palavrasChave(desc))];
   if(palavrasNovo.length>0 && movsHistorico && movsHistorico.length>0){
     const candidatos=[];
     movsHistorico.forEach(m=>{
       if(tipo&&m.tipo!==tipo)return; // só compara com o mesmo tipo (entrada com entrada, saída com saída)
       if(m.tipo!=="saida"&&m.tipo!=="entrada")return;
-      const palavrasHist = palavrasChave(m.descricao);
+      const palavrasHist = [...new Set(palavrasChave(m.descricao))];
       if(palavrasHist.length===0)return;
       const comuns = palavrasNovo.filter(p=>palavrasHist.includes(p)).length;
       if(comuns>0) candidatos.push({categoria:m.categoria,comuns,data:m.data||""});
@@ -1137,6 +1137,23 @@ function guessCatSmart(desc, movsHistorico, tipo) {
     }
   }
   return guessCat(desc,tipo);
+}
+
+// Detecta se uma transação importada já parece estar registrada no app
+// (mesma data + mesmo valor + descrição parecida) — evita duplicar parcelas
+// que já foram lançadas manualmente ou por outro import.
+function pareceDuplicata(t, movsHistorico) {
+  if(!movsHistorico || movsHistorico.length===0) return false;
+  const descBase = (t.desc||"").replace(/\s*\(\d+\/\d+\)\s*$/,""); // tira o "(2/8)" do final pra comparar
+  const palavrasNovo = [...new Set(palavrasChave(descBase))];
+  return movsHistorico.some(m=>{
+    if(m.data!==t.data) return false;
+    if(Math.abs((+m.valor||0)-(t.valor||0))>0.02) return false;
+    const palavrasHist = [...new Set(palavrasChave((m.descricao||"").replace(/\s*\(\d+\/\d+\)\s*$/,"")))];
+    if(palavrasNovo.length===0||palavrasHist.length===0) return false;
+    const comuns = palavrasNovo.filter(p=>palavrasHist.includes(p)).length;
+    return comuns >= Math.min(2, palavrasNovo.length); // pelo menos 2 palavras em comum (ou todas, se a descrição for curta)
+  });
 }
 
 function parseOFX(text) {
@@ -1353,9 +1370,10 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
 
   const applyTxns = parsed => {
     setTxns(parsed.map((t,i)=>{
-      if(t.categoria==="🔄 Transferência") return {...t,id:i,selected:true,confiante:true};
+      const duplicata = pareceDuplicata(t, movsHistorico);
+      if(t.categoria==="🔄 Transferência") return {...t,id:i,selected:!duplicata,confiante:true,duplicata};
       const g = guessCatSmart(t.desc||"", movsHistorico, t.tipo);
-      return {...t,id:i,selected:true,categoria:g.categoria,confiante:g.confiante};
+      return {...t,id:i,selected:!duplicata,categoria:g.categoria,confiante:g.confiante,duplicata};
     }));
     setStep(2);
   };
@@ -1541,6 +1559,11 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
                 </div>
               ))}
             </div>
+            {txns.some(t=>t.duplicata)&&(
+              <div style={{background:"rgba(91,163,212,0.12)",border:"1px solid rgba(91,163,212,0.35)",borderRadius:10,padding:"9px 12px",marginBottom:10,fontSize:11.5,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
+                🔁 {txns.filter(t=>t.duplicata).length} transaç{txns.filter(t=>t.duplicata).length===1?"ão":"ões"} já parece{txns.filter(t=>t.duplicata).length===1?"":"m"} estar cadastrada{txns.filter(t=>t.duplicata).length===1?"":"s"} — já vieram desmarcadas, mas revise antes de importar
+              </div>
+            )}
             {txns.some(t=>!t.confiante)&&(
               <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:10,padding:"9px 12px",marginBottom:10,fontSize:11.5,color:"#6B4C00",fontFamily:"'DM Sans',sans-serif",fontWeight:600,display:"flex",alignItems:"center",gap:6}}>
                 ❓ {txns.filter(t=>!t.confiante).length} transaç{txns.filter(t=>!t.confiante).length===1?"ão":"ões"} sem categoria certa — confira as marcadas em amarelo abaixo
@@ -1553,7 +1576,7 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
             </div>
             <div style={{maxHeight:340,overflowY:"auto",display:"flex",flexDirection:"column",gap:6,marginBottom:14}}>
               {txns.map((t,i)=>(
-                <div key={t.id} style={{background:!t.confiante&&t.selected?"rgba(212,168,67,0.12)":t.selected?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.04)",border:`1px solid ${!t.confiante&&t.selected?"rgba(212,168,67,0.5)":t.selected?"rgba(0,0,0,0.1)":"rgba(0,0,0,0.06)"}`,borderRadius:12,padding:"10px 12px",opacity:t.selected?1:0.5}}>
+                <div key={t.id} style={{background:t.duplicata?"rgba(91,163,212,0.08)":!t.confiante&&t.selected?"rgba(212,168,67,0.12)":t.selected?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.04)",border:`1px solid ${t.duplicata?"rgba(91,163,212,0.35)":!t.confiante&&t.selected?"rgba(212,168,67,0.5)":t.selected?"rgba(0,0,0,0.1)":"rgba(0,0,0,0.06)"}`,borderRadius:12,padding:"10px 12px",opacity:t.selected?1:0.6}}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
                     <input type="checkbox" checked={t.selected} onChange={()=>setTxns(txns.map((x,j)=>j===i?{...x,selected:!x.selected}:x))} style={{marginTop:2,cursor:"pointer",accentColor:"#E8205F"}}/>
                     <div style={{flex:1,minWidth:0}}>
@@ -1561,6 +1584,7 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
                         <span style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{t.desc}</span>
                         <span style={{fontSize:12,fontWeight:700,color:t.tipo==="entrada"?"#2D5A10":"#8B1A1A",fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>{t.tipo==="entrada"?"+":"-"}{R(t.valor)}</span>
                       </div>
+                      {t.duplicata&&<div style={{fontSize:9.5,fontWeight:700,color:"#1A4A6E",marginBottom:4}}>🔁 já parece estar cadastrada</div>}
                       <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
                         <span style={{fontSize:10,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>{t.data||"—"}</span>
                         <select value={t.tipo} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,tipo:e.target.value}:x))}
