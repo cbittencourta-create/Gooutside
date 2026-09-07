@@ -1129,31 +1129,65 @@ function parseOFX(text) {
 
 function parseCSV(text) {
   const txns = [];
+  // Remove BOM se tiver (comum em exports de banco)
+  text = text.replace(/^\uFEFF/,"");
   const linhas = text.split(/\r?\n/).filter(l=>l.trim());
-  if(linhas.length<2) return txns;
-  const sep = linhas[0].includes(";") ? ";" : ",";
-  const cols = linhas[0].split(sep).map(c=>c.trim().toLowerCase().replace(/"/g,""));
+  if(linhas.length<1) return txns;
+
+  // Detecta separador testando qual aparece mais vezes na 1ª linha
+  const candidatos=[";","\t",",","|"];
+  const sep = candidatos.reduce((melhor,c)=>{
+    const n=(linhas[0].match(new RegExp(c==="\t"?"\\t":`\\${c}`,"g"))||[]).length;
+    const nMelhor=(linhas[0].match(new RegExp(melhor==="\t"?"\\t":`\\${melhor}`,"g"))||[]).length;
+    return n>nMelhor?c:melhor;
+  },",");
+
+  const linhaParece=(cells)=>{
+    // true se a linha parece ser dado (tem data OU valor monetário), false se parece texto de cabeçalho
+    return cells.some(c=>/\d{2}[\/\-]\d{2}[\/\-]\d{2,4}/.test(c)||/^-?\s*R?\$?\s*\d{1,3}(\.\d{3})*,\d{2}$/.test(c.trim())||/^-?\d+\.\d{2}$/.test(c.trim()));
+  };
+
+  const linha0Cells = linhas[0].split(sep).map(c=>c.trim().replace(/^"|"$/g,""));
+  const temCabecalho = !linhaParece(linha0Cells);
+
+  const cols = temCabecalho ? linha0Cells.map(c=>c.toLowerCase().replace(/"/g,"")) : [];
   const iData  = cols.findIndex(c=>c.includes("data")||c==="date"||c.includes("dia"));
   const iDesc  = cols.findIndex(c=>c.includes("descri")||c.includes("histór")||c.includes("histor")||c.includes("title")||c.includes("memo")||c.includes("lançamento")||c.includes("lancamento")||c.includes("estabelec")||c.includes("nome"));
   let iValor = cols.findIndex(c=>c==="valor"||c==="amount"||c.includes("vlr")||c.includes("valor("));
   const iCred  = cols.findIndex(c=>c.includes("crédit")||c.includes("credit")||c.includes("entrada"));
   const iDeb   = cols.findIndex(c=>c.includes("débit")||c.includes("debit")||c.includes("saída")||c.includes("saida"));
+
+  const linhaDados = temCabecalho ? (linhas[1]||"") : linhas[0];
   // Fallback: se não achou nenhuma coluna de valor pelo nome, tenta descobrir testando os dados reais
-  if(iValor<0&&iCred<0&&iDeb<0&&linhas.length>1){
-    const linhaTeste = linhas[1].split(sep).map(p=>p.trim().replace(/^"|"$/g,""));
+  if(iValor<0&&iCred<0&&iDeb<0&&linhaDados){
+    const linhaTeste = linhaDados.split(sep).map(p=>p.trim().replace(/^"|"$/g,""));
     for(let c=0;c<linhaTeste.length;c++){
       if(c===iData||c===iDesc)continue;
       const v = linhaTeste[c].replace(/[R$\s]/g,"");
       if(/^-?\d{1,3}(\.\d{3})*,\d{2}$/.test(v)||/^-?\d+,\d{2}$/.test(v)||/^-?\d+\.\d{2}$/.test(v)){iValor=c;break;}
     }
   }
-  for(let i=1;i<linhas.length;i++){
+
+  const inicio = temCabecalho ? 1 : 0;
+  for(let i=inicio;i<linhas.length;i++){
     const parts = linhas[i].split(sep).map(p=>p.trim().replace(/^"|"$/g,""));
     if(parts.length<2) continue;
-    let desc = iDesc>=0 ? parts[iDesc] : (parts.find((p,idx)=>idx!==iData&&idx!==iValor&&isNaN(+p.replace(",","."))&&p.length>2)||parts[1]||"");
+    let desc = iDesc>=0 ? parts[iDesc] : (parts.find((p,idx)=>{
+      if(idx===iData||idx===iValor)return false;
+      const t=p.trim();
+      if(/^\d{2}[\/\-]\d{2}[\/\-]\d{2,4}$/.test(t))return false; // parece data
+      if(/^-?\s*R?\$?\s*\d{1,3}(\.\d{3})*,\d{2}$/.test(t))return false; // parece valor em R$
+      if(/^-?\d+\.\d{2}$/.test(t))return false; // parece valor em formato en-US
+      return isNaN(+t.replace(",","."))&&t.length>2;
+    })||parts[1]||"");
     if(!desc||desc.toLowerCase().includes("saldo")) continue;
     let data="";
     if(iData>=0){const raw=parts[iData]||"";if(raw.includes("/")){const[d,m,y]=raw.split("/");data=`${y.length===2?"20"+y:y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;}else if(raw.includes("-")){data=raw.slice(0,10);}}
+    else{
+      // tenta achar uma data em qualquer coluna, se não sabe qual é
+      const raw=parts.find(p=>/\d{2}\/\d{2}\/\d{2,4}/.test(p))||"";
+      if(raw){const[d,m,y]=raw.match(/(\d{2})\/(\d{2})\/(\d{2,4})/).slice(1);data=`${y.length===2?"20"+y:y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}`;}
+    }
     let valor=0,tipo="saida";
     if(iValor>=0){const v=(parts[iValor]||"").replace(/[R$\s]/g,"").replace(/\.(?=\d{3})/g,"").replace(",",".");valor=Math.abs(parseFloat(v)||0);tipo=parseFloat(v)>0?"entrada":"saida";}
     else if(iCred>=0||iDeb>=0){const cred=parseFloat((parts[iCred]||"").replace(/\.(?=\d{3})/g,"").replace(",","."))||0;const deb=parseFloat((parts[iDeb]||"").replace(/\.(?=\d{3})/g,"").replace(",","."))||0;if(cred>0){valor=cred;tipo="entrada";}else if(deb>0){valor=deb;tipo="saida";}}
