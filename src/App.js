@@ -2052,6 +2052,8 @@ function AppMain({user, onLogout}) {
   const [alocacoes, setAlocacoes] = useLS("v4_aloc",   [], userId);
   const [saldoMensal, setSaldoMensal] = useLS("v4_saldo_mensal", {}, userId);
   const [confirmSaldoMes, setConfirmSaldoMes] = useState(null);
+  const [filaConfirmacaoPlt, setFilaConfirmacaoPlt] = useState([]); // ids de plantões aguardando confirmação
+  const [confirmandoPlt, setConfirmandoPlt] = useState(null); // {plantaoId, mostrarCobertura} — o que está na tela agora
   const [editSaldoMes, setEditSaldoMes] = useState(null);
   const [mortoReportOpen, setMortoReportOpen] = useState(false);
 
@@ -2063,6 +2065,25 @@ function AppMain({user, onLogout}) {
   const [sideOpen,setSideOpen]=useState(false);
   const [cdiAtual,setCdiAtual]=useState(()=>{try{return JSON.parse(localStorage.getItem("velara_cdi")||"null")?.valor||null;}catch{return null;}});
   useEffect(()=>{fetchCDI().then(v=>{if(v)setCdiAtual(v);});},[]);
+  useEffect(()=>{
+    const pendentes = plantoes.filter(p=>p.data && p.data<=today() && p.confirmado===undefined);
+    if(pendentes.length>0){
+      setFilaConfirmacaoPlt(pendentes.map(p=>p.id));
+      setConfirmandoPlt({plantaoId:pendentes[0].id, mostrarCobertura:false});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+  const confirmarPlantaoRealizado=(id,fez,coberturaPor)=>{
+    setPlantoes(plantoes.map(p=>{
+      if(p.id!==id)return p;
+      if(fez) return {...p, confirmado:true};
+      return {...p, confirmado:false, coberturaPor:coberturaPor||"", valorOriginal:p.valorTotal, valorTotal:0};
+    }));
+    const resto = filaConfirmacaoPlt.filter(pid=>pid!==id);
+    setFilaConfirmacaoPlt(resto);
+    if(resto.length>0) setConfirmandoPlt({plantaoId:resto[0], mostrarCobertura:false});
+    else setConfirmandoPlt(null);
+  };
   useEffect(()=>{
     if(ccMovs.length>0){
       const migrados=ccMovs.map(m=>({
@@ -3476,6 +3497,8 @@ function AppMain({user, onLogout}) {
                                 {empresas.map(e=><option key={e.id} value={e.nome}>{e.nome}</option>)}
                                 {!empresas.find(e=>e.nome===p.empresa)&&<option value={p.empresa}>{p.empresa}</option>}
                               </select>
+                              {p.confirmado===true&&<span title="Você confirmou que realizou esse plantão" style={{fontSize:9,fontWeight:700,color:"#215010",background:"rgba(45,90,16,0.12)",borderRadius:5,padding:"2px 5px",flexShrink:0,whiteSpace:"nowrap"}}>✓ confirmado</span>}
+                              {p.confirmado===false&&<span title={p.coberturaPor?`Coberto por ${p.coberturaPor}`:"Você indicou que não realizou esse plantão"} style={{fontSize:9,fontWeight:700,color:"#8B1A1A",background:"rgba(139,26,26,0.1)",borderRadius:5,padding:"2px 5px",flexShrink:0,whiteSpace:"nowrap"}}>✗ não fiz{p.coberturaPor?` · ${p.coberturaPor}`:""}</span>}
                             </div>
                             <input type="date" value={p.data||""} onChange={e=>{
                               const novaData=e.target.value;
@@ -3528,7 +3551,10 @@ function AppMain({user, onLogout}) {
                   <div key={p.id} className={CARD} style={{marginBottom:10,borderLeft:`3px solid ${emp.cor||C.magenta}`,padding:"13px 14px"}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                       <div>
-                        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3}}><span style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{emp.nome}</span><Badge label={s.label} color={s.color} bg={s.bg}/></div>
+                        <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:3,flexWrap:"wrap"}}><span style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:TXT}}>{emp.nome}</span><Badge label={s.label} color={s.color} bg={s.bg}/>
+                          {p.confirmado===true&&<span title="Você confirmou que realizou esse plantão" style={{fontSize:9,fontWeight:700,color:"#215010",background:"rgba(45,90,16,0.12)",borderRadius:5,padding:"2px 5px",whiteSpace:"nowrap"}}>✓ confirmado</span>}
+                          {p.confirmado===false&&<span title={p.coberturaPor?`Coberto por ${p.coberturaPor}`:"Você indicou que não realizou esse plantão"} style={{fontSize:9,fontWeight:700,color:"#8B1A1A",background:"rgba(139,26,26,0.1)",borderRadius:5,padding:"2px 5px",whiteSpace:"nowrap"}}>✗ não fiz{p.coberturaPor?` · ${p.coberturaPor}`:""}</span>}
+                        </div>
                         <div style={{fontSize:10,color:"rgba(26,18,9,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{fd(p.data)}{p.horas&&` · ${p.horas}h`}{p.previsao&&` · pgto ${fd(p.previsao)}`}{p.previsao&&p.status!=="recebido"&&d!==null&&<span style={{color:d<0?C.red:d<7?C.gold:TSUB,fontWeight:600}}> ({d<0?`${Math.abs(d)}d atrasado`:d===0?"hoje":d===1?"amanhã":`${d}d`})</span>}</div>
                         {aloc&&<div style={{display:"flex",gap:4,flexWrap:"wrap",marginTop:5}}>{aloc.itens.map((it,j)=>{const dc=DEST_COLORS[it.tipo]||DEST_COLORS.livre;return <span key={j} style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:99,background:dc.bg,color:dc.color,backdropFilter:"blur(4px)"}}>{it.destinoNome}: {R(it.valor)}</span>;})}</div>}
                       </div>
@@ -4920,6 +4946,42 @@ function AppMain({user, onLogout}) {
             <Btn variant="primary" onClick={()=>{setSaldoMensal({...saldoMensal,[confirmSaldoMes.mes]:+confirmSaldoMes.valor||0});setConfirmSaldoMes(null);}}><Check size={14} strokeWidth={2.5} style={{marginRight:4}}/>Confirmar</Btn>
           </div>
         )}
+      </Modal>
+
+      <Modal open={!!confirmandoPlt} onClose={()=>{}} title="🏥 Confirmar plantão">
+        {confirmandoPlt&&(()=>{
+          const p=plantoes.find(x=>x.id===confirmandoPlt.plantaoId);
+          if(!p)return null;
+          return (
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                {filaConfirmacaoPlt.length>1&&<div style={{fontSize:10.5,color:"rgba(90,74,58,0.6)",fontWeight:700,marginBottom:6}}>{filaConfirmacaoPlt.indexOf(confirmandoPlt.plantaoId)+1} de {filaConfirmacaoPlt.length}</div>}
+                Você realizou esse plantão?
+              </div>
+              <div style={{background:"rgba(0,0,0,0.04)",borderRadius:12,padding:"14px 16px"}}>
+                <div style={{fontSize:14,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{p.empresa}</div>
+                <div style={{fontSize:12,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",marginTop:2}}>{fdFull(p.data)}</div>
+                <div className="num" style={{fontSize:18,fontWeight:700,color:"#215010",marginTop:6}}>{R(p.valorTotal)}</div>
+              </div>
+
+              {!confirmandoPlt.mostrarCobertura ? (
+                <div style={{display:"flex",gap:8}}>
+                  <Btn variant="green" style={{flex:1}} onClick={()=>confirmarPlantaoRealizado(p.id,true)}>✓ Sim, eu fiz</Btn>
+                  <Btn variant="secondary" style={{flex:1,color:"#1A1209",background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.1)"}} onClick={()=>setConfirmandoPlt({...confirmandoPlt,mostrarCobertura:true})}>✗ Não fiz</Btn>
+                </div>
+              ) : (
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <div style={{fontSize:12,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>Quem cobriu esse plantão? (opcional)</div>
+                  <Inp placeholder="Nome de quem fez no seu lugar" value={confirmandoPlt.coberturaPor||""} onChange={e=>setConfirmandoPlt({...confirmandoPlt,coberturaPor:e.target.value})}/>
+                  <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:10,padding:"9px 12px",fontSize:11.5,color:"#6B4C00",fontFamily:"'DM Sans',sans-serif"}}>
+                    O valor desse plantão vai ficar zerado nas suas contas, já que quem recebeu não foi você.
+                  </div>
+                  <Btn variant="danger" onClick={()=>confirmarPlantaoRealizado(p.id,false,confirmandoPlt.coberturaPor)}>Confirmar que não fiz</Btn>
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </Modal>
       <Modal open={editSaldoMes!==null} onClose={()=>setEditSaldoMes(null)} title="Ajustar saldo inicial">
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
