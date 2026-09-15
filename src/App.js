@@ -198,6 +198,12 @@ const LISTRAS_CSS = `background-color:#F3B8C4;background-image:repeating-linear-
 
 const SOL_STRIPES_CSS = `background-color:#FAF6ED;background-image:repeating-linear-gradient(90deg,#FAF6ED 0px,#FAF6ED 18px,#F0D89A 18px,#F0D89A 60px,#FAF6ED 60px,#FAF6ED 78px,#A9C4DE 78px,#A9C4DE 84px);background-size:84px 100%;`;
 
+const LISTRAS_VINHO_CSS = `background-color:#5A1A1F;background-image:repeating-linear-gradient(90deg,#5A1A1F 0px,#5A1A1F 50px,#F0EAE0 50px,#F0EAE0 54px,#7FB8D4 54px,#7FB8D4 68px,#F0EAE0 68px,#F0EAE0 72px);background-size:72px 100%;`;
+
+const AZULEJO_AZUL_CSS = `background-color:#B8D4E0;background-image:repeating-linear-gradient(90deg,#8B1A2E 0px,#8B1A2E 12px,transparent 12px,transparent 24px),repeating-linear-gradient(0deg,#8B1A2E 0px,#8B1A2E 12px,transparent 12px,transparent 24px);background-size:24px 24px;`;
+
+const LISTRAS_LARGAS_CSS = `background-color:#7C9FB0;background-image:repeating-linear-gradient(90deg,#7C9FB0 0px,#7C9FB0 60px,#5C1420 60px,#5C1420 120px);background-size:120px 100%;`;
+
 const BG_OPTIONS = [
   { id:"tartan",    label:"Xadrez",   emoji:"🟫", isCss:true, css:TARTAN_CSS },
   { id:"listras",   label:"Listras",  emoji:"🎀", isCss:true, css:LISTRAS_CSS },
@@ -205,6 +211,10 @@ const BG_OPTIONS = [
   { id:"cachorro",  label:"Dálmata",  emoji:"🐶", url:"/wallpapers/bg-cachorro-azul.jpg", contain:true, bgColor:"#2E4C82", position:"left bottom", containSize:"auto 90%" },
   { id:"veleiro",   label:"Veleiro",  url:"/wallpapers/bg-veleiro-azul.jpg", position:"center" },
   { id:"peixinhos", label:"Peixinhos", url:"/wallpapers/bg-peixinhos.jpg", position:"center" },
+  { id:"listras_vinho",  label:"Listras Vinho", emoji:"🍷", isCss:true, css:LISTRAS_VINHO_CSS },
+  { id:"azulejo_azul",   label:"Azulejo Azul",  emoji:"🔷", isCss:true, css:AZULEJO_AZUL_CSS },
+  { id:"listras_largas", label:"Listras Largas", emoji:"🎗️", isCss:true, css:LISTRAS_LARGAS_CSS },
+  { id:"ladrilho_vermelho", label:"Ladrilho Vermelho", emoji:"🔴", url:"/wallpapers/bg-ladrilho-vermelho.jpg", position:"center" },
 ];
 
 function bgToStyle(bg) {
