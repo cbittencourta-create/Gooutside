@@ -2955,7 +2955,10 @@ function AppMain({user, onLogout}) {
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <div style={{width:26,height:26,borderRadius:8,background:"rgba(255,196,32,0.2)",display:"flex",alignItems:"center",justifyContent:"center",color:"#8B6000"}}><Flower2 size={13} strokeWidth={2.2}/></div>
-                    <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Desafio do Pato 100%</span>
+                    <div>
+                      <div style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",lineHeight:1.2}}>Desafio do Pato 100%</div>
+                      <div style={{fontSize:9.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{monthLabel(selMes)} · reseta todo mês</div>
+                    </div>
                   </div>
                   <span style={{fontSize:12,fontWeight:700,color:desafioPato.completos===desafioPato.total?"#215010":"#8B6000",fontFamily:"'DM Sans',sans-serif"}}>{desafioPato.completos} de {desafioPato.total}</span>
                 </div>
