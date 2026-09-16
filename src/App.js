@@ -233,7 +233,7 @@ function bgToStyle(bg) {
 const R = v => new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(v||0);
 const fd = d => d ? new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short"}) : "—";
 const fdFull = d => d ? new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{day:"2-digit",month:"short",year:"numeric"}) : "—";
-const today = () => new Date().toISOString().slice(0,10);
+const today = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 const addDays = (ds,n) => { const d=new Date(ds+"T12:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
 const addMonths = (ds,n) => { const d=new Date(ds+"T12:00:00"); d.setMonth(d.getMonth()+n); return d.toISOString().slice(0,10); };
 const daysUntil = ds => ds ? Math.ceil((new Date(ds+"T12:00:00")-new Date())/86400000) : null;
@@ -2065,8 +2065,19 @@ function AppMain({user, onLogout}) {
   const [sideOpen,setSideOpen]=useState(false);
   const [cdiAtual,setCdiAtual]=useState(()=>{try{return JSON.parse(localStorage.getItem("velara_cdi")||"null")?.valor||null;}catch{return null;}});
   useEffect(()=>{fetchCDI().then(v=>{if(v)setCdiAtual(v);});},[]);
+  const jaAconteceu = p => {
+    if(!p.data) return false;
+    if(p.horaFim){
+      let fimDate = new Date(p.data+"T"+p.horaFim+":00");
+      // se a hora de fim é menor/igual à de início, o plantão vira a noite (termina no dia seguinte)
+      if(p.horaInicio && p.horaFim<=p.horaInicio) fimDate.setDate(fimDate.getDate()+1);
+      return fimDate <= new Date();
+    }
+    // sem horário definido: só considera que passou quando o dia inteiro já virou
+    return p.data < today();
+  };
   useEffect(()=>{
-    const pendentes = plantoes.filter(p=>p.data && p.data<=today() && p.confirmado===undefined);
+    const pendentes = plantoes.filter(p=>p.data && jaAconteceu(p) && p.confirmado===undefined);
     if(pendentes.length>0){
       setFilaConfirmacaoPlt(pendentes.map(p=>p.id));
       setConfirmandoPlt({plantaoId:pendentes[0].id, mostrarCobertura:false});
