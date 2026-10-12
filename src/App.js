@@ -1991,6 +1991,296 @@ function LoginScreen({onLogin}) {
   );
 }
 
+// ── Simular Compra ("Pergunte antes de comprar") ─────────────────────────────
+const CATEGORIAS_COMPRA = [
+  {id:"celular",    emoji:"📱", nome:"Celular"},
+  {id:"viagem",     emoji:"✈️", nome:"Viagem"},
+  {id:"eletronico", emoji:"💻", nome:"Eletrônico"},
+  {id:"beleza",     emoji:"💄", nome:"Beleza"},
+  {id:"casa",       emoji:"🛋️", nome:"Casa"},
+  {id:"educacao",   emoji:"📚", nome:"Educação"},
+  {id:"lazer",      emoji:"🎉", nome:"Lazer"},
+  {id:"outra",      emoji:"✦",  nome:"Outra"},
+];
+const VALORES_RAPIDOS_COMPRA = [500,1000,1500,2000,3000,5000];
+const REGRA_COMPROMETIMENTO_MAX = 90; // % máx. recomendado da renda em parcelas
+
+function SimularCompraModal({open,onClose,movs,dividas,objetivos,setObjetivos,mediaSaldoLivre3Meses,categoriaMaiorGasto,navTo}) {
+  const [step,setStep]=useState("categoria");
+  const [categoria,setCategoria]=useState(null);
+  const [descricao,setDescricao]=useState("");
+  const [valor,setValor]=useState("");
+  const [parcelado,setParcelado]=useState(false);
+  const [numParcelas,setNumParcelas]=useState("10");
+  const [temJuros,setTemJuros]=useState("naosei");
+  const [checkIdx,setCheckIdx]=useState(0);
+  const [metaCriada,setMetaCriada]=useState(null);
+
+  useEffect(()=>{
+    if(!open) return;
+    setStep("categoria"); setCategoria(null); setDescricao(""); setValor("");
+    setParcelado(false); setNumParcelas("10"); setTemJuros("naosei"); setMetaCriada(null);
+  },[open]);
+
+  useEffect(()=>{
+    if(step!=="analisando") return;
+    setCheckIdx(0);
+    let i=0;
+    const t=setInterval(()=>{
+      i++; setCheckIdx(i);
+      if(i>=4){ clearInterval(t); setTimeout(()=>setStep("resultado"),350); }
+    },350);
+    return ()=>clearInterval(t);
+  },[step]);
+
+  const valorNum = +String(valor).replace(",",".")||0;
+  const n = parcelado ? Math.max(1,+numParcelas||1) : 1;
+  const taxaMensal = !parcelado ? 0 : (temJuros==="sim"?0.025:temJuros==="naosei"?0.03:0);
+  const valorTotalComJuros = taxaMensal>0 ? valorNum*(1+taxaMensal*n) : valorNum;
+  const parcela = n>0 ? valorTotalComJuros/n : valorNum;
+  const jurosEstimados = valorTotalComJuros-valorNum;
+
+  const hoje = today();
+  const mesAlvo = monthKey(hoje);
+
+  const rendaMedia = useMemo(()=>{
+    const meses=[1,2,3].map(k=>shiftMonth(mesAlvo,-k));
+    const vals=meses.map(mk=>movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===mk).reduce((s,m)=>s+m.valor,0)).filter(v=>v>0);
+    return vals.length? vals.reduce((s,v)=>s+v,0)/vals.length : 0;
+  },[movs,mesAlvo]);
+
+  const comprometidoAtual = useMemo(()=>{
+    const cartao = movs.filter(m=>m.formaPagamento==="cartao"&&m.parcelaTotal>1&&monthKey(m.data)===mesAlvo).reduce((s,m)=>s+m.valor,0);
+    const divida = dividas.filter(d=>d.tipo==="cartao_desconto").reduce((s,d)=>{
+      const p=(d.parcelasStatus||[]).find(pp=>!pp.pago&&monthKey(pp.dataVencimento)===mesAlvo);
+      return s+(p?d.valorComDesconto:0);
+    },0);
+    return cartao+divida;
+  },[movs,dividas,mesAlvo]);
+
+  const semDados = rendaMedia<=0;
+  const pctAtual = semDados?0:(comprometidoAtual/rendaMedia*100);
+  const pctComCompra = semDados?0:((comprometidoAtual+parcela)/rendaMedia*100);
+  const veredito = semDados?"semdados":pctComCompra>REGRA_COMPROMETIMENTO_MAX?"nao":pctComCompra>70?"atencao":"sim";
+
+  const sobraParaMetasDepois = mediaSaldoLivre3Meses-parcela;
+
+  const margemDisponivel = Math.max(0,(rendaMedia*REGRA_COMPROMETIMENTO_MAX/100)-comprometidoAtual);
+  const corteNecessario = Math.max(0,parcela-margemDisponivel);
+  const mesesGuardando = mediaSaldoLivre3Meses>0 ? Math.ceil(valorNum/mediaSaldoLivre3Meses) : null;
+  const dataGuardando = mesesGuardando ? addMonths(hoje,mesesGuardando) : null;
+  const parcelasMinNecessarias = (parcelado&&margemDisponivel>0) ? Math.max(n,Math.ceil(valorTotalComJuros/margemDisponivel)) : null;
+
+  const nomeCompra = descricao||categoria?.nome||"Compra";
+
+  const criarMeta=(prazo)=>{
+    const novaMeta={id:uid(), nome:`${categoria?.emoji||"🎯"} ${nomeCompra}`, meta:valorNum, atual:0, prazo, cor:C.blue, obs:"Criada pela Simulação de Compra", partes:[]};
+    setObjetivos([novaMeta,...objetivos]);
+    setMetaCriada(novaMeta);
+    setStep("concluido");
+  };
+
+  if(!open) return null;
+
+  return (
+    <Modal open={open} onClose={onClose} title={<><Glyph e="💭" size={16} style={{marginRight:6,verticalAlign:"-3px"}}/>Simular uma compra</>}>
+
+      {step==="categoria"&&(
+        <div>
+          <SL>O que você quer comprar?</SL>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9}}>
+            {CATEGORIAS_COMPRA.map(c=>(
+              <button key={c.id} onClick={()=>{setCategoria(c);setStep("valor");}}
+                style={{background:"rgba(0,0,0,0.04)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:"14px 10px",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6,fontFamily:"'DM Sans',sans-serif"}}>
+                <span style={{fontSize:22}}>{c.emoji}</span>
+                <span style={{fontSize:12,fontWeight:700,color:C.modalText}}>{c.nome}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {step==="valor"&&(
+        <div>
+          <SL>{categoria?.emoji} {categoria?.nome} — quanto custa?</SL>
+          <Inp label="O que é (opcional)" placeholder="ex: iPhone 16, viagem pro Nordeste..." value={descricao} onChange={e=>setDescricao(e.target.value)}/>
+          <div style={{height:12}}/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:7,marginBottom:10}}>
+            {VALORES_RAPIDOS_COMPRA.map(v=>(
+              <button key={v} onClick={()=>setValor(String(v))}
+                style={{background:+valor===v?C.magentaDark:"rgba(0,0,0,0.05)",color:+valor===v?"#fff":C.modalText,border:"none",borderRadius:10,padding:"9px 4px",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                {R(v).replace(",00","")}
+              </button>
+            ))}
+          </div>
+          <Inp label="Ou digite o valor exato" placeholder="R$ 0,00" value={valor} onChange={e=>setValor(e.target.value)}/>
+          <div style={{height:16}}/>
+
+          <div style={{display:"flex",gap:8,marginBottom:14}}>
+            <button onClick={()=>setParcelado(false)} style={{flex:1,background:!parcelado?C.magentaDark:"rgba(0,0,0,0.05)",color:!parcelado?"#fff":C.modalText,border:"none",borderRadius:10,padding:"9px",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>À vista</button>
+            <button onClick={()=>setParcelado(true)} style={{flex:1,background:parcelado?C.magentaDark:"rgba(0,0,0,0.05)",color:parcelado?"#fff":C.modalText,border:"none",borderRadius:10,padding:"9px",fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Parcelado</button>
+          </div>
+
+          {parcelado&&(
+            <>
+              <Sel label="Quantas vezes?" value={numParcelas} onChange={e=>setNumParcelas(e.target.value)}>
+                {Array.from({length:23},(_,i)=>i+2).map(x=><option key={x} value={x}>{x}x</option>)}
+              </Sel>
+              <div style={{height:12}}/>
+              <div style={{fontSize:11,fontWeight:600,color:C.modalSub,letterSpacing:".06em",textTransform:"uppercase",marginBottom:5}}>Tem juros?</div>
+              <div style={{display:"flex",gap:7}}>
+                {[["nao","Não"],["sim","Sim"],["naosei","Não sei"]].map(([v,lbl])=>(
+                  <button key={v} onClick={()=>setTemJuros(v)} style={{flex:1,background:temJuros===v?C.magentaDark:"rgba(0,0,0,0.05)",color:temJuros===v?"#fff":C.modalText,border:"none",borderRadius:9,padding:"8px 4px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{lbl}</button>
+                ))}
+              </div>
+              {valorNum>0&&(
+                <div style={{fontSize:11.5,color:C.modalSub,marginTop:10,fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                  {n}x de <strong style={{color:C.modalText}}>{R(parcela)}</strong>
+                  {taxaMensal>0&&<>. {temJuros==="naosei"?"Sem saber, conto 3% ao mês, o comum em loja.":"Considerando 3% ao mês."} Total pago: <strong style={{color:C.modalText}}>{R(valorTotalComJuros)}</strong></>}
+                </div>
+              )}
+            </>
+          )}
+
+          <Btn variant="primary" style={{width:"100%",marginTop:18}} onClick={()=>valorNum>0&&setStep("analisando")}>Continuar</Btn>
+        </div>
+      )}
+
+      {step==="analisando"&&(
+        <div style={{padding:"26px 6px 10px",textAlign:"center"}}>
+          <div style={{fontSize:16,fontWeight:700,color:C.modalText,marginBottom:22}}>Analisando seu mês...</div>
+          <div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"flex-start",maxWidth:280,margin:"0 auto"}}>
+            {["Seus gastos do mês","Compras que você já tem","Suas metas e a reserva","Quanto costuma sobrar"].map((lbl,i)=>(
+              <div key={lbl} style={{display:"flex",alignItems:"center",gap:10,opacity:checkIdx>i?1:0.35,transition:"opacity .25s"}}>
+                <CheckCircle2 size={16} strokeWidth={2.2} color={checkIdx>i?C.green:C.modalSub}/>
+                <span style={{fontSize:13,color:C.modalText,fontFamily:"'DM Sans',sans-serif"}}>{lbl}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {step==="resultado"&&(
+        <div>
+          <div style={{background:veredito==="nao"?"rgba(224,82,82,0.1)":veredito==="atencao"?"rgba(212,168,67,0.12)":veredito==="semdados"?"rgba(0,0,0,0.04)":"rgba(143,196,58,0.12)",
+            border:`1.5px solid ${veredito==="nao"?"rgba(224,82,82,0.3)":veredito==="atencao"?"rgba(212,168,67,0.35)":veredito==="semdados"?"rgba(0,0,0,0.1)":"rgba(143,196,58,0.35)"}`,
+            borderRadius:14,padding:16,marginBottom:14}}>
+            <div style={{fontSize:17,fontWeight:700,marginBottom:6,color:veredito==="nao"?"#C0392B":veredito==="atencao"?"#8B6F14":veredito==="semdados"?C.modalText:"#2D5A10"}}>
+              {veredito==="nao"?"Eu não compraria agora.":veredito==="atencao"?"Dá, mas com atenção.":veredito==="semdados"?"Ainda não tenho dados suficientes.":"Pode comprar."}
+            </div>
+            {veredito==="semdados" ? (
+              <div style={{fontSize:12.5,color:C.modalSub,fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>Preciso de pelo menos um mês de entradas registradas pra calcular sua renda média. Registre seus plantões e eu calculo certinho da próxima vez.</div>
+            ) : (
+              <>
+                <div style={{fontSize:12.5,color:C.modalSub,fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                  Sua renda já está <strong style={{color:C.modalText}}>{pctAtual.toFixed(0)}%</strong> comprometida com parcelas.{" "}
+                  {parcelado
+                    ? <>Com essa de <strong style={{color:C.modalText}}>{R(parcela)}</strong>, vai a <strong style={{color:C.modalText}}>{pctComCompra.toFixed(0)}%</strong>.</>
+                    : <>Comprando à vista, esse mês fica <strong style={{color:C.modalText}}>{R(comprometidoAtual+parcela)}</strong> comprometido.</>}
+                  {" "}A regra é no máximo {REGRA_COMPROMETIMENTO_MAX}%.
+                </div>
+                {jurosEstimados>1&&(
+                  <div style={{marginTop:8,display:"flex",alignItems:"center",gap:6,fontSize:11.5,color:"#8B6F14",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>
+                    <AlertTriangle size={13} strokeWidth={2.2}/>+{R(jurosEstimados)} de juros estimados
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {!semDados&&(
+            <div style={{background:"rgba(0,0,0,0.03)",borderRadius:12,padding:14,marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:10.5,color:C.modalSub,fontFamily:"'DM Sans',sans-serif",marginBottom:6,letterSpacing:".04em",textTransform:"uppercase"}}>
+                <span>Sobra p/ metas hoje</span><span>Com essa compra</span>
+              </div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span className="num" style={{fontSize:16,fontWeight:700,color:C.modalText}}>{R(mediaSaldoLivre3Meses)}</span>
+                <span style={{color:C.modalSub,fontSize:13}}>→</span>
+                <span className="num" style={{fontSize:16,fontWeight:700,color:sobraParaMetasDepois<0?"#C0392B":C.modalText}}>{R(sobraParaMetasDepois)}</span>
+              </div>
+            </div>
+          )}
+
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {(veredito==="nao"||veredito==="atencao")&&(
+              <Btn variant="secondary" style={{width:"100%"}} onClick={()=>setStep("fazercaber")}>Ver como fazer caber</Btn>
+            )}
+            <Btn variant={veredito==="nao"?"danger":"primary"} style={{width:"100%"}} onClick={()=>setStep("decisao")}>{veredito==="nao"?"Mesmo assim, decidir agora":"Continuar"}</Btn>
+          </div>
+        </div>
+      )}
+
+      {step==="fazercaber"&&(
+        <div>
+          <SL>Dá pra fazer caber</SL>
+          <div style={{fontSize:12,color:C.modalSub,marginBottom:14,fontFamily:"'DM Sans',sans-serif"}}>Escolha um caminho. Cada um mostra o que acontece com o seu mês.</div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {corteNecessario>0&&categoriaMaiorGasto&&(
+              <button onClick={()=>setStep("decisao")} style={{textAlign:"left",background:"rgba(0,0,0,0.04)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.modalText,marginBottom:4}}>✂️ Gastar {R(corteNecessario)} a menos por mês</div>
+                <div style={{fontSize:11.5,color:C.modalSub}}>Sua maior categoria esse mês é {categoriaMaiorGasto.nome} ({R(categoriaMaiorGasto.valor)}) — reduzindo ali, a parcela cabe.</div>
+              </button>
+            )}
+            {mesesGuardando>0&&(
+              <button onClick={()=>setStep("decisao")} style={{textAlign:"left",background:"rgba(0,0,0,0.04)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.modalText,marginBottom:4}}>⏳ Guardar e comprar à vista em {fdFull(dataGuardando)}</div>
+                <div style={{fontSize:11.5,color:C.modalSub}}>Guardando {R(mediaSaldoLivre3Meses)} por mês (sua média de hoje), sem dívida.</div>
+              </button>
+            )}
+            {parcelado&&parcelasMinNecessarias>n&&(
+              <button onClick={()=>{setNumParcelas(String(parcelasMinNecessarias));setStep("decisao");}} style={{textAlign:"left",background:"rgba(0,0,0,0.04)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                <div style={{fontSize:13,fontWeight:700,color:C.modalText,marginBottom:4}}>🔁 Parcelar em {parcelasMinNecessarias}x</div>
+                <div style={{fontSize:11.5,color:C.modalSub}}>Parcela menor, cabe dentro da regra de {REGRA_COMPROMETIMENTO_MAX}% da renda.</div>
+              </button>
+            )}
+            {!(corteNecessario>0&&categoriaMaiorGasto)&&!(mesesGuardando>0)&&!(parcelado&&parcelasMinNecessarias>n)&&(
+              <div style={{fontSize:12.5,color:C.modalSub,fontFamily:"'DM Sans',sans-serif"}}>Não encontrei um caminho fácil agora — talvez valha esperar ou repensar o valor.</div>
+            )}
+          </div>
+          <Btn variant="secondary" style={{width:"100%",marginTop:14}} onClick={()=>setStep("resultado")}>Voltar</Btn>
+        </div>
+      )}
+
+      {step==="decisao"&&(
+        <div>
+          <SL>Então, o que você vai fazer?</SL>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {mesesGuardando>0&&(
+              <button onClick={()=>criarMeta(dataGuardando)} style={{textAlign:"left",background:"rgba(143,196,58,0.12)",border:"1.5px solid rgba(143,196,58,0.35)",borderRadius:12,padding:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+                <div style={{fontSize:13,fontWeight:700,color:"#2D5A10",marginBottom:4}}>💰 Vou guardar primeiro</div>
+                <div style={{fontSize:11.5,color:C.modalSub}}>Meta de {R(mediaSaldoLivre3Meses)} por mês, compra em {fdFull(dataGuardando)}.</div>
+              </button>
+            )}
+            <button onClick={onClose} style={{textAlign:"left",background:"rgba(0,0,0,0.04)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.modalText,marginBottom:4}}>😴 Decidir amanhã</div>
+              <div style={{fontSize:11.5,color:C.modalSub}}>Se amanhã ainda quiser, volta aqui.</div>
+            </button>
+            <button onClick={onClose} style={{textAlign:"left",background:"rgba(0,0,0,0.04)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:12,padding:14,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
+              <div style={{fontSize:13,fontWeight:700,color:C.modalText,marginBottom:4}}>🙅 Vou desistir</div>
+              <div style={{fontSize:11.5,color:C.modalSub}}>Não preciso disso agora.</div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step==="concluido"&&metaCriada&&(
+        <div style={{textAlign:"center",padding:"10px 0"}}>
+          <div style={{fontSize:30,marginBottom:10}}>💰</div>
+          <div style={{fontSize:17,fontWeight:700,color:C.modalText,marginBottom:8}}>Compra planejada.</div>
+          <div style={{fontSize:12.5,color:C.modalSub,marginBottom:18,fontFamily:"'DM Sans',sans-serif"}}>
+            {R(mediaSaldoLivre3Meses)} por mês até {fdFull(metaCriada.prazo)}. Meta criada.
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            <Btn variant="primary" style={{width:"100%"}} onClick={()=>{navTo&&navTo("objetivos");onClose();}}>Ver a meta</Btn>
+            <Btn variant="secondary" style={{width:"100%"}} onClick={()=>{setStep("categoria");setCategoria(null);setDescricao("");setValor("");setParcelado(false);setMetaCriada(null);}}>Simular outra compra</Btn>
+          </div>
+        </div>
+      )}
+
+    </Modal>
+  );
+}
+
 class ErrorBoundary extends React.Component {
   constructor(props){super(props);this.state={hasError:false,error:null};}
   static getDerivedStateFromError(error){return{hasError:true,error};}
@@ -2123,6 +2413,7 @@ function AppMain({user, onLogout}) {
   },[]);
   const [alocExpanded,setAlocExpanded]=useState(false);
   const [importOpen,setImportOpen]=useState(false);
+  const [simularOpen,setSimularOpen]=useState(false);
   const [notas,setNotas]=useLS("v4_notas","",userId);
   const [pltDist,setPltDist]=useState(null);
   const [recebModal,setRecebModal]=useState(null);
@@ -2884,6 +3175,7 @@ function AppMain({user, onLogout}) {
               </button>
               <button onClick={()=>setModal("dashCustom")} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 10px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}} title="Escolher o que mostrar"><SlidersHorizontal size={14} strokeWidth={2.2}/></button>
               <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}><Glyph e="📥" size={14}/>Importar Extrato</button>
+              <button onClick={()=>setSimularOpen(true)} style={{background:C.magentaDark,border:`1px solid ${C.magenta}`,borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:`0 2px 10px ${C.magenta}44`}}>💭 Simular Compra</button>
             </div>
 
             {dashEditMode&&(
@@ -4892,6 +5184,8 @@ function AppMain({user, onLogout}) {
       </Modal>
 
       <ImportacaoModal open={importOpen} onClose={()=>setImportOpen(false)} onImport={importarMovs} cats={cats} movsHistorico={movs}/>
+
+      <SimularCompraModal open={simularOpen} onClose={()=>setSimularOpen(false)} movs={movs} dividas={dividas} objetivos={objetivos} setObjetivos={setObjetivos} mediaSaldoLivre3Meses={mediaSaldoLivre3Meses} categoriaMaiorGasto={categoriaMaiorGasto} navTo={navTo}/>
       <Modal open={!!temDinheiroPergunta} onClose={()=>setTemDinheiroPergunta(null)} title={<><CreditCard size={16} strokeWidth={2.2} style={{marginRight:6,verticalAlign:"-3px"}}/>Compra no cartão</>}>
         {temDinheiroPergunta&&(
           <div style={{display:"flex",flexDirection:"column",gap:14}}>
