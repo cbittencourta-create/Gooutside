@@ -720,13 +720,16 @@ function GerenciarCategorias({cats, setCats, onClose}) {
 // MÓDULO 2 — PLANEJAMENTO ORÇAMENTÁRIO
 // ═══════════════════════════════════════════════════════════════════
 
+// Mês a que um plantão pertence: se já foi recebido, o mês em que o dinheiro entrou; senão, o da previsão
+const mesDoPlantao = p => (p.status==="recebido" && p.dataRecebimento) ? monthKey(p.dataRecebimento) : monthKey(p.previsao||p.data);
+
 function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
   const [viewMode, setViewMode] = useState("planejado"); // 'planejado' | 'recebimento'
   const [editCat, setEditCat] = useState(null);
   const [editVal, setEditVal] = useState("");
 
   const recebimentoPrevMes = plantoes
-    .filter(p => monthKey(p.previsao)===selMes)
+    .filter(p => p.status!=="cancelado" && mesDoPlantao(p)===selMes)
     .reduce((s,p)=>s+p.valorTotal,0);
 
   const movsM = movs.filter(m=>monthKey(m.data)===selMes);
@@ -3270,7 +3273,7 @@ function AppMain({user, onLogout}) {
   // Forecast
   const forecast=useMemo(()=>months8().map(ym=>({
     ym,
-    entradas:movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)+plantoes.filter(p=>monthKey(p.previsao)===ym).reduce((s,p)=>s+p.valorTotal,0),
+    entradas:movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)+plantoes.filter(p=>p.status!=="recebido"&&p.status!=="cancelado"&&monthKey(p.previsao)===ym).reduce((s,p)=>s+p.valorTotal,0),
     saidas:movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
     rendimentos:invests.reduce((s,i)=>s+(i.aporte*taxaEfetiva(i)/100/12),0),
   })).map(f=>({...f,saldo:f.entradas-f.saidas+f.rendimentos})),[movs,plantoes,invests]);
@@ -4059,7 +4062,7 @@ function AppMain({user, onLogout}) {
               });
               const grupos={};
               plantoesFiltrados.forEach(p=>{
-                const key=monthKey(p.previsao||p.data)||"sem-data";
+                const key=mesDoPlantao(p)||"sem-data";
                 if(!grupos[key])grupos[key]=[];
                 grupos[key].push(p);
               });
@@ -4121,7 +4124,7 @@ function AppMain({user, onLogout}) {
                             }}
                               style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 4px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
                             {p.status==="recebido"?(
-                              <div style={{background:"rgba(143,196,58,0.2)",border:"1px solid rgba(45,90,16,0.3)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#2D5A10",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}><Check size={11} strokeWidth={3} style={{marginRight:3}}/>Recebido</div>
+                              <div style={{background:"rgba(143,196,58,0.2)",border:"1px solid rgba(45,90,16,0.3)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#2D5A10",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}><Check size={11} strokeWidth={3} style={{marginRight:3}}/>Recebido{p.dataRecebimento&&<div style={{fontSize:9,fontWeight:600,opacity:.8}}>{fd(p.dataRecebimento)}</div>}</div>
                             ):(
                               <button onClick={()=>marcarRecebido(p.id)} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.35)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#E8205F",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%"}}>Receber</button>
                             )}
