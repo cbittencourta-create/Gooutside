@@ -2807,6 +2807,16 @@ function AppMain({user, onLogout}) {
     if(!fPlt.empresa||!fPlt.data||!fPlt.valorTotal)return;
     const estavaEditando=!!edit;
     const novoPlt={...fPlt,valorTotal:+fPlt.valorTotal};
+    if(novoPlt.status==="recebido"&&(!edit||edit.status!=="recebido")){
+      // não grava como recebido direto: abre "Quando você recebeu?" para criar a entrada no mês certo
+      const id=edit?edit.id:uid();
+      const base={...novoPlt,id,status:"pendente"};
+      setPlantoes(edit?plantoes.map(x=>x.id===id?base:x):[base,...plantoes]);
+      closeM();
+      setRecebData(today());
+      setRecebModal(base);
+      return;
+    }
     upsert(plantoes,setPlantoes,novoPlt);
     if(estavaEditando){
       const novaChave=monthKey(novoPlt.previsao||novoPlt.data);
@@ -2934,6 +2944,8 @@ function AppMain({user, onLogout}) {
   const savePgto=()=>{if(!fPgto.valor||!extra)return;const v=+String(fPgto.valor).replace(",",".");setDividas(dividas.map(d=>d.id===extra?{...d,pago:Math.min(+d.pago+v,+d.total)}:d));alimentarPato(v);closeM();};
 
   const getPltStatus=p=>{if(p.status==="recebido")return"recebido";if(p.status==="cancelado")return"cancelado";if(isPast(p.previsao))return"atrasado";return"pendente";};
+  // Plantão marcado como "recebido" pela edição (sem passar por "Receber"): sem data e sem entrada no caixa
+  const recebidoSemEntrada=p=>p.status==="recebido"&&!p.dataRecebimento&&!movs.some(m=>m.tipo==="entrada"&&m.descricao===`Plantão - ${p.empresa}`&&Math.abs(m.valor-p.valorTotal)<0.01);
 
   const updatePlantao=(id,patch)=>{setPlantoes(plantoes.map(p=>p.id===id?{...p,...patch}:p));};
   const marcarRecebido=id=>{
@@ -4124,7 +4136,7 @@ function AppMain({user, onLogout}) {
                             }}
                               style={{background:"rgba(255,255,255,0.7)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,padding:"7px 4px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
                             {p.status==="recebido"?(
-                              <div style={{background:"rgba(143,196,58,0.2)",border:"1px solid rgba(45,90,16,0.3)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#2D5A10",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}><Check size={11} strokeWidth={3} style={{marginRight:3}}/>Recebido{p.dataRecebimento&&<div style={{fontSize:9,fontWeight:600,opacity:.8}}>{fd(p.dataRecebimento)}</div>}</div>
+                              <div style={{background:"rgba(143,196,58,0.2)",border:"1px solid rgba(45,90,16,0.3)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#2D5A10",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}><Check size={11} strokeWidth={3} style={{marginRight:3}}/>Recebido{recebidoSemEntrada(p)&&<button onClick={()=>marcarRecebido(p.id)} title="Este plantão está como recebido mas não entrou no caixa. Toque para informar a data." style={{display:"block",width:"100%",marginTop:3,background:"#E8A020",border:"none",borderRadius:5,color:"#fff",fontSize:9,fontWeight:700,padding:"2px 0",cursor:"pointer",fontFamily:"inherit"}}>Informar data</button>}{p.dataRecebimento&&<div style={{fontSize:9,fontWeight:600,opacity:.8}}>{fd(p.dataRecebimento)}</div>}</div>
                             ):(
                               <button onClick={()=>marcarRecebido(p.id)} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.35)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#E8205F",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%"}}>Receber</button>
                             )}
@@ -4168,6 +4180,7 @@ function AppMain({user, onLogout}) {
                     </div>
                     <div style={{display:"flex",gap:6}}>
                       {p.status!=="recebido"&&<Btn variant="green" style={{fontSize:10,padding:"5px 11px"}} onClick={()=>marcarRecebido(p.id)}><Check size={11} strokeWidth={3} style={{marginRight:3}}/>Recebido</Btn>}
+                      {recebidoSemEntrada(p)&&<Btn variant="green" style={{fontSize:10,padding:"5px 11px",background:"#E8A020"}} onClick={()=>marcarRecebido(p.id)}>Informar data do recebimento</Btn>}
                       <Btn variant="secondary" style={{fontSize:10,padding:"5px 9px",color:"#1A1209",background:"rgba(0,0,0,0.07)",border:"1px solid rgba(0,0,0,0.12)"}} onClick={()=>openM("plt",p)}>Editar</Btn>
                       <Btn variant="danger" style={{fontSize:10,padding:"5px 9px"}} onClick={()=>remove(plantoes,setPlantoes,p.id)}>Excluir</Btn>
                     </div>
