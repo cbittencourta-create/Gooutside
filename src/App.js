@@ -1991,6 +1991,233 @@ function LoginScreen({onLogin}) {
   );
 }
 
+// ── Lançamento rápido por texto ("uber 23 cartão", "mercado 187 pix") ────────
+const normTxt = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const numBR = str => {
+  let s=String(str).trim();
+  if(s.includes(",")&&s.includes(".")) s=s.replace(/\./g,"").replace(",",".");
+  else if(s.includes(",")) s=s.replace(",",".");
+  else if(/^\d{1,3}(\.\d{3})+$/.test(s)) s=s.replace(/\./g,"");
+  return parseFloat(s);
+};
+const dataLocalStr = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const STOP_RAPIDO = new Set(["no","na","nos","nas","de","do","da","em","com","por","pra","para","um","uma","o","a","e","via","foi","gasto","gastos"]);
+
+function opcoesCategoria(tipo, cats) {
+  if(tipo==="entrada") return (cats?.receita||DEFAULT_CATS.receita).map(c=>`${c.emoji} ${c.nome}`);
+  return (cats?.despesa||DEFAULT_CATS.despesa).flatMap(c=>[`${c.emoji} ${c.nome}`,...(c.subcats||[]).map(s=>`${c.emoji} ${c.nome} · ${s.nome}`)]);
+}
+
+function parseLancamentoRapido(texto, cartoes, movsHistorico, cats) {
+  const original=(texto||"").trim();
+  if(!original) return null;
+  let rest=" "+original+" ";
+  // Procura o padrão no texto sem acento/maiúscula e remove o trecho do texto original
+  const retirar=(re)=>{
+    const m=re.exec(normTxt(rest));
+    if(!m) return null;
+    rest=rest.slice(0,m.index)+" "+rest.slice(m.index+m[0].length);
+    return m;
+  };
+
+  // tipo
+  let tipo="saida";
+  if(/^\s*\+/.test(original)){ tipo="entrada"; rest=rest.replace("+"," "); }
+  if(retirar(/\b(recebi|recebido|ganhei|entrou|receita)\b/)) tipo="entrada";
+  retirar(/\b(gastei|paguei|comprei|pago|paga)\b/);
+
+  // parcelas ("3x", "em 10x", "6 parcelas")
+  let parcelas=0;
+  const mp=retirar(/\b(?:em\s+)?(\d{1,2})\s*(?:x|vezes|parcelas?)\b/);
+  if(mp) parcelas=+mp[1];
+
+  // data
+  let data=today();
+  const hojeD=new Date(today()+"T12:00:00");
+  if(retirar(/\banteontem\b/)){ const d=new Date(hojeD); d.setDate(d.getDate()-2); data=dataLocalStr(d); }
+  else if(retirar(/\bontem\b/)){ const d=new Date(hojeD); d.setDate(d.getDate()-1); data=dataLocalStr(d); }
+  else retirar(/\bhoje\b/);
+  const md=retirar(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+  if(md){
+    const dia=+md[1], mes=+md[2];
+    let ano=md[3]?(md[3].length===2?2000+(+md[3]):+md[3]):hojeD.getFullYear();
+    const d=new Date(ano,mes-1,dia,12);
+    if(d.getMonth()===mes-1&&d.getDate()===dia) data=dataLocalStr(d);
+  } else {
+    const mdia=retirar(/\bdia\s+(\d{1,2})\b/);
+    if(mdia){
+      const dia=+mdia[1];
+      let y=hojeD.getFullYear(), m=hojeD.getMonth();
+      if(dia>hojeD.getDate()){ m-=1; if(m<0){m=11;y-=1;} } // "dia 28" dito no dia 5 = mês passado
+      const d=new Date(y,m,dia,12);
+      if(d.getMonth()===m&&d.getDate()===dia) data=dataLocalStr(d);
+    }
+  }
+
+  // forma de pagamento / cartão
+  let forma=null, cartaoId="";
+  for(const c of (cartoes||[])){
+    const nomeN=normTxt(c.nome||"").trim();
+    if(!nomeN) continue;
+    const tokens=[nomeN,...nomeN.split(/\s+/).filter(w=>w.length>=3&&!["cartao","credito","banco","card"].includes(w))];
+    for(const tk of tokens){
+      const esc=tk.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+      if(retirar(new RegExp("\\b"+esc+"\\b"))){ forma="cartao"; cartaoId=c.id; break; }
+    }
+    if(forma) break;
+  }
+  const generico=retirar(/\b(cartao|credito|cc)\b/);
+  if(!forma){
+    if(retirar(/\bpix\b/)) forma="pix";
+    else if(retirar(/\bdebito\b/)) forma="debito";
+    else if(retirar(/\b(dinheiro|especie|cash)\b/)) forma="dinheiro";
+    else if(generico) forma="cartao";
+  } else { retirar(/\b(pix|debito)\b/); }
+  if(!forma && parcelas>1) forma="cartao"; // parcelado quase sempre é cartão
+  // sem forma explícita: usa a mais frequente nas últimas saídas
+  if(!forma||(forma==="cartao"&&!cartaoId)){
+    const ultimas=(movsHistorico||[]).filter(m=>m.tipo==="saida"&&m.formaPagamento).slice(0,30);
+    if(!forma){
+      const cont={}; ultimas.forEach(m=>{cont[m.formaPagamento]=(cont[m.formaPagamento]||0)+1;});
+      forma=Object.entries(cont).sort((a,b)=>b[1]-a[1])[0]?.[0]||"dinheiro";
+    }
+    if(forma==="cartao"&&!cartaoId){
+      if((cartoes||[]).length===1) cartaoId=cartoes[0].id;
+      else {
+        const cont={}; ultimas.filter(m=>m.formaPagamento==="cartao"&&m.cartaoId).forEach(m=>{cont[m.cartaoId]=(cont[m.cartaoId]||0)+1;});
+        const top=Object.entries(cont).sort((a,b)=>b[1]-a[1])[0]?.[0];
+        if(top&&(cartoes||[]).some(c=>c.id===top)) cartaoId=top;
+      }
+    }
+  }
+
+  // valor: prefere o que tem "R$"; senão o maior número do texto
+  retirar(/\breais\b/);
+  const reValor=/(r\$\s*)?(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:[.,]\d{1,2})?)(\s*k\b)?/g;
+  const nrm=normTxt(rest);
+  const cands=[]; let mv;
+  while((mv=reValor.exec(nrm))!==null){
+    let v=numBR(mv[2]); if(mv[3]) v*=1000;
+    if(isFinite(v)&&v>0) cands.push({v,rs:!!mv[1],index:mv.index,len:mv[0].length});
+  }
+  let valor=0;
+  if(cands.length){
+    const escolhido=cands.filter(c=>c.rs)[0]||cands.slice().sort((a,b)=>b.v-a.v)[0];
+    valor=escolhido.v;
+    rest=rest.slice(0,escolhido.index)+" "+rest.slice(escolhido.index+escolhido.len);
+  }
+
+  // descrição: o que sobrou, sem palavras-ponte nas pontas
+  let words=rest.replace(/r\$/gi," ").replace(/[,;]+/g," ").replace(/\s+/g," ").trim().split(" ").filter(Boolean);
+  while(words.length&&STOP_RAPIDO.has(normTxt(words[0]))) words.shift();
+  while(words.length&&STOP_RAPIDO.has(normTxt(words[words.length-1]))) words.pop();
+  let descricao=words.join(" ");
+  if(descricao) descricao=descricao.charAt(0).toUpperCase()+descricao.slice(1);
+
+  // categoria: histórico dela > palavras-chave; se não souber, deixa vazio (pergunta)
+  const g=guessCatSmart(descricao||original,movsHistorico,tipo);
+  let categoria=g.confiante?g.categoria:"";
+  if(categoria&&tipo==="saida"){
+    const cat=(cats?.despesa||DEFAULT_CATS.despesa).find(c=>categoria===`${c.emoji} ${c.nome}`);
+    if(cat){
+      const dn=new Set(palavrasChave(descricao));
+      const ach=(cat.subcats||[]).filter(s=>palavrasChave(s.nome).some(w=>dn.has(w)));
+      if(ach.length===1) categoria=`${cat.emoji} ${cat.nome} · ${ach[0].nome}`;
+    }
+  }
+  if(categoria&&!opcoesCategoria(tipo,cats).includes(categoria)) categoria=""; // categoria que não existe mais
+
+  return {tipo,descricao,valor,data,formaPagamento:tipo==="entrada"?"dinheiro":forma,cartaoId:forma==="cartao"?cartaoId:"",parcelas:tipo==="saida"&&forma==="cartao"?parcelas:0,categoria};
+}
+
+function LancamentoRapido({movs,cartoes,cats,onSalvar,onEditar}) {
+  const [texto,setTexto]=useState("");
+  const [ov,setOv]=useState({});
+  const [okMsg,setOkMsg]=useState("");
+  const parsed=useMemo(()=>parseLancamentoRapido(texto,cartoes,movs,cats),[texto,cartoes,movs,cats]);
+  const item=parsed?{...parsed,...ov}:null;
+  if(item&&item.tipo!=="saida"){ item.formaPagamento="dinheiro"; item.cartaoId=""; item.parcelas=0; }
+  const pronto=!!(item&&item.valor>0&&item.descricao&&item.categoria);
+  const duplicado=!!(item&&item.valor>0&&pareceDuplicata({desc:item.descricao,data:item.data,valor:item.valor},movs));
+  const limpar=()=>{setTexto("");setOv({});};
+  const salvar=()=>{
+    if(!pronto) return;
+    onSalvar(item);
+    limpar();
+    setOkMsg("Lançado ✓");
+    setTimeout(()=>setOkMsg(""),2500);
+  };
+  const pillBtn=(ativo)=>({background:ativo?C.magentaDark:"rgba(0,0,0,0.06)",color:ativo?"#fff":"#1A1209",border:"none",borderRadius:9,padding:"7px 10px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"});
+  const cartaoSel=item&&item.formaPagamento==="cartao"?cartoes:[];
+  return (
+    <div className="card" style={{padding:"12px 14px",marginBottom:10,borderRadius:14}}>
+      <div style={{display:"flex",gap:8,alignItems:"center"}}>
+        <input value={texto} onChange={e=>setTexto(e.target.value)}
+          onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();salvar();}}}
+          placeholder="Lançar rápido: uber 23 cartão · mercado 187 pix · recebi 1500 plantão"
+          style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"11px 13px",color:"#1A1209",fontSize:14,outline:"none",fontFamily:"inherit",minWidth:0}}/>
+        {texto&&<button onClick={limpar} style={{background:"rgba(0,0,0,0.07)",border:"none",borderRadius:10,width:36,height:40,cursor:"pointer",fontSize:16,color:"#5A4A3A"}}>×</button>}
+      </div>
+      {okMsg&&<div style={{marginTop:8,fontSize:12,fontWeight:700,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif"}}>{okMsg}</div>}
+      {item&&(
+        <div style={{marginTop:10,display:"flex",flexDirection:"column",gap:9}}>
+          {!(item.valor>0)?(
+            <div style={{fontSize:12,color:"#8B6F14",fontFamily:"'DM Sans',sans-serif"}}>Falta o valor — ex: “{item.descricao||"uber"} 23”.</div>
+          ):(
+            <>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:10,flexWrap:"wrap"}}>
+                <div style={{fontSize:14,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{item.descricao||"(sem descrição)"}</div>
+                <div className="num" style={{fontSize:15,fontWeight:700,color:item.tipo==="entrada"?"#2D5A10":"#8B1043"}}>
+                  {item.tipo==="entrada"?"+":"−"}{R(item.valor)}
+                </div>
+              </div>
+              <div style={{fontSize:11.5,color:"rgba(26,18,9,0.6)",fontFamily:"'DM Sans',sans-serif"}}>
+                {item.data===today()?"hoje":fdFull(item.data)}
+                {item.parcelas>1&&<> · {item.parcelas}x de {R(item.valor/item.parcelas)}</>}
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>setOv({...ov,tipo:"saida",categoria:""})} style={pillBtn(item.tipo==="saida")}>Saída</button>
+                <button onClick={()=>setOv({...ov,tipo:"entrada",categoria:""})} style={pillBtn(item.tipo==="entrada")}>Entrada</button>
+              </div>
+              <div>
+                {!item.categoria&&<div style={{fontSize:11.5,fontWeight:700,color:"#8B6F14",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Não sei a categoria — escolhe aqui:</div>}
+                <select value={item.categoria} onChange={e=>setOv({...ov,categoria:e.target.value})} className="filter-select"
+                  style={{background:"#F5F0E8",border:`1.5px solid ${item.categoria?"#DDD5C8":"#D4A843"}`,borderRadius:10,padding:"9px 30px 9px 12px",color:"#1A1209",fontSize:13,outline:"none",width:"100%",fontFamily:"inherit",cursor:"pointer"}}>
+                  {!item.categoria&&<option value="">Escolher categoria…</option>}
+                  {opcoesCategoria(item.tipo,cats).map(o=><option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+              {item.tipo==="saida"&&(
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {[["dinheiro","Dinheiro"],["pix","Pix"],["debito","Débito"],["cartao","Cartão"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setOv({...ov,formaPagamento:v,cartaoId:v==="cartao"?(item.cartaoId||cartoes[0]?.id||""):"",parcelas:v==="cartao"?item.parcelas:0})} style={pillBtn(item.formaPagamento===v)}>{l}</button>
+                  ))}
+                </div>
+              )}
+              {cartaoSel.length>0&&(
+                <select value={item.cartaoId} onChange={e=>setOv({...ov,cartaoId:e.target.value})} className="filter-select"
+                  style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"9px 30px 9px 12px",color:"#1A1209",fontSize:13,outline:"none",width:"100%",fontFamily:"inherit",cursor:"pointer"}}>
+                  <option value="">Qual cartão?</option>
+                  {cartaoSel.map(c=><option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              )}
+              {duplicado&&(
+                <div style={{fontSize:11.5,color:"#8B6F14",fontWeight:600,display:"flex",alignItems:"center",gap:5,fontFamily:"'DM Sans',sans-serif"}}>
+                  <AlertTriangle size={13} strokeWidth={2.2}/>Parece que isso já está lançado.
+                </div>
+              )}
+              <div style={{display:"flex",gap:8}}>
+                <Btn variant="primary" style={{flex:1,opacity:pronto?1:0.45}} onClick={salvar}>Lançar</Btn>
+                <Btn variant="secondary" onClick={()=>{onEditar(item);limpar();}}>Editar</Btn>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Simular Compra ("Pergunte antes de comprar") ─────────────────────────────
 const CATEGORIAS_COMPRA = [
   {id:"celular",    emoji:"📱", nome:"Celular"},
@@ -2396,19 +2623,35 @@ function AppMain({user, onLogout}) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
+  // Saldo ao FIM de um mês, acumulando desde o primeiro mês com dados (carry-forward),
+  // respeitando ajustes manuais e descontando o que foi distribuído pra investimento/objetivo/dívida.
+  // Mesma lógica do saldoFinal — usada pelo pop-up de novo mês e pelo "ajustar".
+  const saldoFimDoMes=(mes)=>{
+    const chaves=[...Object.keys(saldoMensal),...movs.map(m=>monthKey(m.data))].filter(Boolean).sort();
+    if(!chaves.length) return 0;
+    let mesAtual=chaves[0];
+    let base=saldoMensal[mesAtual]!==undefined?+saldoMensal[mesAtual]:0;
+    let fim=base;
+    let guard=0;
+    while(mesAtual<=mes && guard<600){
+      const ent=movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
+      const sai=movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
+      const tA=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
+      const tR=movs.filter(m=>m.tipo==="transferencia"&&m.subtipo==="resgate"&&monthKey(m.data)===mesAtual).reduce((s,m)=>s+m.valor,0);
+      fim=base+ent-sai-tA+tR-(distribuidoNaoLivrePorMes[mesAtual]||0);
+      mesAtual=shiftMonth(mesAtual,1);
+      base=saldoMensal[mesAtual]!==undefined?+saldoMensal[mesAtual]:fim;
+      guard++;
+    }
+    return fim;
+  };
   useEffect(()=>{
     const mesAtualReal = today().slice(0,7);
     if(saldoMensal[mesAtualReal]!==undefined) return;
     const mesAnterior = shiftMonth(mesAtualReal,-1);
     const temDadosAnterior = saldoMensal[mesAnterior]!==undefined || movs.some(m=>monthKey(m.data)===mesAnterior);
     if(!temDadosAnterior) return;
-    const entMesAnt = movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===mesAnterior).reduce((s,m)=>s+m.valor,0);
-    const saiMesAnt = movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===mesAnterior).reduce((s,m)=>s+m.valor,0);
-    const transfAporteMesAnt = movs.filter(m=>m.tipo==="transferencia"&&m.subtipo!=="resgate"&&monthKey(m.data)===mesAnterior).reduce((s,m)=>s+m.valor,0);
-    const transfResgateMesAnt = movs.filter(m=>m.tipo==="transferencia"&&m.subtipo==="resgate"&&monthKey(m.data)===mesAnterior).reduce((s,m)=>s+m.valor,0);
-    const baseAnterior = saldoMensal[mesAnterior]!==undefined?+saldoMensal[mesAnterior]:0;
-    const saldoFinalAnterior = baseAnterior+entMesAnt-saiMesAnt-transfAporteMesAnt+transfResgateMesAnt;
-    setConfirmSaldoMes({mes:mesAtualReal, valor:saldoFinalAnterior.toFixed(2)});
+    setConfirmSaldoMes({mes:mesAtualReal, valor:saldoFimDoMes(mesAnterior).toFixed(2)});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[]);
   const [alocExpanded,setAlocExpanded]=useState(false);
@@ -2497,6 +2740,31 @@ function AppMain({user, onLogout}) {
   };
 
   const importarMovs=items=>{setMovs([...items,...movs]);};
+  // Lançamento rápido por texto: salva direto (mesma lógica do saveMov, sem passar pelo modal)
+  const salvarRapido=(it)=>{
+    const valorNum=+it.valor;
+    if(it.tipo==="saida"&&it.formaPagamento==="cartao"&&it.parcelas>1){
+      const n=Math.max(2,+it.parcelas);
+      const valorParcela=+(valorNum/n).toFixed(2);
+      const grupoId=uid();
+      const novos=Array.from({length:n},(_,idx)=>({
+        id:uid(), tipo:"saida", descricao:`${it.descricao} (${idx+1}/${n})`, valor:valorParcela,
+        categoria:it.categoria, data:addMonths(it.data,idx),
+        formaPagamento:"cartao", cartaoId:it.cartaoId, parcelaAtual:idx+1, parcelaTotal:n, compraGrupoId:grupoId,
+      }));
+      setMovs([...novos,...movs]);
+      setTemDinheiroPergunta({descricao:it.descricao,valorTotal:valorNum});
+      return;
+    }
+    setMovs([{id:uid(),tipo:it.tipo,descricao:it.descricao,valor:valorNum,categoria:it.categoria,data:it.data,
+      formaPagamento:it.tipo==="saida"?it.formaPagamento:"dinheiro",cartaoId:it.tipo==="saida"&&it.formaPagamento==="cartao"?it.cartaoId:""},...movs]);
+    if(it.tipo==="saida"&&it.formaPagamento==="cartao") setTemDinheiroPergunta({descricao:it.descricao,valorTotal:valorNum});
+  };
+  const editarRapido=(it)=>{
+    openM("mov");
+    setFMov(f=>({...f,tipo:it.tipo,descricao:it.descricao,valor:String(it.valor),categoria:it.categoria||(it.tipo==="entrada"?CATS_IN[0]:CATS_OUT[0]),
+      data:it.data,formaPagamento:it.formaPagamento,cartaoId:it.cartaoId||"",parcelado:it.parcelas>1,numParcelas:String(it.parcelas>1?it.parcelas:2)}));
+  };
   const saveMov=()=>{
     if(!fMov.descricao||!fMov.valor)return;
     const valorNum=+String(fMov.valor).replace(",",".");
@@ -3144,7 +3412,7 @@ function AppMain({user, onLogout}) {
                 <div style={{fontSize:24,fontWeight:300,letterSpacing:"-.03em",lineHeight:1,color:"#1A1209"}}>{R(saldoFinal)}</div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif"}}>saldo · {monthLabel(selMes)}</div>
-                  <button onClick={()=>setEditSaldoMes(String(saldoMensal[selMes]!==undefined?saldoMensal[selMes]:0))} style={{background:"rgba(0,0,0,0.07)",border:"none",borderRadius:6,padding:"1px 6px",fontSize:9,color:"rgba(0,0,0,0.5)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Settings size={9} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-1px"}}/>ajustar</button>
+                  <button onClick={()=>setEditSaldoMes(String(saldoMensal[selMes]!==undefined?saldoMensal[selMes]:+saldoFimDoMes(shiftMonth(selMes,-1)).toFixed(2)))} style={{background:"rgba(0,0,0,0.07)",border:"none",borderRadius:6,padding:"1px 6px",fontSize:9,color:"rgba(0,0,0,0.5)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Settings size={9} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-1px"}}/>ajustar</button>
                 </div>
               </div>
             </div>
@@ -3168,6 +3436,7 @@ function AppMain({user, onLogout}) {
         {/* ══ DASHBOARD ══ */}
         {tab==="dashboard"&&(
           <div className="fade">
+            <LancamentoRapido movs={movs} cartoes={cartoes} cats={cats} onSalvar={salvarRapido} onEditar={editarRapido}/>
             <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:10}}>
               <button onClick={()=>setDashEditMode(!dashEditMode)} style={{background:dashEditMode?C.magenta:"rgba(255,255,255,0.88)",border:`1px solid ${dashEditMode?C.magenta:"rgba(0,0,0,0.12)"}`,borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:dashEditMode?"#fff":"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
                 {dashEditMode?<Check size={14} strokeWidth={2.5}/>:<LayoutGrid size={14} strokeWidth={2.2}/>}
@@ -5298,6 +5567,17 @@ function AppMain({user, onLogout}) {
           </div>
           <Inp label="Saldo inicial deste mês (R$)" type="text" inputMode="decimal" value={editSaldoMes||""}
             onChange={e=>setEditSaldoMes(e.target.value.replace(",","."))}/>
+          {editSaldoMes!==null&&(()=>{
+            const calc=+saldoFimDoMes(shiftMonth(selMes,-1)).toFixed(2);
+            return (
+              <div style={{background:"rgba(0,0,0,0.04)",borderRadius:10,padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+                <div style={{fontSize:11.5,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>
+                  Calculado pelas movimentações de {monthLabel(shiftMonth(selMes,-1))}: <strong style={{color:"#1A1209"}}>{R(calc)}</strong>
+                </div>
+                <Btn variant="secondary" style={{fontSize:11,padding:"6px 10px",whiteSpace:"nowrap"}} onClick={()=>setEditSaldoMes(String(calc))}>Usar</Btn>
+              </div>
+            );
+          })()}
           <Btn variant="primary" onClick={()=>{setSaldoMensal({...saldoMensal,[selMes]:+editSaldoMes||0});setEditSaldoMes(null);}}><Check size={14} strokeWidth={2.5} style={{marginRight:4}}/>Salvar ajuste</Btn>
         </div>
       </Modal>
