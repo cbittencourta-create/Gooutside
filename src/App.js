@@ -2677,6 +2677,8 @@ function AppMain({user, onLogout}) {
   const [filtroMov,setFiltroMov]=useState({tipo:"todos",categoria:"todos",formaPagamento:"todos"});
   const [filtroPlt,setFiltroPlt]=useState({empresa:"todos",status:"todos",dataDe:"",dataAte:""});
   const [fJuros,setFJuros]=useState({mes:today().slice(0,7),taxa:""});
+  const [fAporteInv,setFAporteInv]=useState({valor:"",data:today(),obs:"",descontar:true});
+  const [cronoAberto,setCronoAberto]=useState(null); // id do investimento com cronologia expandida
   const [temDinheiroPergunta,setTemDinheiroPergunta]=useState(null); // {mov, valorTotal} aguardando resposta
   const [planoAcaoAberto,setPlanoAcaoAberto]=useState(null); // {descricao, valorTotal} pra mostrar estrategia
   const [fParte,setFParte]=useState({descricao:"",valor:"",investId:""});
@@ -2724,6 +2726,7 @@ function AppMain({user, onLogout}) {
     if(m==="div")   setFDiv(item?{...item}:{credor:"",total:"",pago:"0",prazo:"",parcelas:"",obs:""});
     if(m==="cart")  setFCart(item?{...item}:{nome:"",bandeira:"",limite:"",fechamento:"",vencimento:""});
     if(m==="ccmov") setFCCMov(item?{...item}:{cartao:ex||"",descricao:"",valor:"",categoria:CATS_OUT[0],data:today()});
+    if(m==="aporteInv") setFAporteInv({valor:"",data:today(),obs:"",descontar:true});
     if(m==="aporte"||m==="pgto"){setFAporte({valor:"",data:today()});setFPgto({valor:"",data:today()});}
   };
   const closeM=()=>{setModal(null);setEdit(null);setExtra(null);};
@@ -2891,12 +2894,37 @@ function AppMain({user, onLogout}) {
   const removeParte=(objId,parteId)=>{
     setObjetivos(objetivos.map(o=>o.id===objId?{...o,partes:(o.partes||[]).filter(p=>p.id!==parteId)}:o));
   };
+  // Aporte direto num investimento (aba Investimentos)
+  const saveAporteInv=()=>{
+    const v=numBR(fAporteInv.valor);
+    if(!(v>0)||!extra)return;
+    const inv=invests.find(x=>x.id===extra);
+    if(!inv)return;
+    const data=fAporteInv.data||today();
+    const obs=(fAporteInv.obs||"").trim();
+    if(fAporteInv.descontar){
+      // vira uma transferência (sai do saldo do mês) — aparece também em Movimentos
+      setMovs([{id:uid(),tipo:"transferencia",subtipo:"aporte",investId:inv.id,descricao:obs||`Aporte - ${inv.nome}`,valor:v,categoria:"🔄 Transferência",data,formaPagamento:"dinheiro"},...movs]);
+      setInvests(invests.map(i=>i.id===inv.id?{...i,aporte:i.aporte+v}:i));
+    } else {
+      // só registra (dinheiro que já não estava no saldo): não mexe no saldo do mês
+      setInvests(invests.map(i=>i.id===inv.id?{...i,aporte:i.aporte+v,aportesManuais:[{id:uid(),data,valor:v,origem:"registro",obs},...(i.aportesManuais||[])]}:i));
+    }
+    alimentarPato(v);
+    closeM();
+  };
+  const removeAporteManual=(investId,entryId)=>{
+    const inv=invests.find(x=>x.id===investId);
+    const e=(inv?.aportesManuais||[]).find(x=>x.id===entryId);
+    if(!inv||!e)return;
+    setInvests(invests.map(i=>i.id===investId?{...i,aporte:Math.max(0,i.aporte-e.valor),aportesManuais:(i.aportesManuais||[]).filter(x=>x.id!==entryId)}:i));
+  };
   const saveAporte=()=>{
     if(!fAporte.valor||!extra)return;
     const v=+String(fAporte.valor).replace(",",".");
     const obj=objetivos.find(o=>o.id===extra);
     setObjetivos(objetivos.map(o=>o.id===extra?{...o,atual:+o.atual+v}:o));
-    if(obj?.investId) setInvests(invests.map(i=>i.id===obj.investId?{...i,aporte:i.aporte+v}:i));
+    if(obj?.investId) setInvests(invests.map(i=>i.id===obj.investId?{...i,aporte:i.aporte+v,aportesManuais:[{id:uid(),data:fAporte.data||today(),valor:v,origem:"objetivo",obs:obj.nome},...(i.aportesManuais||[])]}:i));
     alimentarPato(v);
     closeM();
   };
@@ -4470,6 +4498,54 @@ function AppMain({user, onLogout}) {
                         );
                       })()}
 
+                      {(()=>{
+                        // Cronologia de aportes: junta movimentos, plantões e registros manuais
+                        const itens=[];
+                        movs.filter(m=>m.tipo==="transferencia"&&m.investId===i.id).forEach(m=>
+                          itens.push({k:"m"+m.id,data:m.data,valor:m.subtipo==="resgate"?-m.valor:m.valor,origem:"Movimento",obs:m.descricao,onDel:()=>removeMov(m.id)}));
+                        alocacoes.forEach(a=>(a.itens||[]).forEach((it,ix)=>{
+                          if(it.tipo==="investimento"&&it.destinoId===i.id)
+                            itens.push({k:"a"+a.id+"_"+ix,data:a.data,valor:+it.valor,origem:"Plantão",obs:a.empresa||""});
+                        }));
+                        (i.aportesManuais||[]).forEach(e=>
+                          itens.push({k:"r"+e.id,data:e.data,valor:+e.valor,origem:e.origem==="objetivo"?"Objetivo":"Registro",obs:e.obs||"",onDel:()=>removeAporteManual(i.id,e.id)}));
+                        const liquido=itens.reduce((s,x)=>s+x.valor,0);
+                        const resto=+(i.aporte-liquido).toFixed(2);
+                        if(Math.abs(resto)>=0.01)
+                          itens.push({k:"base",data:i.data,valor:resto,origem:resto>0?"Saldo anterior":"Ajuste",obs:resto>0?"Valor que já existia antes do histórico":"Diferença com o valor editado"});
+                        itens.sort((a,b)=>(b.data||"").localeCompare(a.data||""));
+                        const aberto=cronoAberto===i.id;
+                        const lista=aberto?itens:itens.slice(0,3);
+                        const cor=o=>({"Movimento":"#1A4A6E","Plantão":"#2D5A10","Registro":"#7A0E3A","Objetivo":"#8A5A00"}[o]||"#555");
+                        return (
+                          <div style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:9,border:"1px solid rgba(0,0,0,0.06)"}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                              <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Cronologia de aportes</div>
+                              <button onClick={()=>openM("aporteInv",null,i.id)} style={{display:"flex",alignItems:"center",gap:4,background:"linear-gradient(135deg,#9BD046,#7AB02A)",border:"none",borderRadius:8,padding:"6px 11px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Plus size={12} strokeWidth={2.6}/>Aporte</button>
+                            </div>
+                            {itens.length===0&&<div style={{fontSize:11,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif"}}>Nenhum aporte registrado ainda.</div>}
+                            {lista.map((x,ix)=>(
+                              <div key={x.k} style={{display:"flex",alignItems:"flex-start",gap:9,padding:"6px 0",borderTop:ix?"1px solid rgba(0,0,0,0.05)":"none"}}>
+                                <div style={{width:8,height:8,borderRadius:99,background:x.valor<0?"#8B1A1A":cor(x.origem),marginTop:5,flexShrink:0}}/>
+                                <div style={{flex:1,minWidth:0}}>
+                                  <div style={{fontSize:11.5,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{x.data?fdFull(x.data):"—"} <span style={{fontSize:9.5,fontWeight:700,color:cor(x.origem),textTransform:"uppercase",letterSpacing:".04em",marginLeft:3}}>{x.valor<0?"Resgate":x.origem}</span></div>
+                                  {x.obs&&<div style={{fontSize:10.5,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.obs}</div>}
+                                </div>
+                                <span className="num" style={{fontSize:12,fontWeight:700,color:x.valor<0?"#8B1A1A":"#2D5A10",whiteSpace:"nowrap"}}>{x.valor<0?"−":"+"}{R(Math.abs(x.valor))}</span>
+                                {x.onDel?<button onClick={x.onDel} style={{background:"none",border:"none",color:"#aaa",fontSize:15,cursor:"pointer",lineHeight:1,padding:"0 2px"}}>×</button>:<span style={{width:14}}/>}
+                              </div>
+                            ))}
+                            {itens.length>3&&(
+                              <button onClick={()=>setCronoAberto(aberto?null:i.id)} style={{width:"100%",marginTop:4,background:"none",border:"none",color:"#1A4A6E",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",padding:"4px 0"}}>{aberto?"▲ Mostrar menos":`▼ Ver todos (${itens.length})`}</button>
+                            )}
+                            <div style={{display:"flex",justifyContent:"space-between",marginTop:6,paddingTop:6,borderTop:"1px solid rgba(0,0,0,0.08)"}}>
+                              <span style={{fontSize:10,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>Total investido</span>
+                              <span className="num" style={{fontSize:11.5,fontWeight:700,color:"#2D5A10"}}>{R(i.aporte)}</span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
                       <div style={{display:"flex",gap:7}}>
                         <button onClick={()=>setInvestExpandido(investExpandido===i.id?null:i.id)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(91,163,212,0.12)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:10,color:"#1A4A6E",fontSize:11.5,fontWeight:700,padding:"8px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{investExpandido===i.id?"▲ Fechar":<><BarChart3 size={12} strokeWidth={2.2}/>Juros</>}</button>
                         <button onClick={()=>openM("inv",i)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:5,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:10,color:"#1A1209",fontSize:11.5,fontWeight:700,padding:"8px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Pencil size={13} strokeWidth={2.2}/>Editar</button>
@@ -5266,6 +5342,21 @@ function AppMain({user, onLogout}) {
           <G2><Inp label="Prazo" type="date" value={fObj.prazo} onChange={e=>setFObj({...fObj,prazo:e.target.value})}/><div><div style={{fontSize:11,fontWeight:600,color:C.modalSub,letterSpacing:".06em",textTransform:"uppercase",marginBottom:5}}>Cor</div><input type="color" style={{background:C.inputBg,border:`1.5px solid ${C.inputBorder}`,borderRadius:10,padding:4,width:"100%",height:44,cursor:"pointer"}} value={fObj.cor} onChange={e=>setFObj({...fObj,cor:e.target.value})}/></div></G2>
           <Inp label="Observações" placeholder="Opcional" value={fObj.obs} onChange={e=>setFObj({...fObj,obs:e.target.value})}/>
           <Btn variant="primary" onClick={saveObj}>Salvar</Btn>
+        </div>
+      </Modal>
+
+      <Modal open={modal==="aporteInv"} onClose={closeM} title="Novo Aporte">
+        <div style={{display:"flex",flexDirection:"column",gap:12}}>
+          {(()=>{const inv=invests.find(x=>x.id===extra);return <div style={{fontSize:14,color:C.modalSub,fontFamily:"'DM Sans',sans-serif"}}>Investimento: <strong style={{color:C.modalText}}>{inv?.nome}{inv?.banco?` · ${inv.banco}`:""}</strong></div>;})()}
+          <Inp label="Valor (R$)" placeholder="0,00" inputMode="decimal" value={fAporteInv.valor} onChange={e=>setFAporteInv({...fAporteInv,valor:e.target.value})} autoFocus/>
+          <Inp label="Data do aporte" type="date" value={fAporteInv.data} onChange={e=>setFAporteInv({...fAporteInv,data:e.target.value})}/>
+          <Inp label="Observação" placeholder="Opcional" value={fAporteInv.obs} onChange={e=>setFAporteInv({...fAporteInv,obs:e.target.value})}/>
+          <div style={{display:"flex",gap:6,background:"rgba(0,0,0,0.06)",borderRadius:12,padding:3}}>
+            <button onClick={()=>setFAporteInv({...fAporteInv,descontar:true})} style={{flex:1,background:fAporteInv.descontar?"rgba(45,90,16,0.75)":"transparent",color:fAporteInv.descontar?"#fff":C.modalSub,border:"none",borderRadius:10,padding:"9px 6px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Tirar do meu saldo</button>
+            <button onClick={()=>setFAporteInv({...fAporteInv,descontar:false})} style={{flex:1,background:!fAporteInv.descontar?"rgba(91,163,212,0.7)":"transparent",color:!fAporteInv.descontar?"#fff":C.modalSub,border:"none",borderRadius:10,padding:"9px 6px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Só registrar</button>
+          </div>
+          <div style={{fontSize:11,color:C.modalSub,fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>{fAporteInv.descontar?"O valor sai do saldo do mês da data escolhida e aparece em Movimentos como transferência.":"Não mexe no saldo — use para aportes antigos ou dinheiro que não estava no app."}</div>
+          <Btn variant="green" onClick={saveAporteInv}>Confirmar aporte</Btn>
         </div>
       </Modal>
 
