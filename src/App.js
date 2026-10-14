@@ -165,7 +165,7 @@ const DASH_CARDS = [
 
 // Altura padrão (em unidades de linha do grid) de cada card do Início
 const DASH_H = {
-  resumo:4, semanasLivres:8, desafioPato:9, cartoes:8, graficoGastos:9,
+  resumo:3, semanasLivres:8, desafioPato:9, cartoes:8, graficoGastos:9,
   graficoEmpresas:9, calendario:9, recebimentos:9, ranking:10, alocacao:12, objetivos:8,
 };
 const DASH_BREAKPOINTS = {lg:996, md:768, sm:480};
@@ -400,7 +400,7 @@ function MultiCalendar({plantoes, movs, onAddWithDate}) {
         const movDia=(movs||[]).filter(m=>m.data===selDay);
         return(
           <div style={{marginTop:10,background:"rgba(0,0,0,0.04)",borderRadius:12,padding:"10px 12px",border:"1px solid rgba(0,0,0,0.08)"}}>
-            <div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>{selDay.slice(8)} de {MNAMES[+dm-1]}</div>
+            <div style={{fontSize:11,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:8}}>{selDay.slice(8)} de {MNAMES[+dm-1]}</div>
             {pltDia.map(p=><div key={p.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid rgba(0,0,0,0.05)"}}><span style={{fontSize:11,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:5}}><Glyph e="🏥" size={12}/>{p.empresa}</span><span style={{fontSize:11,fontWeight:700,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif"}}>{R(p.valorTotal)}</span></div>)}
             {movDia.map(m=><div key={m.id} style={{display:"flex",justifyContent:"space-between",padding:"5px 0",borderBottom:"1px solid rgba(0,0,0,0.05)"}}><span style={{fontSize:11,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:5}}><Glyph e={m.categoria.split(" ")[0]} size={12}/>{m.descricao}</span><span style={{fontSize:11,fontWeight:700,color:m.tipo==="entrada"?"#2D5A10":"#8B1A1A",fontFamily:"'DM Sans',sans-serif"}}>{m.tipo==="entrada"?"+":"-"}{R(m.valor)}</span></div>)}
             {pltDia.length===0&&movDia.length===0&&<div style={{fontSize:11,color:"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>Nenhum registro neste dia</div>}
@@ -434,27 +434,27 @@ function Modal({open,onClose,title,children}) {
 
 const Inp = ({label,...p}) => (
   <div>
-    {label&&<div style={{fontSize:11,fontWeight:600,color:C.modalSub,letterSpacing:".06em",textTransform:"uppercase",marginBottom:5}}>{label}</div>}
+    {label&&<div style={{fontSize:10,fontWeight:500,color:C.modalSub,letterSpacing:".08em",textTransform:"uppercase",marginBottom:6,fontFamily:"'DM Mono',ui-monospace,monospace"}}>{label}</div>}
     <input style={{background:C.inputBg,border:`1.5px solid ${C.inputBorder}`,borderRadius:10,padding:"11px 13px",color:C.modalText,fontSize:14,outline:"none",width:"100%",fontFamily:"inherit",transition:"border-color .15s"}}
       onFocus={e=>e.target.style.borderColor=C.magenta} onBlur={e=>e.target.style.borderColor=C.inputBorder} {...p}/>
   </div>
 );
 const Sel = ({label,children,...p}) => (
   <div>
-    {label&&<div style={{fontSize:11,fontWeight:600,color:C.modalSub,letterSpacing:".06em",textTransform:"uppercase",marginBottom:5}}>{label}</div>}
+    {label&&<div style={{fontSize:10,fontWeight:500,color:C.modalSub,letterSpacing:".08em",textTransform:"uppercase",marginBottom:6,fontFamily:"'DM Mono',ui-monospace,monospace"}}>{label}</div>}
     <select className="filter-select" style={{background:C.inputBg,border:`1.5px solid ${C.inputBorder}`,borderRadius:10,padding:"11px 30px 11px 13px",color:C.modalText,fontSize:14,outline:"none",width:"100%",fontFamily:"inherit",cursor:"pointer"}} {...p}>{children}</select>
   </div>
 );
 const G2=({children,gap=10})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap}}>{children}</div>;
-const Btn=({variant="primary",children,...p})=>{
+const Btn=({variant="primary",children,style:extraStyle,...p})=>{
   const styles={
-    primary:  {background:C.magentaDark,color:"#fff",border:`1px solid ${C.magenta}`,boxShadow:`0 2px 12px ${C.magenta}44`},
+    primary:  {background:"linear-gradient(135deg,#F0356E,#D01050)",color:"#fff",border:"1px solid rgba(208,16,80,0.6)",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"},
     secondary:{background:"rgba(0,0,0,0.06)",color:C.modalText,border:"1.5px solid rgba(0,0,0,0.12)"},
     green:    {background:"rgba(143,196,58,0.7)",color:"#fff",border:"1px solid rgba(143,196,58,0.5)"},
     danger:   {background:"rgba(224,82,82,0.12)",color:"#C0392B",border:"1.5px solid rgba(224,82,82,0.3)"},
     blue:     {background:"rgba(91,163,212,0.6)",color:"#fff",border:"1px solid rgba(91,163,212,0.4)"},
   };
-  return <button style={{...styles[variant],borderRadius:12,fontSize:14,fontWeight:600,padding:"11px 16px",cursor:"pointer",transition:"all .15s",fontFamily:"inherit",...p.style}} {...p}>{children}</button>;
+  return <button style={{...styles[variant],borderRadius:12,fontSize:14,fontWeight:600,padding:"11px 16px",cursor:"pointer",transition:"all .15s",fontFamily:"inherit",...extraStyle}} {...p}>{children}</button>;
 };
 const SL=({children,style:st})=><div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.55)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:10,...st}}>{children}</div>;
 const DashDragHandle=()=>(
@@ -488,7 +488,7 @@ function AlocacaoModal({open,onClose,plantao,regras,invests,objetivos,dividas,on
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
             {[["Total Recebido",R(plantao.valorTotal),C.green],["Alocado",R(totalAloc),C.magenta],["Livre",R(livre),livre>=0?C.gold:C.red]].map(([l,v,c])=>(
               <div key={l} style={{textAlign:"center"}}>
-                <div style={{fontSize:9,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:C.modalSub,fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{l}</div>
+                <div style={{fontSize:9,fontWeight:500,letterSpacing:".06em",textTransform:"uppercase",color:C.modalSub,fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:3}}>{l}</div>
                 <div style={{fontSize:14,fontWeight:700,color:c,fontFamily:"'DM Sans',sans-serif"}}>{v}</div>
               </div>
             ))}
@@ -505,7 +505,7 @@ function AlocacaoModal({open,onClose,plantao,regras,invests,objetivos,dividas,on
                   <div>
                     <div style={{fontSize:13,fontWeight:700,color:dc.color,fontFamily:"'DM Sans',sans-serif"}}>{getNome(a)}</div>
                     {inv?.banco&&<div style={{fontSize:10,color:C.modalSub,fontFamily:"'DM Sans',sans-serif"}}>{inv.banco} · {inv.tipo}</div>}
-                    <div style={{fontSize:9,color:C.modalSub,fontFamily:"'DM Sans',sans-serif",textTransform:"uppercase",letterSpacing:".05em"}}>{a.pct}% do recebimento</div>
+                    <div style={{fontSize:9,color:C.modalSub,fontFamily:"'DM Mono',ui-monospace,monospace",textTransform:"uppercase",letterSpacing:".05em"}}>{a.pct}% do recebimento</div>
                   </div>
                 </div>
                 <input type="number" value={a.valorEdit} onChange={e=>setAlocs(alocs.map((x,j)=>j===i?{...x,valorEdit:e.target.value}:x))}
@@ -771,7 +771,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
           {l:"Saldo",v:totalPlanejado-totalGasto,c:totalPlanejado-totalGasto>=0?"#2D6E20":"#D4443A"},
         ].map(x=>(
           <div key={x.l} className="card" style={{padding:"14px 12px",textAlign:"center"}}>
-            <div style={{fontSize:10,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"#1A1209",fontFamily:"'DM Sans',sans-serif",marginBottom:5}}>{x.l}</div>
+            <div style={{fontSize:10,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",color:"#1A1209",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:5}}>{x.l}</div>
             <div className="num" style={{fontSize:16,fontWeight:700,color:x.c,letterSpacing:"-.01em"}}>{R(x.v)}</div>
           </div>
         ))}
@@ -805,7 +805,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
       <div className="card" style={{padding:"16px 14px"}}>
         <div style={{display:"grid",gridTemplateColumns:"1fr 82px 82px 52px",gap:8,marginBottom:10,paddingBottom:10,borderBottom:"2px solid rgba(0,0,0,0.1)"}}>
           {["Categoria","Planejado","Realizado","%"].map(h=>(
-            <div key={h} style={{fontSize:10.5,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:h!=="Categoria"?"right":"left"}}>{h}</div>
+            <div key={h} style={{fontSize:10.5,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",textAlign:h!=="Categoria"?"right":"left"}}>{h}</div>
           ))}
         </div>
         {categorias.map((c,idx)=>{
@@ -899,7 +899,7 @@ function BalancoTab({movs, plantoes, cartoes, selMes}) {
       <div style={{display:"flex",gap:10,marginBottom:14}}>
         {[{l:"↑ Receitas",v:entM,c:"#A8E063"},{l:"↓ Despesas",v:saiM,c:"#FF8A80"},{l:"= Saldo",v:entM-saiM,c:entM-saiM>=0?"#A8E063":"#FF8A80"}].map(x=>(
           <div key={x.l} className="card" style={{flex:1,padding:"10px 12px",textAlign:"center"}}>
-            <div style={{fontSize:9,fontWeight:700,color:"rgba(26,18,9,0.6)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:3}}>{x.l}</div>
+            <div style={{fontSize:9,fontWeight:500,color:"rgba(26,18,9,0.6)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:3}}>{x.l}</div>
             <div style={{fontSize:13,fontWeight:700,color:x.c,fontFamily:"'DM Sans',sans-serif",letterSpacing:"-.01em"}}>{R(x.v)}</div>
           </div>
         ))}
@@ -1963,7 +1963,7 @@ function LoginScreen({onLogin}) {
       `}</style>
       <div style={{background:"rgba(255,255,255,0.88)",backdropFilter:"blur(24px)",borderRadius:24,padding:"36px 32px",width:"100%",maxWidth:380,margin:16,boxShadow:"0 8px 40px rgba(0,0,0,0.15)",position:"relative",zIndex:1}}>
         <div style={{textAlign:"center",marginBottom:28}}>
-          <div style={{fontSize:11,fontWeight:700,letterSpacing:".2em",textTransform:"uppercase",color:"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>Velara Finance</div>
+          <div style={{fontSize:11,fontWeight:500,letterSpacing:".2em",textTransform:"uppercase",color:"rgba(26,18,9,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:6}}>Velara Finance</div>
           <div style={{fontSize:28,fontWeight:300,letterSpacing:"-.02em",color:"#1A1209"}}>{mode==="login"?"Bem-vinda":"Criar conta"}</div>
         </div>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
@@ -2420,7 +2420,7 @@ function SimularCompraModal({open,onClose,movs,dividas,objetivos,setObjetivos,me
 
           {!semDados&&(
             <div style={{background:"rgba(0,0,0,0.03)",borderRadius:12,padding:14,marginBottom:14}}>
-              <div style={{display:"flex",justifyContent:"space-between",fontSize:10.5,color:C.modalSub,fontFamily:"'DM Sans',sans-serif",marginBottom:6,letterSpacing:".04em",textTransform:"uppercase"}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:10.5,color:C.modalSub,fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:6,letterSpacing:".04em",textTransform:"uppercase"}}>
                 <span>Sobra p/ metas hoje</span><span>Com essa compra</span>
               </div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -3324,15 +3324,16 @@ function AppMain({user, onLogout}) {
   const TMUT="rgba(26,18,9,0.45)";
 
   return (
-    <div style={{minHeight:"100vh",color:TXT,fontFamily:"'Cormorant Garamond','Georgia',serif",position:"relative"}}>
+    <div style={{minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
       <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         input,select,textarea,button{font-family:'DM Sans','Segoe UI',sans-serif}
-        .num{font-family:'DM Sans',sans-serif}
+        .num{font-family:'DM Sans',sans-serif;font-variant-numeric:lining-nums tabular-nums;letter-spacing:-.015em}
+        .mono{font-family:'DM Mono',ui-monospace,monospace}
         ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:2px}
-        body,#root{background:#C4A96A;min-height:100vh}
+        body,#root{background:#C4A96A;min-height:100vh;font-variant-numeric:lining-nums}
         .wallpaper-bg{
   position:fixed;inset:0;z-index:0;pointer-events:none;
   background-color:#C4A96A;
@@ -3369,7 +3370,7 @@ function AppMain({user, onLogout}) {
     );
   background-size:160px 160px;
 }
-        .card{background:rgba(255,255,255,0.88);border:1px solid rgba(255,255,255,0.98);border-radius:18px;padding:18px;backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);box-shadow:0 4px 24px rgba(0,0,0,0.12),0 1px 0 rgba(255,255,255,1) inset;color:#1A1209}.card *{color:inherit}.card span,.card div,.card p{color:#1A1209}
+        .card{background:rgba(250,248,244,0.96);border:1px solid rgba(255,255,255,0.7);border-radius:20px;padding:18px;box-shadow:0 8px 28px rgba(40,24,8,0.14);color:#1A1209}.card *{color:inherit}.card span,.card div,.card p{color:#1A1209}
         .card *{color:inherit}
         select option{background:#3d1a10;color:#fff}
         .plt-numinput::-webkit-outer-spin-button,.plt-numinput::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
@@ -3400,7 +3401,7 @@ function AppMain({user, onLogout}) {
       <div className={`overlay-side ${sideOpen?"open":""}`} onClick={()=>setSideOpen(false)}/>
       <div className={`sidebar ${sideOpen?"open":""}`}>
         <div style={{padding:"22px 16px 14px",borderBottom:"1px solid rgba(255,255,255,0.12)"}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:".2em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>Velara Finance</div>
+          <div style={{fontSize:10,fontWeight:500,letterSpacing:".2em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>Velara Finance</div>
           <div style={{fontSize:20,fontWeight:300,letterSpacing:"-.02em",color:"#fff"}}>Menu</div>
         </div>
         <div style={{padding:"8px 0",overflowY:"auto",maxHeight:"calc(100vh - 160px)"}}>
@@ -3412,7 +3413,7 @@ function AppMain({user, onLogout}) {
           ))}
         </div>
         <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
-          <div style={{fontSize:10,fontWeight:700,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Sans',sans-serif",marginBottom:7}}>Fundo</div>
+          <div style={{fontSize:10,fontWeight:500,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:7}}>Fundo</div>
           <div style={{display:"flex",gap:6,marginBottom:12}}>
             {BG_OPTIONS.map(bg=>(
               <button key={bg.id} onClick={()=>setBgId(bg.id)}
@@ -3451,8 +3452,8 @@ function AppMain({user, onLogout}) {
                 <div style={{width:11,height:1.5,background:"rgba(0,0,0,0.75)",borderRadius:1}}/>
               </button>
               <div>
-                <div style={{fontSize:10,fontWeight:600,letterSpacing:".15em",textTransform:"uppercase",color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif",marginBottom:1}}>{TABS.find(t=>t.id===tab)?.label||"Velara Finance"}</div>
-                <div style={{fontSize:24,fontWeight:300,letterSpacing:"-.03em",lineHeight:1,color:"#1A1209"}}>{R(saldoFinal)}</div>
+                <div style={{fontSize:10,fontWeight:500,letterSpacing:".15em",textTransform:"uppercase",color:"rgba(0,0,0,0.5)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:1}}>{TABS.find(t=>t.id===tab)?.label||"Velara Finance"}<span style={{display:"inline-flex",gap:3,marginLeft:7,verticalAlign:"1px"}}>{[C.magenta,C.green,C.gold].map(c=><i key={c} style={{width:5,height:5,borderRadius:99,background:c,display:"inline-block"}}/>)}</span></div>
+                <div className="num" style={{fontSize:30,fontWeight:300,letterSpacing:"-.04em",lineHeight:1.05,color:"#1A1209"}}>{R(saldoFinal)}</div>
                 <div style={{display:"flex",alignItems:"center",gap:6}}>
                   <div style={{fontSize:10,color:"rgba(0,0,0,0.5)",fontFamily:"'DM Sans',sans-serif"}}>saldo · {monthLabel(selMes)}</div>
                   <button onClick={()=>setEditSaldoMes(String(saldoMensal[selMes]!==undefined?saldoMensal[selMes]:+saldoFimDoMes(shiftMonth(selMes,-1)).toFixed(2)))} style={{background:"rgba(0,0,0,0.07)",border:"none",borderRadius:6,padding:"1px 6px",fontSize:9,color:"rgba(0,0,0,0.5)",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Settings size={9} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-1px"}}/>ajustar</button>
@@ -3480,14 +3481,14 @@ function AppMain({user, onLogout}) {
         {tab==="dashboard"&&(
           <div className="fade">
             <LancamentoRapido movs={movs} cartoes={cartoes} cats={cats} onSalvar={salvarRapido} onEditar={editarRapido}/>
-            <div style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:10}}>
+            <div style={{display:"flex",justifyContent:"flex-end",flexWrap:"wrap",gap:8,marginBottom:10}}>
               <button onClick={()=>setDashEditMode(!dashEditMode)} style={{background:dashEditMode?C.magenta:"rgba(255,255,255,0.88)",border:`1px solid ${dashEditMode?C.magenta:"rgba(0,0,0,0.12)"}`,borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:dashEditMode?"#fff":"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
                 {dashEditMode?<Check size={14} strokeWidth={2.5}/>:<LayoutGrid size={14} strokeWidth={2.2}/>}
                 {dashEditMode?"Concluir":"Reorganizar"}
               </button>
               <button onClick={()=>setModal("dashCustom")} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 10px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}} title="Escolher o que mostrar"><SlidersHorizontal size={14} strokeWidth={2.2}/></button>
               <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}><Glyph e="📥" size={14}/>Importar Extrato</button>
-              <button onClick={()=>setSimularOpen(true)} style={{background:C.magentaDark,border:`1px solid ${C.magenta}`,borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:`0 2px 10px ${C.magenta}44`}}>💭 Simular Compra</button>
+              <button onClick={()=>setSimularOpen(true)} style={{background:C.magentaDark,border:`1px solid ${C.magenta}`,borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:`0 2px 10px ${C.magenta}44`}}><Lightbulb size={13} strokeWidth={2.2}/>Simular Compra</button>
             </div>
 
             {dashEditMode&&(
@@ -3514,13 +3515,13 @@ function AppMain({user, onLogout}) {
                 {dashEditMode&&<DashDragHandle/>}
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,height:"100%"}}>
                   {[
-                    {label:"A Receber", val:totalPendPlant, color:"#FFD580",  bg:"rgba(0,0,0,0.35)", bdr:"rgba(212,168,67,0.5)"},
-                    {label:"Patrimônio", val:totalPatrimonio, color:"#2D5A10", bg:"rgba(143,196,58,0.18)", bdr:"rgba(143,196,58,0.4)"},
-                    {label:"Em Dívidas", val:totalDividas,   color:"#8B1A1A",  bg:"rgba(224,82,82,0.15)", bdr:"rgba(224,82,82,0.4)"},
+                    {label:"A Receber", val:totalPendPlant, dot:C.gold, color:"#1A1209"},
+                    {label:"Patrimônio", val:totalPatrimonio, dot:C.green, color:"#1A1209"},
+                    {label:"Dívidas", val:totalDividas,   dot:C.magenta, color:"#1A1209"},
                   ].map(c=>(
-                    <div key={c.label} className={CARD} style={{padding:"10px 10px",background:c.bg,border:`1px solid ${c.bdr}`,textAlign:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)",borderRadius:12}}>
-                      <div style={{fontSize:8,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:c.color,fontFamily:"'DM Sans',sans-serif",marginBottom:3,opacity:0.8}}>{c.label}</div>
-                      <div className="num" style={{fontSize:14,fontWeight:700,color:c.color}}>{R(c.val)}</div>
+                    <div key={c.label} className={CARD} style={{padding:"10px 12px",textAlign:"left",borderRadius:16,display:"flex",flexDirection:"column",justifyContent:"center"}}>
+                      <div className="mono" style={{fontSize:8.5,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",marginBottom:6,display:"flex",alignItems:"center",gap:5,opacity:.75}}><i style={{width:6,height:6,borderRadius:99,background:c.dot,display:"inline-block"}}/>{c.label}</div>
+                      <div className="num" style={{fontSize:15,fontWeight:500,color:c.color,letterSpacing:"-.02em"}}>{R(c.val)}</div>
                     </div>
                   ))}
                 </div>
@@ -3535,7 +3536,7 @@ function AppMain({user, onLogout}) {
                 <>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                   <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#1A4A6E"}}><CalendarDays size={13} strokeWidth={2.2}/></div>
-                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Suas próximas semanas</span>
+                  <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Suas próximas semanas</span>
                 </div>
                 {semanasLivres.map((sem,idx)=>(
                   <div key={idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 4px",borderBottom:idx<semanasLivres.length-1?"1px solid rgba(0,0,0,0.05)":"none"}}>
@@ -3571,7 +3572,7 @@ function AppMain({user, onLogout}) {
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <div style={{width:26,height:26,borderRadius:8,background:"rgba(255,196,32,0.2)",display:"flex",alignItems:"center",justifyContent:"center",color:"#8B6000"}}><Flower2 size={13} strokeWidth={2.2}/></div>
                     <div>
-                      <div style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",lineHeight:1.2}}>Desafio do Pato 100%</div>
+                      <div style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",lineHeight:1.2}}>Desafio do Pato 100%</div>
                       <div style={{fontSize:9.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{monthLabel(selMes)} · reseta todo mês</div>
                     </div>
                   </div>
@@ -3777,7 +3778,7 @@ function AppMain({user, onLogout}) {
                     </div>
                     {alocExpanded ? (
                       <div style={{borderTop:"1px solid rgba(0,0,0,0.07)",paddingTop:10}}>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Extrato de distribuições</div>
+                        <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.45)",letterSpacing:".07em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:8}}>Extrato de distribuições</div>
                         {alocacoes.map(a=>(
                           <div key={a.id} style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:8,border:"1px solid rgba(0,0,0,0.06)"}}>
                             <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
@@ -3854,7 +3855,7 @@ function AppMain({user, onLogout}) {
                 </div>
                 <div style={{display:"flex",gap:7}}>
                   <button onClick={()=>setImportOpen(true)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"9px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6}}><Glyph e="📥" size={14}/>Importar</button>
-                  <button onClick={()=>openM("mov")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"9px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)"}}>
+                  <button onClick={()=>openM("mov")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"9px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
                     <Plus size={14} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Lançamento
                   </button>
                 </div>
@@ -3864,11 +3865,11 @@ function AppMain({user, onLogout}) {
             <div className={CARD} style={{marginBottom:14,padding:"14px 16px"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                 <div style={{width:26,height:26,borderRadius:8,background:"rgba(232,32,95,0.12)",display:"flex",alignItems:"center",justifyContent:"center",color:"#C4185A"}}><Search size={13} strokeWidth={2.2}/></div>
-                <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Filtrar lançamentos</span>
+                <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Filtrar lançamentos</span>
               </div>
               <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
                 <div>
-                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Tipo</div>
+                  <div style={{fontSize:9.5,fontWeight:500,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Mono',ui-monospace,monospace"}}>Tipo</div>
                   <select value={filtroMov.tipo} onChange={e=>setFiltroMov({...filtroMov,tipo:e.target.value})}
                     className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
@@ -3879,7 +3880,7 @@ function AppMain({user, onLogout}) {
                   </select>
                 </div>
                 <div>
-                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Categoria</div>
+                  <div style={{fontSize:9.5,fontWeight:500,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Mono',ui-monospace,monospace"}}>Categoria</div>
                   <select value={filtroMov.categoria} onChange={e=>setFiltroMov({...filtroMov,categoria:e.target.value})}
                     className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",maxWidth:170,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
@@ -3888,7 +3889,7 @@ function AppMain({user, onLogout}) {
                   </select>
                 </div>
                 <div>
-                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Pagamento</div>
+                  <div style={{fontSize:9.5,fontWeight:500,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Mono',ui-monospace,monospace"}}>Pagamento</div>
                   <select value={filtroMov.formaPagamento} onChange={e=>setFiltroMov({...filtroMov,formaPagamento:e.target.value})}
                     className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
@@ -3919,10 +3920,10 @@ function AppMain({user, onLogout}) {
               :(
               <div className={CARD} style={{padding:"16px 14px"}}>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 175px 100px 92px 26px",gap:10,marginBottom:8,padding:"0 4px"}}>
-                  <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Descrição</div>
-                  <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Categoria</div>
-                  <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data</div>
-                  <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:"right"}}>Valor</div>
+                  <div style={{fontSize:10,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Descrição</div>
+                  <div style={{fontSize:10,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Categoria</div>
+                  <div style={{fontSize:10,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Data</div>
+                  <div style={{fontSize:10,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",textAlign:"right"}}>Valor</div>
                   <div/>
                 </div>
                 {[...movsFiltrados].sort((a,b)=>b.data.localeCompare(a.data)).map((m,idx)=>{
@@ -3986,7 +3987,7 @@ function AppMain({user, onLogout}) {
                 <div style={{fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>a receber</div>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 18px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)",transition:"transform .15s"}}
+                <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 18px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)",transition:"transform .15s"}}
                   onMouseEnter={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
                   <Plus size={15} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Plantão
                 </button>
@@ -4004,7 +4005,7 @@ function AppMain({user, onLogout}) {
               <div className={CARD} style={{marginBottom:14,padding:"14px 16px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
                   <div style={{width:26,height:26,borderRadius:8,background:"rgba(232,32,95,0.12)",display:"flex",alignItems:"center",justifyContent:"center",color:"#C4185A"}}><Building2 size={13} strokeWidth={2.2}/></div>
-                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresas</span>
+                  <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Empresas</span>
                   <span style={{fontSize:11,color:"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif"}}>({empresas.length})</span>
                 </div>
                 <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
@@ -4025,11 +4026,11 @@ function AppMain({user, onLogout}) {
             <div className={CARD} style={{marginBottom:14,padding:"14px 16px"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                 <div style={{width:26,height:26,borderRadius:8,background:"rgba(232,32,95,0.12)",display:"flex",alignItems:"center",justifyContent:"center",color:"#C4185A"}}><Search size={13} strokeWidth={2.2}/></div>
-                <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Filtrar plantões</span>
+                <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Filtrar plantões</span>
               </div>
               <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
                 <div>
-                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
+                  <div style={{fontSize:9.5,fontWeight:500,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Mono',ui-monospace,monospace"}}>Empresa</div>
                   <select value={filtroPlt.empresa} onChange={e=>setFiltroPlt({...filtroPlt,empresa:e.target.value})}
                     className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",maxWidth:170,boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
@@ -4038,7 +4039,7 @@ function AppMain({user, onLogout}) {
                   </select>
                 </div>
                 <div>
-                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Status</div>
+                  <div style={{fontSize:9.5,fontWeight:500,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Mono',ui-monospace,monospace"}}>Status</div>
                   <select value={filtroPlt.status} onChange={e=>setFiltroPlt({...filtroPlt,status:e.target.value})}
                     className="filter-select"
                     style={{background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,cursor:"pointer",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
@@ -4050,7 +4051,7 @@ function AppMain({user, onLogout}) {
                   </select>
                 </div>
                 <div>
-                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Previsão de pagamento</div>
+                  <div style={{fontSize:9.5,fontWeight:500,color:"rgba(26,18,9,0.45)",letterSpacing:".05em",textTransform:"uppercase",marginBottom:4,fontFamily:"'DM Mono',ui-monospace,monospace"}}>Previsão de pagamento</div>
                   <div style={{display:"flex",alignItems:"center",gap:6,background:"rgba(255,255,255,0.9)",border:"1.5px solid rgba(0,0,0,0.1)",borderRadius:10,padding:"5px 8px",boxShadow:"0 1px 3px rgba(0,0,0,0.04)"}}>
                     <input type="date" value={filtroPlt.dataDe} onChange={e=>setFiltroPlt({...filtroPlt,dataDe:e.target.value})}
                       style={{background:"transparent",border:"none",padding:"3px 0",fontSize:11.5,color:"#1A1209",outline:"none",fontFamily:"'DM Sans',sans-serif",fontWeight:600,width:118}}/>
@@ -4096,11 +4097,11 @@ function AppMain({user, onLogout}) {
                   ):(
                     <>
                       <div style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Empresa</div>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Dia</div>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Valor</div>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data prov.</div>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Status</div>
+                        <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Empresa</div>
+                        <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Dia</div>
+                        <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Valor</div>
+                        <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Data prov.</div>
+                        <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Status</div>
                         <div/>
                       </div>
                       {grupo.map((p,idx)=>{
@@ -4205,16 +4206,16 @@ function AppMain({user, onLogout}) {
               <div className={CARD} style={{marginBottom:10,padding:"16px 18px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                   <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#1A4A6E"}}><Sparkles size={13} strokeWidth={2.2}/></div>
-                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Presente vs Futuro</span>
+                  <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Presente vs Futuro</span>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
                   <div style={{background:"rgba(139,26,26,0.07)",border:"1px solid rgba(139,26,26,0.18)",borderRadius:10,padding:"11px 13px"}}>
-                    <div style={{fontSize:9.5,fontWeight:700,color:"#8B1A1A",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4,display:"flex",alignItems:"center",gap:3}}><Sandwich size={11} strokeWidth={2.2}/>Gasto no agora</div>
+                    <div style={{fontSize:9.5,fontWeight:500,color:"#8B1A1A",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4,display:"flex",alignItems:"center",gap:3}}><Sandwich size={11} strokeWidth={2.2}/>Gasto no agora</div>
                     <div className="num" style={{fontSize:17,fontWeight:700,color:"#8B1A1A"}}>{R(presenteVsFuturo.gastoSuperfluo)}</div>
                     <div style={{fontSize:9,color:"#8B1A1A",opacity:0.7,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>lazer, delivery, compras por impulso...</div>
                   </div>
                   <div style={{background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:10,padding:"11px 13px"}}>
-                    <div style={{fontSize:9.5,fontWeight:700,color:"#215010",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4,display:"flex",alignItems:"center",gap:3}}><Sprout size={11} strokeWidth={2.2}/>Guardado pro futuro</div>
+                    <div style={{fontSize:9.5,fontWeight:500,color:"#215010",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4,display:"flex",alignItems:"center",gap:3}}><Sprout size={11} strokeWidth={2.2}/>Guardado pro futuro</div>
                     <div className="num" style={{fontSize:17,fontWeight:700,color:"#215010"}}>{R(presenteVsFuturo.totalFuturo)}</div>
                     <div style={{fontSize:9,color:"#215010",opacity:0.7,fontFamily:"'DM Sans',sans-serif",marginTop:2}}>investimentos, objetivos, dívidas</div>
                   </div>
@@ -4233,7 +4234,7 @@ function AppMain({user, onLogout}) {
               <div className={CARD} style={{marginBottom:10,padding:"16px 18px"}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                   <div style={{width:26,height:26,borderRadius:8,background:"rgba(212,168,67,0.18)",display:"flex",alignItems:"center",justifyContent:"center",color:"#8B6000"}}><Lightbulb size={13} strokeWidth={2.2}/></div>
-                  <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Onde você pode economizar</span>
+                  <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Onde você pode economizar</span>
                 </div>
                 {analiseEconomia.map((r,idx)=>(
                   <div key={r.cat} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 4px",borderBottom:idx<analiseEconomia.length-1?"1px solid rgba(0,0,0,0.06)":"none"}}>
@@ -4384,11 +4385,11 @@ function AppMain({user, onLogout}) {
           <div className="fade">
             <div className={CARD} style={{marginBottom:16,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(255,255,255,0.94),rgba(255,255,255,0.86))"}}>
               <div>
-                <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}><TrendingUp size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Investimentos</div>
+                <div style={{fontSize:11,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}><TrendingUp size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Investimentos</div>
                 <div className="num" style={{fontSize:26,fontWeight:700,color:C.green,letterSpacing:"-.02em",lineHeight:1}}>{R(totalInvestido)}</div>
                 <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:3}}>total investido</div>
               </div>
-              <button onClick={()=>openM("inv")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)"}}>
+              <button onClick={()=>openM("inv")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
                 <Plus size={15} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Investimento
               </button>
             </div>
@@ -4397,7 +4398,7 @@ function AppMain({user, onLogout}) {
               const maxTx=Math.max(...ranking.map(i=>i.txEf),1);
               return (
                 <div className={CARD} style={{marginBottom:16,padding:"16px 18px"}}>
-                  <div style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:12}}><BarChart3 size={12} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Onde vale mais a pena alocar</div>
+                  <div style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:12}}><BarChart3 size={12} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Onde vale mais a pena alocar</div>
                   {ranking.map((i,idx)=>(
                     <div key={i.id} style={{marginBottom:10}}>
                       <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
@@ -4429,7 +4430,7 @@ function AppMain({user, onLogout}) {
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                       <button onClick={()=>setInvestIdx(idx===0?invests.length-1:idx-1)} style={{background:"rgba(255,255,255,0.75)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:36,height:36,cursor:"pointer",fontSize:17,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>‹</button>
                       <div style={{background:"rgba(255,255,255,0.85)",borderRadius:12,padding:"6px 16px",boxShadow:"0 2px 8px rgba(0,0,0,0.06)",textAlign:"center"}}>
-                        <div style={{fontSize:10,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><CatIcon size={11} strokeWidth={2.2}/>{catInfo?.label}</div>
+                        <div style={{fontSize:10,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",display:"flex",alignItems:"center",justifyContent:"center",gap:4}}><CatIcon size={11} strokeWidth={2.2}/>{catInfo?.label}</div>
                         <div style={{fontSize:11,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>{idx+1} de {invests.length}</div>
                       </div>
                       <button onClick={()=>setInvestIdx(idx===invests.length-1?0:idx+1)} style={{background:"rgba(255,255,255,0.75)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:36,height:36,cursor:"pointer",fontSize:17,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>›</button>
@@ -4458,7 +4459,7 @@ function AppMain({user, onLogout}) {
                       </div>
                       {(objsVinc.length>0||divsVinc.length>0)&&(
                         <div style={{background:"rgba(91,163,212,0.08)",border:"1px solid rgba(91,163,212,0.25)",borderRadius:10,padding:"9px 11px",marginBottom:9}}>
-                          <div style={{fontSize:9,fontWeight:700,color:"#1A4A6E",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>Reservado para</div>
+                          <div style={{fontSize:9,fontWeight:500,color:"#1A4A6E",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:6}}>Reservado para</div>
                           {objsVinc.map(o=>(
                             <div key={o.id} style={{display:"flex",justifyContent:"space-between",padding:"2px 0"}}>
                               <span style={{fontSize:11,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}><Target size={11} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-2px"}}/>{o.nome}</span>
@@ -4490,7 +4491,7 @@ function AppMain({user, onLogout}) {
                         return (
                           <div style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:9,border:"1px solid rgba(0,0,0,0.06)"}}>
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                              <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Histórico de juros mensal</div>
+                              <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Histórico de juros mensal</div>
                               {hist.length>0&&<span className="num" style={{fontSize:11,fontWeight:700,color:"#2D5A10"}}>≈{R(jurosAcumulado)} acumulado</span>}
                             </div>
                             {hist.length===0&&<div style={{fontSize:11,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Nenhum mês registrado ainda.</div>}
@@ -4536,7 +4537,7 @@ function AppMain({user, onLogout}) {
                         return (
                           <div style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:9,border:"1px solid rgba(0,0,0,0.06)"}}>
                             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                              <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Cronologia de aportes</div>
+                              <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Cronologia de aportes</div>
                               <button onClick={()=>openM("aporteInv",null,i.id)} style={{display:"flex",alignItems:"center",gap:4,background:"linear-gradient(135deg,#9BD046,#7AB02A)",border:"none",borderRadius:8,padding:"6px 11px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Plus size={12} strokeWidth={2.6}/>Aporte</button>
                             </div>
                             {itens.length===0&&<div style={{fontSize:11,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif"}}>Nenhum aporte registrado ainda.</div>}
@@ -4544,7 +4545,7 @@ function AppMain({user, onLogout}) {
                               <div key={x.k} style={{display:"flex",alignItems:"flex-start",gap:9,padding:"6px 0",borderTop:ix?"1px solid rgba(0,0,0,0.05)":"none"}}>
                                 <div style={{width:8,height:8,borderRadius:99,background:x.valor<0?"#8B1A1A":cor(x.origem),marginTop:5,flexShrink:0}}/>
                                 <div style={{flex:1,minWidth:0}}>
-                                  <div style={{fontSize:11.5,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{x.data?fdFull(x.data):"—"} <span style={{fontSize:9.5,fontWeight:700,color:cor(x.origem),textTransform:"uppercase",letterSpacing:".04em",marginLeft:3}}>{x.valor<0?"Resgate":x.origem}</span></div>
+                                  <div style={{fontSize:11.5,fontWeight:700,color:"#1A1209",fontFamily:"'DM Sans',sans-serif"}}>{x.data?fdFull(x.data):"—"} <span style={{fontSize:9,fontWeight:500,color:cor(x.origem),textTransform:"uppercase",letterSpacing:".06em",marginLeft:4,fontFamily:"'DM Mono',ui-monospace,monospace"}}>{x.valor<0?"Resgate":x.origem}</span></div>
                                   {x.obs&&<div style={{fontSize:10.5,color:"#3D3226",fontFamily:"'DM Sans',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.obs}</div>}
                                 </div>
                                 <span className="num" style={{fontSize:12,fontWeight:700,color:x.valor<0?"#8B1A1A":"#2D5A10",whiteSpace:"nowrap"}}>{x.valor<0?"−":"+"}{R(Math.abs(x.valor))}</span>
@@ -4579,11 +4580,11 @@ function AppMain({user, onLogout}) {
           <div className="fade">
             <div className={CARD} style={{marginBottom:16,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",background:"linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,255,255,0.82))"}}>
               <div>
-                <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}><Target size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Objetivos</div>
+                <div style={{fontSize:11,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}><Target size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Objetivos</div>
                 <div className="num" style={{fontSize:26,fontWeight:700,color:C.magenta,letterSpacing:"-.02em",lineHeight:1}}>{objetivos.length}</div>
                 <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:3}}>{objetivos.length===1?"meta cadastrada":"metas cadastradas"}</div>
               </div>
-              <button onClick={()=>openM("obj")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)"}}>
+              <button onClick={()=>openM("obj")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
                 <Plus size={15} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Objetivo
               </button>
             </div>
@@ -4611,7 +4612,7 @@ function AppMain({user, onLogout}) {
 
                   {isExp&&(
                     <div style={{background:"rgba(0,0,0,0.03)",borderRadius:10,padding:"10px 12px",marginBottom:10,border:"1px solid rgba(0,0,0,0.06)"}}>
-                      <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Onde está esse dinheiro e para quê</div>
+                      <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:8}}>Onde está esse dinheiro e para quê</div>
                       {partes.length===0&&<div style={{fontSize:11,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Nenhum detalhamento ainda. Adicione abaixo.</div>}
                       {partes.map(p=>{
                         const pInv=p.investId?invests.find(i=>i.id===p.investId):null;
@@ -4676,7 +4677,7 @@ function AppMain({user, onLogout}) {
           <div className="fade">
             <div className={CARD} style={{marginBottom:16,padding:"18px 20px",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:12,background:"linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,255,255,0.82))"}}>
               <div>
-                <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}><CreditCard size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Dívidas</div>
+                <div style={{fontSize:11,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}><CreditCard size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Dívidas</div>
                 <div className="num" style={{fontSize:26,fontWeight:700,color:"#8B1A1A",letterSpacing:"-.02em",lineHeight:1}}>{R(totalDividas)}</div>
                 <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:3}}>em aberto</div>
               </div>
@@ -4684,7 +4685,7 @@ function AppMain({user, onLogout}) {
                 <button onClick={()=>openM("div")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"10px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
                   <Plus size={14} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Dívida
                 </button>
-                <button onClick={()=>setModal("cartaoRenegoc")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 4px 14px rgba(232,32,95,0.35)"}}>
+                <button onClick={()=>setModal("cartaoRenegoc")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
                   <CreditCard size={14} strokeWidth={2.2}/> Cartão Renegociado
                 </button>
               </div>
@@ -4695,7 +4696,7 @@ function AppMain({user, onLogout}) {
               <div style={{marginBottom:18}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"9px 14px",background:"rgba(255,255,255,0.75)",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
                   <CreditCard size={14} strokeWidth={2}/>
-                  <span style={{fontSize:12,fontWeight:700,color:"#8B1043",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Cartão Renegociado — desconto por pontualidade</span>
+                  <span style={{fontSize:12,fontWeight:500,color:"#8B1043",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Cartão Renegociado — desconto por pontualidade</span>
                 </div>
                 {dividas.filter(d=>d.tipo==="cartao_desconto").map(d=>{
                   const parcelas=d.parcelasStatus||[];
@@ -4774,7 +4775,7 @@ function AppMain({user, onLogout}) {
               <div style={{marginBottom:18}}>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"9px 14px",background:"rgba(255,255,255,0.75)",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
                   <Landmark size={14} strokeWidth={2}/>
-                  <span style={{fontSize:12,fontWeight:700,color:"#8B6000",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Fundo de Dívidas — acumulando para quitar</span>
+                  <span style={{fontSize:12,fontWeight:500,color:"#8B6000",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Fundo de Dívidas — acumulando para quitar</span>
                 </div>
                 {dividas.filter(d=>d.tipo==="fundo").map(d=>{
                   const pct=+d.total>0?Math.min(+d.pago/+d.total*100,100):0;
@@ -4810,7 +4811,7 @@ function AppMain({user, onLogout}) {
             {/* ── Dívidas Ativas ── */}
             <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,padding:"9px 14px",background:"rgba(255,255,255,0.75)",borderRadius:10,boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
               <CreditCard size={14} strokeWidth={2}/>
-              <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Dívidas Ativas — pagamento mensal</span>
+              <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Dívidas Ativas — pagamento mensal</span>
             </div>
             {dividas.filter(d=>!d.tipo||d.tipo==="ativa").length===0
               ?<div className={CARD} style={{textAlign:"center",padding:24,color:TMUT,fontSize:13,fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><CheckCircle2 size={14} strokeWidth={2.2}/>Nenhuma dívida ativa</div>
@@ -4858,7 +4859,7 @@ function AppMain({user, onLogout}) {
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
                       <button onClick={()=>setCartaoIdx(idx===0?cartoes.length-1:idx-1)} style={{background:"rgba(255,255,255,0.75)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:36,height:36,cursor:"pointer",fontSize:17,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>‹</button>
                       <div style={{textAlign:"center"}}>
-                        <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>▭ Cartões</div>
+                        <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>▭ Cartões</div>
                         <div style={{fontSize:11,color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif"}}>{idx+1} de {cartoes.length}</div>
                       </div>
                       <button onClick={()=>setCartaoIdx(idx===cartoes.length-1?0:idx+1)} style={{background:"rgba(255,255,255,0.75)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:10,width:36,height:36,cursor:"pointer",fontSize:17,color:"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>›</button>
@@ -4889,10 +4890,10 @@ function AppMain({user, onLogout}) {
                     ):(
                       <div className={CARD} style={{padding:"16px 14px"}}>
                         <div style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
-                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Descrição</div>
-                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Categoria</div>
-                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Data</div>
-                          <div style={{fontSize:10,fontWeight:700,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",textAlign:"right"}}>Valor</div>
+                          <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Descrição</div>
+                          <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Categoria</div>
+                          <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Data</div>
+                          <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",textAlign:"right"}}>Valor</div>
                           <div/>
                         </div>
                         {cc.map((m,rowIdx)=>{
@@ -4933,12 +4934,12 @@ function AppMain({user, onLogout}) {
             <div className={CARD} style={{marginBottom:16,padding:"18px 20px",background:"linear-gradient(135deg,rgba(255,255,255,0.92),rgba(255,255,255,0.82))"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",flexWrap:"wrap",gap:10}}>
                 <div>
-                  <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}><Calendar size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Previsão</div>
-                  <div style={{fontSize:26,fontWeight:300,fontFamily:"'Cormorant Garamond',serif",color:"#1A1209",letterSpacing:"-.01em",lineHeight:1}}>Próximos 8 meses</div>
+                  <div style={{fontSize:11,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}><Calendar size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Previsão</div>
+                  <div style={{fontSize:26,fontWeight:300,fontFamily:"'DM Sans',sans-serif",color:"#1A1209",letterSpacing:"-.01em",lineHeight:1}}>Próximos 8 meses</div>
                   <div style={{fontSize:11,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",marginTop:5}}>Plantões agendados · investimentos · histórico</div>
                 </div>
                 <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:10,fontWeight:700,letterSpacing:".06em",textTransform:"uppercase",color:"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif",marginBottom:2}}>saldo projetado total</div>
+                  <div style={{fontSize:10,fontWeight:500,letterSpacing:".06em",textTransform:"uppercase",color:"rgba(26,18,9,0.45)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:2}}>saldo projetado total</div>
                   <div className="num" style={{fontSize:22,fontWeight:700,color:forecast.reduce((s,f)=>s+f.saldo,0)>=0?"#215010":"#8B1A1A"}}>{R(forecast.reduce((s,f)=>s+f.saldo,0))}</div>
                 </div>
               </div>
@@ -4978,7 +4979,7 @@ function AppMain({user, onLogout}) {
                   {isNow&&<div style={{position:"absolute",top:0,left:0,width:4,height:"100%",background:"linear-gradient(180deg,#F0356E,#8B1043)"}}/>}
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                     <div style={{display:"flex",alignItems:"center",gap:9}}>
-                      <div style={{fontSize:17,fontWeight:500,fontFamily:"'Cormorant Garamond',serif",color:isNow?"#8B1043":"#1A1209",textTransform:"capitalize"}}>{monthLabel(f.ym)}</div>
+                      <div style={{fontSize:17,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:isNow?"#8B1043":"#1A1209",textTransform:"capitalize"}}>{monthLabel(f.ym)}</div>
                       {isNow&&<span style={{fontSize:9,fontWeight:700,background:"linear-gradient(135deg,#F0356E,#D01050)",color:"#fff",borderRadius:99,padding:"3px 10px",letterSpacing:".04em",textTransform:"uppercase",boxShadow:"0 2px 6px rgba(232,32,95,0.3)"}}>✦ Atual</span>}
                     </div>
                     <div style={{textAlign:"right"}}>
@@ -5008,8 +5009,8 @@ function AppMain({user, onLogout}) {
             <div className={CARD} style={{marginBottom:14,padding:"16px 18px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:12}}>
                 <div>
-                  <div style={{fontSize:11,fontWeight:700,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>▦ Agenda</div>
-                  <div style={{fontSize:20,fontWeight:300,fontFamily:"'Cormorant Garamond',serif",color:"#1A1209"}}>
+                  <div style={{fontSize:11,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>▦ Agenda</div>
+                  <div style={{fontSize:20,fontWeight:300,fontFamily:"'DM Sans',sans-serif",color:"#1A1209"}}>
                     {fd(agendaDias[0]?.data)} – {fd(agendaDias[agendaDias.length-1]?.data)}
                   </div>
                 </div>
@@ -5042,7 +5043,7 @@ function AppMain({user, onLogout}) {
                     return (
                       <div key={dia.data} style={{flex:1,minWidth:88,borderLeft:"1px solid rgba(0,0,0,0.06)"}}>
                         <div style={{textAlign:"center",paddingBottom:6,marginBottom:2}}>
-                          <div style={{fontSize:9,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",fontWeight:700,textTransform:"uppercase"}}>{nomeDia}</div>
+                          <div style={{fontSize:9,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Mono',ui-monospace,monospace",fontWeight:500,textTransform:"uppercase"}}>{nomeDia}</div>
                           <div style={{width:24,height:24,borderRadius:99,background:hoje?"#E8205F":"transparent",color:hoje?"#fff":"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",margin:"2px auto 0",fontSize:12,fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>{dia.diaNum}</div>
                         </div>
                         {dia.plantoesSemHorario.length>0&&(
@@ -5078,16 +5079,16 @@ function AppMain({user, onLogout}) {
             <div className={CARD} style={{marginBottom:14,padding:"16px 18px"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
                 <div style={{width:26,height:26,borderRadius:8,background:"rgba(45,90,16,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>⏱</div>
-                <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Horas trabalhadas por semana</span>
+                <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Horas trabalhadas por semana</span>
               </div>
 
               <div style={{display:"flex",gap:10,marginBottom:16}}>
                 <div style={{flex:1,background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-                  <div style={{fontSize:9.5,fontWeight:700,color:"#215010",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>Essa semana</div>
+                  <div style={{fontSize:9.5,fontWeight:500,color:"#215010",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>Essa semana</div>
                   <div className="num" style={{fontSize:24,fontWeight:700,color:"#215010"}}>{horasPorSemana.semanaAtual?.horas||0}h</div>
                 </div>
                 <div style={{flex:1,background:"rgba(0,0,0,0.04)",border:"1px solid rgba(0,0,0,0.08)",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-                  <div style={{fontSize:9.5,fontWeight:700,color:"rgba(26,18,9,0.55)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>Média (8 semanas)</div>
+                  <div style={{fontSize:9.5,fontWeight:500,color:"rgba(26,18,9,0.55)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>Média (8 semanas)</div>
                   <div className="num" style={{fontSize:24,fontWeight:700,color:"#1A1209"}}>{horasPorSemana.mediaHoras.toFixed(0)}h</div>
                 </div>
               </div>
@@ -5130,7 +5131,7 @@ function AppMain({user, onLogout}) {
             <div className={CARD} style={{padding:"16px 18px"}}>
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                 <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#1A4A6E"}}><Sparkles size={13} strokeWidth={2.2}/></div>
-                <span style={{fontSize:12,fontWeight:700,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif"}}>Meus períodos livres</span>
+                <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Meus períodos livres</span>
               </div>
               {agendaDias.map(dia=>{
                 if(dia.plantoesSemHorario.length>0){
@@ -5582,12 +5583,12 @@ function AppMain({user, onLogout}) {
           return (
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div style={{background:"rgba(232,32,95,0.08)",border:"1px solid rgba(232,32,95,0.25)",borderRadius:12,padding:"12px 16px",textAlign:"center"}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#8B1043",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>{planoAcaoAberto.descricao}</div>
+                <div style={{fontSize:11,fontWeight:500,color:"#8B1043",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>{planoAcaoAberto.descricao}</div>
                 <div className="num" style={{fontSize:20,fontWeight:700,color:"#8B1043"}}>{R(planoAcaoAberto.valorTotal)}</div>
               </div>
 
               <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:12,padding:"12px 14px"}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#1A4A6E",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:6,display:"flex",alignItems:"center",gap:5}}><Timer size={12} strokeWidth={2.2}/>Tempo estimado</div>
+                <div style={{fontSize:11,fontWeight:500,color:"#1A4A6E",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:6,display:"flex",alignItems:"center",gap:5}}><Timer size={12} strokeWidth={2.2}/>Tempo estimado</div>
                 <div style={{fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
                   {mesesNecessarios
                     ? <>Com sua média de <strong>{R(mediaSaldoLivre3Meses)}</strong> livre por mês, levaria cerca de <strong>{mesesNecessarios} {mesesNecessarios===1?"mês":"meses"}</strong> pra juntar esse valor guardando tudo que sobra.</>
@@ -5598,7 +5599,7 @@ function AppMain({user, onLogout}) {
 
               {categoriaMaiorGasto&&(
                 <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:12,padding:"12px 14px"}}>
-                  <div style={{fontSize:11,fontWeight:700,color:"#8B6000",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:6,display:"flex",alignItems:"center",gap:5}}><Scissors size={12} strokeWidth={2.2}/>Onde cortar</div>
+                  <div style={{fontSize:11,fontWeight:500,color:"#8B6000",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:6,display:"flex",alignItems:"center",gap:5}}><Scissors size={12} strokeWidth={2.2}/>Onde cortar</div>
                   <div style={{fontSize:12,color:"#6B4C00",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
                     Sua maior categoria de gasto esse mês é <strong>{categoriaMaiorGasto.nome}</strong> ({R(categoriaMaiorGasto.valor)}). Reduzir um pouco ali pode liberar dinheiro pra essa compra mais rápido.
                   </div>
@@ -5606,7 +5607,7 @@ function AppMain({user, onLogout}) {
               )}
 
               <div style={{background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.25)",borderRadius:12,padding:"12px 14px"}}>
-                <div style={{fontSize:11,fontWeight:700,color:"#215010",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}><Target size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Acompanhar como meta</div>
+                <div style={{fontSize:11,fontWeight:500,color:"#215010",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:8}}><Target size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Acompanhar como meta</div>
                 <Btn variant="green" style={{width:"100%"}} onClick={()=>{
                   const prazo=mesesNecessarios?addMonths(today(),mesesNecessarios):"";
                   setObjetivos([{id:uid(),nome:planoAcaoAberto.descricao,meta:planoAcaoAberto.valorTotal,atual:0,prazo,cor:C.green,obs:"Criado automaticamente pelo plano de economia",partes:[]},...objetivos]);
@@ -5691,7 +5692,7 @@ function AppMain({user, onLogout}) {
       <Modal open={mortoReportOpen} onClose={()=>setMortoReportOpen(false)} title="Relatório do mês">
         <div style={{display:"flex",flexDirection:"column",gap:14}}>
           <div style={{background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.3)",borderRadius:12,padding:"14px 16px",textAlign:"center"}}>
-            <div style={{fontSize:11,fontWeight:700,color:"#8B1A1A",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}>Saldo negativo em {monthLabel(selMes)}</div>
+            <div style={{fontSize:11,fontWeight:500,color:"#8B1A1A",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>Saldo negativo em {monthLabel(selMes)}</div>
             <div className="num" style={{fontSize:22,fontWeight:700,color:"#8B1A1A"}}>{R(saldo)}</div>
           </div>
           <div>
@@ -5708,7 +5709,7 @@ function AppMain({user, onLogout}) {
             )}
           </div>
           <div style={{background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.3)",borderRadius:12,padding:"12px 14px"}}>
-            <div style={{fontSize:11,fontWeight:700,color:"#1A4A6E",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",marginBottom:6}}>Como melhorar</div>
+            <div style={{fontSize:11,fontWeight:500,color:"#1A4A6E",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:6}}>Como melhorar</div>
             <div style={{fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",lineHeight:1.6}}>
               {categoriasEstouradas.length>0
                 ? <>Foque em reduzir gastos em <strong>{categoriasEstouradas[0].nome}</strong> no próximo mês — foi onde mais passou do planejado. Revise o orçamento dessa categoria ou ajuste o planejamento se ele estava irreal.</>
