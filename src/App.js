@@ -3353,7 +3353,7 @@ function AppMain({user, onLogout}) {
   const TMUT="rgba(26,18,9,0.45)";
 
   return (
-    <div className={isMobile?"mobile":""} style={{minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
+    <div className={"vl"+(isMobile?" mobile":"")} style={{minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
       <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap');
@@ -3413,35 +3413,55 @@ function AppMain({user, onLogout}) {
         @media (max-width:640px){html,body{overflow-x:hidden;max-width:100vw}}
         .mlab{display:none}
         /* ===== MODO CELULAR ===== */
-        .mobile .wallpaper-bg{display:none}
-        .mobile,body:has(.mobile){background:#7A0E3A}
-        .mobile .topbar{display:none!important}
-        .mobile .main-wrap{background:#F7F3EE;border-radius:30px 30px 0 0;margin:-24px 0 0!important;padding:24px 14px 96px!important;min-height:70vh;position:relative}
-        .mobile .card{background:#fff!important;border:1px solid rgba(40,20,10,.06)!important;box-shadow:0 6px 22px rgba(60,20,30,.07)!important;border-radius:22px!important}
-        .mobile .num{font-family:'Fraunces',Georgia,serif!important;font-weight:400!important;letter-spacing:-.02em}
-        .mobile .m-hero{background:#5E0A2E;color:#fff;padding:max(14px,env(safe-area-inset-top)) 18px 50px;position:relative;overflow:hidden}
-        .mobile .m-hero>*{position:relative;z-index:2}
-        .mobile .m-hero>.m-hero-bg,.mobile .m-hero>.m-hero-scrim{position:absolute;inset:0;z-index:0;pointer-events:none}
-        .mobile .m-hero>.m-hero-scrim{z-index:1;background:linear-gradient(180deg,rgba(110,10,48,.5) 0%,rgba(50,6,24,.68) 55%,rgba(30,4,16,.82) 100%)}
-        .mobile .m-hero *{color:inherit}
-        .mobile .m-hero .scr{scrollbar-width:none}
-        .mobile .m-saldo{font-family:'Fraunces',Georgia,serif!important;font-weight:300!important;font-size:46px;letter-spacing:-.035em;line-height:1.02;color:#fff}
-        .mobile .m-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:20px}
-        .mobile .m-stats>div{padding:0 10px;border-left:1px solid rgba(255,255,255,.28)}
-        .mobile .m-stats>div:first-child{padding-left:0;border-left:none}
-        .mobile .m-stats .v{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:400;letter-spacing:-.02em;white-space:nowrap}
-        .mobile .m-stats .l{font-family:'DM Mono',ui-monospace,monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-bottom:3px}
-        .mobile .sidebar{width:100%!important;background:linear-gradient(170deg,#E8205F 0%,#A8134B 55%,#5E0A2E 100%)!important;border:none!important;overflow-y:auto;display:flex;flex-direction:column}
-        .mobile .sidebar .navitem{font-family:'Fraunces',Georgia,serif;font-size:32px;font-weight:300;letter-spacing:-.02em;color:rgba(255,255,255,.55);background:none!important;border:none!important;box-shadow:none!important;padding:5px 24px;margin:0;border-radius:0}
-        .mobile .sidebar .navitem.active{color:#fff;font-weight:400}
-        .mobile .sidebar .navitem.active>span:last-of-type{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
-        .mobile .sidebar .nav-icon{display:none}
-        .mobile .sidebar .nav-count{font-family:'DM Mono',ui-monospace,monospace;font-size:11px;color:#FFD36A;margin-left:4px;vertical-align:super}
-        .mobile .sidebar .nav-list{max-height:none!important;overflow:visible!important;padding:6px 0 14px!important}
-        .mobile .overlay-side{display:none!important}
+        .vl .wallpaper-bg{display:none}
+        .vl,body:has(.vl){background:#7A0E3A}
+        .vl .topbar{display:none!important}
+        .vl .sheet{background:#F7F3EE;border-radius:30px 30px 0 0;margin-top:-26px;position:relative;z-index:1;min-height:70vh}
+        .mobile .sheet{margin-top:-24px}
+        .mobile .main-wrap{padding:24px 14px 96px!important}
+        .vl .main-wrap{padding-top:28px!important}
+        .vl .card{background:#fff!important;border:1px solid rgba(40,20,10,.06)!important;box-shadow:0 6px 22px rgba(60,20,30,.07)!important;border-radius:22px!important}
+        .vl .num{font-family:'Fraunces',Georgia,serif!important;font-weight:400!important;letter-spacing:-.02em}
+        .vl .m-hero{background:#5E0A2E;color:#fff;padding:max(14px,env(safe-area-inset-top)) 18px 50px;position:relative;overflow:hidden}
+        .vl .m-hero-in{max-width:1100px;margin:0 auto;position:relative;z-index:2;display:block}
+        .vl .m-hero>.m-hero-bg,.vl .m-hero>.m-hero-scrim{position:absolute;inset:0;z-index:0;pointer-events:none}
+        .vl .m-hero>.m-hero-scrim{z-index:1;background:linear-gradient(180deg,rgba(110,10,48,.5) 0%,rgba(50,6,24,.68) 55%,rgba(30,4,16,.82) 100%)}
+        .vl .m-hero *{color:inherit}
+        .vl .m-hero .scr{scrollbar-width:none}
+        .vl .m-saldo{font-family:'Fraunces',Georgia,serif!important;font-weight:300!important;font-size:46px;letter-spacing:-.035em;line-height:1.02;color:#fff}
+        .vl .m-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:20px}
+        .vl .m-stats>div{padding:0 10px;border-left:1px solid rgba(255,255,255,.28)}
+        .vl .m-stats>div:first-child{padding-left:0;border-left:none}
+        .vl .m-stats .v{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:400;letter-spacing:-.02em;white-space:nowrap}
+        .vl .m-stats .l{font-family:'DM Mono',ui-monospace,monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-bottom:3px}
+        @media (min-width:900px){
+          .vl .m-hero{padding:22px 32px 72px}
+          .vl .m-hero-in{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"top top" "left stats" "chips chips";column-gap:40px;align-items:end}
+          .vl .m-hero-top{grid-area:top;margin-bottom:34px!important}
+          .vl .m-hero-l{grid-area:left}
+          .vl .m-hero-chips{grid-area:chips;margin-right:0!important;padding-right:0!important;margin-top:30px!important}
+          .vl .m-stats{grid-area:stats;margin-top:0;grid-template-columns:repeat(3,auto)}
+          .vl .m-stats>div{padding:0 26px}
+          .vl .m-stats .v{font-size:24px}
+          .vl .m-saldo{font-size:76px}
+          .vl .main-wrap{padding-left:32px!important;padding-right:32px!important}
+        }
+        .vl .sidebar{width:100%!important;background:linear-gradient(170deg,#E8205F 0%,#A8134B 55%,#5E0A2E 100%)!important;border:none!important;overflow-y:auto;display:flex;flex-direction:column}
+        .vl .sidebar .navitem{font-family:'Fraunces',Georgia,serif;font-size:32px;font-weight:300;letter-spacing:-.02em;color:rgba(255,255,255,.55);background:none!important;border:none!important;box-shadow:none!important;padding:5px 24px;margin:0;border-radius:0}
+        .vl .sidebar .navitem:hover{color:#fff}
+        .vl .sidebar .navitem.active{color:#fff;font-weight:400}
+        .vl .sidebar .navitem.active>span:last-of-type{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
+        .vl .sidebar .nav-icon{display:none}
+        .vl .sidebar .nav-count{font-family:'DM Mono',ui-monospace,monospace;font-size:11px;color:#FFD36A;margin-left:4px;vertical-align:super}
+        .vl .sidebar .nav-list{max-height:none!important;overflow:visible!important;padding:6px 0 14px!important}
+        .vl .overlay-side{display:none!important}
         .sidebar .m-close{display:none}
-        .mobile .sidebar .m-close{display:flex}
-        .mobile .main-wrap{}
+        .vl .sidebar .m-close{display:flex}
+        @media (min-width:900px){
+          .vl .sidebar>div{padding-left:max(24px,calc((100vw - 1100px)/2 + 32px))!important;padding-right:max(24px,calc((100vw - 1100px)/2 + 32px))!important}
+          .vl .sidebar .navitem{font-size:44px;padding:6px max(24px,calc((100vw - 1100px)/2 + 32px))}
+          .vl .sidebar .nav-list{padding-left:0!important;padding-right:0!important}
+        }
         .mobile input,.mobile select,.mobile textarea{font-size:16px!important}
         .mobile .main-wrap button{min-height:34px}
         .mobile .topbar{position:relative!important;top:auto!important}
@@ -3503,7 +3523,7 @@ function AppMain({user, onLogout}) {
             <div key={t.id} className={`navitem ${tab===t.id?"active":""}`} onClick={()=>navTo(t.id)}>
               <span className="nav-icon">{t.icon}</span>
               <span>{t.label}</span>
-              {isMobile&&cnt>0&&<sup className="nav-count">{cnt}</sup>}
+              {cnt>0&&<sup className="nav-count">{cnt}</sup>}
             </div>
           );})}
         </div>
@@ -3542,11 +3562,12 @@ function AppMain({user, onLogout}) {
       })()}
 
 
-      {isMobile&&(
+      {(
         <div className="m-hero">
           <div className="m-hero-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
           <div className="m-hero-scrim"/>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
+          <div className="m-hero-in">
+          <div className="m-hero-top" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
             <button onClick={()=>setSideOpen(true)} aria-label="Abrir menu" style={{background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:99,width:40,height:40,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5,minHeight:40}}>
               <div style={{width:16,height:1.5,background:"#fff",borderRadius:1}}/>
               <div style={{width:16,height:1.5,background:"#fff",borderRadius:1}}/>
@@ -3555,6 +3576,7 @@ function AppMain({user, onLogout}) {
             <div className="mono" style={{fontSize:10,letterSpacing:".18em",textTransform:"uppercase",opacity:.85}}>{TABS.find(t=>t.id===tab)?.label||"Velara"}</div>
             <button onClick={()=>setEditSaldoMes(String(saldoMensal[selMes]!==undefined?saldoMensal[selMes]:+saldoFimDoMes(shiftMonth(selMes,-1)).toFixed(2)))} style={{background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:99,padding:"0 12px",height:40,minHeight:40,fontSize:11,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>ajustar</button>
           </div>
+          <div className="m-hero-l">
           <div className="mono" style={{fontSize:10,letterSpacing:".18em",textTransform:"uppercase",opacity:.75,marginBottom:6}}>Saldo · {monthLabel(selMes)}</div>
           <div className="m-saldo">{R(saldoFinal)}</div>
           {parcelasDividaMes>0&&(
@@ -3563,7 +3585,8 @@ function AppMain({user, onLogout}) {
               <span>parcelas {R(parcelasDividaMes)} · previsto <strong>{R(saldoFinal-parcelasDividaMes)}</strong></span>
             </div>
           )}
-          <div className="scr" style={{display:"flex",gap:6,overflowX:"auto",marginTop:18,marginRight:-18,paddingRight:18}}>
+          </div>
+          <div className="scr m-hero-chips" style={{display:"flex",gap:6,overflowX:"auto",marginTop:18,marginRight:-18,paddingRight:18}}>
             {Array.from({length:20},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-12+i);const ym=d.toISOString().slice(0,7);const isSel=ym===selMes;
               return <button key={ym} ref={isSel?(el=>{if(el&&el.parentNode&&!el.parentNode.dataset.done){el.parentNode.dataset.done="1";el.parentNode.scrollLeft=Math.max(0,el.offsetLeft-90);}}):undefined} onClick={()=>setSelMes(ym)} style={{flexShrink:0,background:isSel?"#fff":"rgba(255,255,255,0.14)",color:isSel?"#C4185A":"#fff",border:isSel?"1px solid #fff":"1px solid rgba(255,255,255,0.28)",borderRadius:99,padding:"0 14px",height:32,minHeight:32,fontSize:12,fontWeight:isSel?700:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{monthLabel(ym)}</button>;
             })}
@@ -3572,6 +3595,7 @@ function AppMain({user, onLogout}) {
             <div><div className="l">Entradas</div><div className="v">{R(entradas)}</div></div>
             <div><div className="l">Saídas</div><div className="v">{R(saidas)}</div></div>
             <div><div className="l">A receber</div><div className="v">{R(totalPendPlant)}</div></div>
+          </div>
           </div>
         </div>
       )}
@@ -3618,6 +3642,7 @@ function AppMain({user, onLogout}) {
         </div>
       </div>
 
+      <div className="sheet">
       <div className="main-wrap" style={{maxWidth:1100,margin:"0 auto",padding:"14px 24px 80px",position:"relative",zIndex:1}}>
 
         {/* ══ DASHBOARD ══ */}
@@ -5339,6 +5364,7 @@ function AppMain({user, onLogout}) {
           </div>
         )}
 
+      </div>
       </div>
 
       {/* ══ MODAIS ══ */}
