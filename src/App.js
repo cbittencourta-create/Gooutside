@@ -209,12 +209,9 @@ const BG_OPTIONS = [
   { id:"listras",   label:"Listras",  emoji:"🎀", isCss:true, css:LISTRAS_CSS },
   { id:"sol",       label:"Sol",      emoji:"☀️", isCss:true, css:SOL_STRIPES_CSS },
   { id:"cachorro",  label:"Dálmata",  emoji:"🐶", url:"/wallpapers/bg-cachorro-azul.jpg", contain:true, bgColor:"#2E4C82", position:"left bottom", containSize:"auto 90%" },
-  { id:"veleiro",   label:"Veleiro",  url:"/wallpapers/bg-veleiro-azul.jpg", position:"center" },
-  { id:"peixinhos", label:"Peixinhos", url:"/wallpapers/bg-peixinhos.jpg", position:"center" },
   { id:"listras_vinho",  label:"Listras Vinho", emoji:"🍷", isCss:true, css:LISTRAS_VINHO_CSS },
   { id:"azulejo_azul",   label:"Azulejo Azul",  emoji:"🔷", isCss:true, css:AZULEJO_AZUL_CSS },
   { id:"listras_largas", label:"Listras Largas", emoji:"🎗️", isCss:true, css:LISTRAS_LARGAS_CSS },
-  { id:"ladrilho_vermelho", label:"Ladrilho Vermelho", emoji:"🔴", url:"/wallpapers/bg-ladrilho-vermelho.jpg", position:"center" },
 ];
 
 function bgToStyle(bg) {
@@ -3359,7 +3356,7 @@ function AppMain({user, onLogout}) {
     <div className={isMobile?"mobile":""} style={{minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
       <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         input,select,textarea,button{font-family:'DM Sans','Segoe UI',sans-serif}
         .num{font-family:'DM Sans',sans-serif;font-variant-numeric:lining-nums tabular-nums;letter-spacing:-.015em}
@@ -3416,7 +3413,35 @@ function AppMain({user, onLogout}) {
         @media (max-width:640px){html,body{overflow-x:hidden;max-width:100vw}}
         .mlab{display:none}
         /* ===== MODO CELULAR ===== */
-        .mobile .main-wrap{padding:12px 12px 96px!important}
+        .mobile .wallpaper-bg{display:none}
+        .mobile,body:has(.mobile){background:#7A0E3A}
+        .mobile .topbar{display:none!important}
+        .mobile .main-wrap{background:#F7F3EE;border-radius:30px 30px 0 0;margin:-24px 0 0!important;padding:24px 14px 96px!important;min-height:70vh;position:relative}
+        .mobile .card{background:#fff!important;border:1px solid rgba(40,20,10,.06)!important;box-shadow:0 6px 22px rgba(60,20,30,.07)!important;border-radius:22px!important}
+        .mobile .num{font-family:'Fraunces',Georgia,serif!important;font-weight:400!important;letter-spacing:-.02em}
+        .mobile .m-hero{background:#5E0A2E;color:#fff;padding:max(14px,env(safe-area-inset-top)) 18px 50px;position:relative;overflow:hidden}
+        .mobile .m-hero>*{position:relative;z-index:2}
+        .mobile .m-hero>.m-hero-bg,.mobile .m-hero>.m-hero-scrim{position:absolute;inset:0;z-index:0;pointer-events:none}
+        .mobile .m-hero>.m-hero-scrim{z-index:1;background:linear-gradient(180deg,rgba(110,10,48,.5) 0%,rgba(50,6,24,.68) 55%,rgba(30,4,16,.82) 100%)}
+        .mobile .m-hero *{color:inherit}
+        .mobile .m-hero .scr{scrollbar-width:none}
+        .mobile .m-saldo{font-family:'Fraunces',Georgia,serif!important;font-weight:300!important;font-size:46px;letter-spacing:-.035em;line-height:1.02;color:#fff}
+        .mobile .m-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:20px}
+        .mobile .m-stats>div{padding:0 10px;border-left:1px solid rgba(255,255,255,.28)}
+        .mobile .m-stats>div:first-child{padding-left:0;border-left:none}
+        .mobile .m-stats .v{font-family:'Fraunces',Georgia,serif;font-size:17px;font-weight:400;letter-spacing:-.02em;white-space:nowrap}
+        .mobile .m-stats .l{font-family:'DM Mono',ui-monospace,monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;margin-bottom:3px}
+        .mobile .sidebar{width:100%!important;background:linear-gradient(170deg,#E8205F 0%,#A8134B 55%,#5E0A2E 100%)!important;border:none!important;overflow-y:auto;display:flex;flex-direction:column}
+        .mobile .sidebar .navitem{font-family:'Fraunces',Georgia,serif;font-size:32px;font-weight:300;letter-spacing:-.02em;color:rgba(255,255,255,.55);background:none!important;border:none!important;box-shadow:none!important;padding:5px 24px;margin:0;border-radius:0}
+        .mobile .sidebar .navitem.active{color:#fff;font-weight:400}
+        .mobile .sidebar .navitem.active>span:last-of-type{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:6px}
+        .mobile .sidebar .nav-icon{display:none}
+        .mobile .sidebar .nav-count{font-family:'DM Mono',ui-monospace,monospace;font-size:11px;color:#FFD36A;margin-left:4px;vertical-align:super}
+        .mobile .sidebar .nav-list{max-height:none!important;overflow:visible!important;padding:6px 0 14px!important}
+        .mobile .overlay-side{display:none!important}
+        .sidebar .m-close{display:none}
+        .mobile .sidebar .m-close{display:flex}
+        .mobile .main-wrap{}
         .mobile input,.mobile select,.mobile textarea{font-size:16px!important}
         .mobile .main-wrap button{min-height:34px}
         .mobile .topbar{position:relative!important;top:auto!important}
@@ -3464,17 +3489,23 @@ function AppMain({user, onLogout}) {
       {/* SIDEBAR */}
       <div className={`overlay-side ${sideOpen?"open":""}`} onClick={()=>setSideOpen(false)}/>
       <div className={`sidebar ${sideOpen?"open":""}`}>
-        <div style={{padding:"22px 16px 14px",borderBottom:"1px solid rgba(255,255,255,0.12)"}}>
-          <div style={{fontSize:10,fontWeight:500,letterSpacing:".2em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>Velara Finance</div>
-          <div style={{fontSize:20,fontWeight:300,letterSpacing:"-.02em",color:"#fff"}}>Menu</div>
+        <div style={{padding:"max(22px,calc(env(safe-area-inset-top) + 8px)) 16px 14px",borderBottom:"1px solid rgba(255,255,255,0.12)",display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+          <div>
+            <div style={{fontSize:10,fontWeight:500,letterSpacing:".2em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>Velara Finance</div>
+            <div style={{fontSize:20,fontWeight:300,letterSpacing:"-.02em",color:"#fff"}}>Menu</div>
+          </div>
+          <button className="m-close" onClick={()=>setSideOpen(false)} aria-label="Fechar menu" style={{width:40,height:40,borderRadius:99,background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",color:"#fff",fontSize:22,lineHeight:1,alignItems:"center",justifyContent:"center",cursor:"pointer"}}>×</button>
         </div>
-        <div style={{padding:"8px 0",overflowY:"auto",maxHeight:"calc(100vh - 160px)"}}>
-          {TABS.map(t=>(
+        <div className="nav-list" style={{padding:"8px 0",overflowY:"auto",maxHeight:"calc(100vh - 160px)"}}>
+          {TABS.map(t=>{
+            const cnt={movimentos:movsDoMes.length,plantoes:plantoes.length,investimentos:invests.length,objetivos:objetivos.length,dividas:dividas.length,cartoes:cartoes.length}[t.id];
+            return (
             <div key={t.id} className={`navitem ${tab===t.id?"active":""}`} onClick={()=>navTo(t.id)}>
               <span className="nav-icon">{t.icon}</span>
               <span>{t.label}</span>
+              {isMobile&&cnt>0&&<sup className="nav-count">{cnt}</sup>}
             </div>
-          ))}
+          );})}
         </div>
         <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
           <div style={{fontSize:10,fontWeight:500,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:7}}>Tela</div>
@@ -3510,6 +3541,40 @@ function AppMain({user, onLogout}) {
         return <PatoMascote progresso={combinado} alerta={orcamentoEstourado} relaxado={relaxado} morto={estaMorto} correndo={saidas>entradas&&saldoFinal<saidas} onClickMorto={()=>setMortoReportOpen(true)} feedTrigger={feedTrigger} totalAlimentado={totalAlimentado}/>;
       })()}
 
+
+      {isMobile&&(
+        <div className="m-hero">
+          <div className="m-hero-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
+          <div className="m-hero-scrim"/>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
+            <button onClick={()=>setSideOpen(true)} aria-label="Abrir menu" style={{background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:99,width:40,height:40,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5,minHeight:40}}>
+              <div style={{width:16,height:1.5,background:"#fff",borderRadius:1}}/>
+              <div style={{width:16,height:1.5,background:"#fff",borderRadius:1}}/>
+              <div style={{width:10,height:1.5,background:"#fff",borderRadius:1,alignSelf:"flex-start",marginLeft:12}}/>
+            </button>
+            <div className="mono" style={{fontSize:10,letterSpacing:".18em",textTransform:"uppercase",opacity:.85}}>{TABS.find(t=>t.id===tab)?.label||"Velara"}</div>
+            <button onClick={()=>setEditSaldoMes(String(saldoMensal[selMes]!==undefined?saldoMensal[selMes]:+saldoFimDoMes(shiftMonth(selMes,-1)).toFixed(2)))} style={{background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:99,padding:"0 12px",height:40,minHeight:40,fontSize:11,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>ajustar</button>
+          </div>
+          <div className="mono" style={{fontSize:10,letterSpacing:".18em",textTransform:"uppercase",opacity:.75,marginBottom:6}}>Saldo · {monthLabel(selMes)}</div>
+          <div className="m-saldo">{R(saldoFinal)}</div>
+          {parcelasDividaMes>0&&(
+            <div style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:12,background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.28)",borderRadius:99,padding:"5px 12px",fontSize:11}}>
+              <CreditCard size={12} strokeWidth={2.2}/>
+              <span>parcelas {R(parcelasDividaMes)} · previsto <strong>{R(saldoFinal-parcelasDividaMes)}</strong></span>
+            </div>
+          )}
+          <div className="scr" style={{display:"flex",gap:6,overflowX:"auto",marginTop:18,marginRight:-18,paddingRight:18}}>
+            {Array.from({length:20},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-12+i);const ym=d.toISOString().slice(0,7);const isSel=ym===selMes;
+              return <button key={ym} ref={isSel?(el=>{if(el&&el.parentNode&&!el.parentNode.dataset.done){el.parentNode.dataset.done="1";el.parentNode.scrollLeft=Math.max(0,el.offsetLeft-90);}}):undefined} onClick={()=>setSelMes(ym)} style={{flexShrink:0,background:isSel?"#fff":"rgba(255,255,255,0.14)",color:isSel?"#C4185A":"#fff",border:isSel?"1px solid #fff":"1px solid rgba(255,255,255,0.28)",borderRadius:99,padding:"0 14px",height:32,minHeight:32,fontSize:12,fontWeight:isSel?700:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{monthLabel(ym)}</button>;
+            })}
+          </div>
+          <div className="m-stats">
+            <div><div className="l">Entradas</div><div className="v">{R(entradas)}</div></div>
+            <div><div className="l">Saídas</div><div className="v">{R(saidas)}</div></div>
+            <div><div className="l">A receber</div><div className="v">{R(totalPendPlant)}</div></div>
+          </div>
+        </div>
+      )}
 
       {/* TOP BAR */}
       <div className="topbar" style={{background:"rgba(255,255,255,0.78)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",borderBottom:"1px solid rgba(0,0,0,0.08)",padding:"14px 16px 12px",position:"sticky",top:0,zIndex:50,boxShadow:"0 2px 20px rgba(0,0,0,0.1)"}}>
