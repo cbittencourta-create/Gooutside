@@ -2629,6 +2629,11 @@ function AppMain({user, onLogout}) {
   // Saldo ao FIM de um mês, acumulando desde o primeiro mês com dados (carry-forward),
   // respeitando ajustes manuais e descontando o que foi distribuído pra investimento/objetivo/dívida.
   // Mesma lógica do saldoFinal — usada pelo pop-up de novo mês e pelo "ajustar".
+  useEffect(()=>{
+    const desp=cats?.despesa||[];
+    if(desp.length&&!desp.some(c=>c.nome==="Dívidas")) setCats({...cats,despesa:[...desp,{id:"cat_div",nome:"Dívidas",emoji:"💳",subcats:[]}]});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
   const saldoFimDoMes=(mes)=>{
     const chaves=[...Object.keys(saldoMensal),...movs.map(m=>monthKey(m.data))].filter(Boolean).sort();
     if(!chaves.length) return 0;
@@ -2704,6 +2709,7 @@ function AppMain({user, onLogout}) {
   const [fCartaoRenegoc,setFCartaoRenegoc]=useState({credor:"",numParcelas:"12",valorComDesconto:"",valorSemDesconto:"",percentualDesconto:"",percentualAntecipado:"",dataPrimeiraParcela:today()});
   const [cartaoRenegocExpandido,setCartaoRenegocExpandido]=useState(null);
   const [pagarParcelaModal,setPagarParcelaModal]=useState(null); // {divId, parcelaIdx}
+  const [pagarParcelaData,setPagarParcelaData]=useState(today());
   const [fCart,setFCart]=useState({nome:"",bandeira:"",limite:"",fechamento:"",vencimento:""});
     const [fAporte,setFAporte]=useState({valor:"",data:today()});
   const [fPgto,setFPgto]=useState({valor:"",data:today()});
@@ -2866,23 +2872,30 @@ function AppMain({user, onLogout}) {
     closeM();
   };
 
+  const CATEGORIA_DIVIDA="💳 Dívidas";
   const marcarParcelaPaga=(divId,parcelaIdx,comDesconto)=>{
+    const div=dividas.find(d=>d.id===divId); if(!div)return;
+    const parc=div.parcelasStatus[parcelaIdx]; if(!parc)return;
+    const valorPago=comDesconto?div.valorComDesconto:div.valorSemDesconto;
+    const dataPg=pagarParcelaData||today();
+    const movId=uid();
+    // a parcela paga sai do saldo do mês em que foi paga
+    setMovs([{id:movId,tipo:"saida",descricao:`Dívida - ${div.credor} (parcela ${parc.numero}/${div.numParcelas})`,valor:valorPago,categoria:CATEGORIA_DIVIDA,data:dataPg,formaPagamento:"pix",dividaId:divId},...movs]);
     setDividas(dividas.map(d=>{
       if(d.id!==divId)return d;
-      const novasParcelas=d.parcelasStatus.map((p,idx)=>{
-        if(idx!==parcelaIdx)return p;
-        const valorPago=comDesconto?d.valorComDesconto:d.valorSemDesconto;
-        return {...p,pago:true,valorPago,comDesconto};
-      });
+      const novasParcelas=d.parcelasStatus.map((p,idx)=>idx===parcelaIdx?{...p,pago:true,valorPago,comDesconto,dataPagamento:dataPg,movId}:p);
       const novoPago=novasParcelas.reduce((s,p)=>s+(p.pago?p.valorPago:0),0);
       return {...d,parcelasStatus:novasParcelas,pago:novoPago};
     }));
     setPagarParcelaModal(null);
   };
   const desmarcarParcela=(divId,parcelaIdx)=>{
+    const div=dividas.find(d=>d.id===divId);
+    const movId=div?.parcelasStatus[parcelaIdx]?.movId;
+    if(movId) setMovs(movs.filter(m=>m.id!==movId)); // desfaz a saída no caixa
     setDividas(dividas.map(d=>{
       if(d.id!==divId)return d;
-      const novasParcelas=d.parcelasStatus.map((p,idx)=>idx===parcelaIdx?{...p,pago:false,valorPago:0,comDesconto:null}:p);
+      const novasParcelas=d.parcelasStatus.map((p,idx)=>idx===parcelaIdx?{...p,pago:false,valorPago:0,comDesconto:null,dataPagamento:undefined,movId:undefined}:p);
       const novoPago=novasParcelas.reduce((s,p)=>s+(p.pago?p.valorPago:0),0);
       return {...d,parcelasStatus:novasParcelas,pago:novoPago};
     }));
@@ -2941,7 +2954,16 @@ function AppMain({user, onLogout}) {
     alimentarPato(v);
     closeM();
   };
-  const savePgto=()=>{if(!fPgto.valor||!extra)return;const v=+String(fPgto.valor).replace(",",".");setDividas(dividas.map(d=>d.id===extra?{...d,pago:Math.min(+d.pago+v,+d.total)}:d));alimentarPato(v);closeM();};
+  const savePgto=()=>{
+    if(!fPgto.valor||!extra)return;
+    const v=numBR(fPgto.valor); if(!(v>0))return;
+    const div=dividas.find(d=>d.id===extra);
+    setDividas(dividas.map(d=>d.id===extra?{...d,pago:Math.min(+d.pago+v,+d.total)}:d));
+    // o pagamento sai do saldo do mês da data escolhida
+    setMovs([{id:uid(),tipo:"saida",descricao:`Dívida - ${div?.credor||"pagamento"}`,valor:v,categoria:CATEGORIA_DIVIDA,data:fPgto.data||today(),formaPagamento:"pix",dividaId:extra},...movs]);
+    alimentarPato(v);
+    closeM();
+  };
 
   const getPltStatus=p=>{if(p.status==="recebido")return"recebido";if(p.status==="cancelado")return"cancelado";if(isPast(p.previsao))return"atrasado";return"pendente";};
   // Plantão marcado como "recebido" pela edição (sem passar por "Receber"): sem data e sem entrada no caixa
@@ -3237,6 +3259,7 @@ function AppMain({user, onLogout}) {
   const totalObjetivos=objetivos.filter(o=>!o.investId).reduce((s,o)=>s+(+o.atual||0),0);
   const totalPatrimonio=totalInvestido+totalFundoDivida;
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
+  const parcelasDividaMes=dividas.filter(d=>d.tipo==="cartao_desconto").reduce((s,d)=>s+(d.parcelasStatus||[]).filter(p=>!p.pago&&monthKey(p.dataVencimento)===selMes).length*(+d.valorComDesconto||0),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
   const empNome=n=>empresas.find(e=>e.nome===n)||{nome:n,cor:C.magenta};
   const ccGastosMes=cid=>movs.filter(m=>m.formaPagamento==="cartao"&&m.cartaoId===cid&&monthKey(m.data)===selMes).reduce((s,m)=>s+m.valor,0);
@@ -3467,6 +3490,14 @@ function AppMain({user, onLogout}) {
               {totalPatrimonio>0&&<div style={{fontSize:10,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}><TrendingUp size={10} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-2px"}}/>{R(totalPatrimonio)} patrimônio</div>}
             </div>
           </div>
+          {parcelasDividaMes>0&&(
+            <div title="Parcelas de dívida que vencem neste mês e ainda não foram pagas" style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",background:"rgba(139,26,26,0.07)",border:"1px solid rgba(139,26,26,0.16)",borderRadius:10,padding:"6px 10px",marginBottom:8}}>
+              <CreditCard size={12} strokeWidth={2.2} style={{color:"#8B1A1A"}}/>
+              <span className="mono" style={{fontSize:9.5,fontWeight:500,color:"#8B1A1A",letterSpacing:".05em",textTransform:"uppercase"}}>Parcelas do mês a pagar</span>
+              <span className="num" style={{fontSize:12,fontWeight:700,color:"#8B1A1A"}}>{R(parcelasDividaMes)}</span>
+              <span style={{fontSize:11,color:"rgba(26,18,9,0.6)",fontFamily:"'DM Sans',sans-serif",marginLeft:"auto"}}>saldo previsto <strong className="num" style={{color:saldoFinal-parcelasDividaMes<0?"#8B1A1A":"#1A1209"}}>{R(saldoFinal-parcelasDividaMes)}</strong></span>
+            </div>
+          )}
           <div className="scr" style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:2}}>
             {Array.from({length:20},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-12+i);const ym=d.toISOString().slice(0,7);const isSel=ym===selMes;
               return <button key={ym} onClick={()=>setSelMes(ym)} style={{flexShrink:0,background:isSel?"#E8205F":"rgba(0,0,0,0.08)",color:isSel?"#fff":"rgba(26,18,9,0.7)",border:isSel?"1px solid #E8205F":"1px solid rgba(0,0,0,0.12)",borderRadius:99,padding:"4px 12px",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",boxShadow:isSel?"0 2px 8px rgba(232,32,95,0.3)":"none"}}>{monthLabel(ym)}</button>;
@@ -3513,7 +3544,7 @@ function AppMain({user, onLogout}) {
               {showCard("resumo")&&(
               <div key="resumo" style={{height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,height:"100%"}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,height:"100%"}}>
                   {[
                     {label:"A Receber", val:totalPendPlant, dot:C.gold, color:"#1A1209"},
                     {label:"Patrimônio", val:totalPatrimonio, dot:C.green, color:"#1A1209"},
@@ -3521,7 +3552,7 @@ function AppMain({user, onLogout}) {
                   ].map(c=>(
                     <div key={c.label} className={CARD} style={{padding:"10px 12px",textAlign:"left",borderRadius:16,display:"flex",flexDirection:"column",justifyContent:"center"}}>
                       <div className="mono" style={{fontSize:8.5,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",marginBottom:6,display:"flex",alignItems:"center",gap:5,opacity:.75}}><i style={{width:6,height:6,borderRadius:99,background:c.dot,display:"inline-block"}}/>{c.label}</div>
-                      <div className="num" style={{fontSize:15,fontWeight:500,color:c.color,letterSpacing:"-.02em"}}>{R(c.val)}</div>
+                      <div className="num" style={{fontSize:14,fontWeight:500,color:c.color,letterSpacing:"-.02em",whiteSpace:"nowrap"}}>{R(c.val)}</div>
                     </div>
                   ))}
                 </div>
@@ -4732,7 +4763,7 @@ function AppMain({user, onLogout}) {
                             {diasProxima<0?<><Glyph e="⚠" size={12} style={{marginRight:4}}/>{`Parcela ${proxima.numero} atrasada há ${Math.abs(diasProxima)}d`}</>:diasProxima===0?<><Glyph e="🔔" size={12} style={{marginRight:4}}/>{`Parcela ${proxima.numero} vence hoje!`}</>:`Próxima: parcela ${proxima.numero} em ${diasProxima}d`}
                           </div>
                           <div style={{fontSize:10,color:TMUT,fontFamily:"'DM Sans',sans-serif",marginTop:1}}>Vence {fdFull(proxima.dataVencimento)} · pague até lá pra manter o desconto</div>
-                          <button onClick={()=>setPagarParcelaModal({divId:d.id,parcelaIdx:parcelas.indexOf(proxima)})} style={{marginTop:6,background:"#C4185A",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,padding:"6px 12px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Marcar parcela {proxima.numero} como paga</button>
+                          <button onClick={()=>{setPagarParcelaData(today());setPagarParcelaModal({divId:d.id,parcelaIdx:parcelas.indexOf(proxima)});}} style={{marginTop:6,background:"#C4185A",border:"none",borderRadius:8,color:"#fff",fontSize:11,fontWeight:700,padding:"6px 12px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Marcar parcela {proxima.numero} como paga</button>
                         </div>
                       )}
                       <div style={{background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:10,padding:"9px 12px",marginBottom:9}}>
@@ -4757,7 +4788,7 @@ function AppMain({user, onLogout}) {
                                   <button onClick={()=>desmarcarParcela(d.id,idx)} style={{background:"none",border:"none",color:"#aaa",fontSize:13,cursor:"pointer"}}>×</button>
                                 </div>
                               ) : (
-                                <button onClick={()=>setPagarParcelaModal({divId:d.id,parcelaIdx:idx})} style={{background:"rgba(196,24,90,0.1)",border:"1px solid rgba(196,24,90,0.3)",borderRadius:7,color:"#C4185A",fontSize:10,fontWeight:700,padding:"4px 9px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Marcar paga</button>
+                                <button onClick={()=>{setPagarParcelaData(today());setPagarParcelaModal({divId:d.id,parcelaIdx:idx});}} style={{background:"rgba(196,24,90,0.1)",border:"1px solid rgba(196,24,90,0.3)",borderRadius:7,color:"#C4185A",fontSize:10,fontWeight:700,padding:"4px 9px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Marcar paga</button>
                               )}
                             </div>
                           ))}
@@ -5527,6 +5558,8 @@ function AppMain({user, onLogout}) {
                 Parcela <strong style={{color:"#1A1209"}}>{p.numero}</strong> de {d.credor} — vencimento {fdFull(p.dataVencimento)}
                 {noPrazo?<span style={{color:"#215010",fontWeight:700}}> (ainda no prazo)</span>:<span style={{color:"#8B1A1A",fontWeight:700}}> (atrasada)</span>}
               </div>
+              <Inp label="Data do pagamento" type="date" value={pagarParcelaData} onChange={e=>setPagarParcelaData(e.target.value)}/>
+              <div style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4,marginTop:-6}}>O valor pago sai do saldo do mês dessa data e aparece em Movimentos.</div>
               <button onClick={()=>marcarParcelaPaga(d.id,pagarParcelaModal.parcelaIdx,true)}
                 style={{background:"rgba(45,90,16,0.1)",border:"2px solid rgba(45,90,16,0.35)",borderRadius:12,padding:"14px",textAlign:"left",cursor:"pointer"}}>
                 <div style={{fontSize:13,fontWeight:700,color:"#215010",fontFamily:"'DM Sans',sans-serif"}}><Check size={13} strokeWidth={2.5} style={{marginRight:4}}/>Paguei com desconto (em dia)</div>
