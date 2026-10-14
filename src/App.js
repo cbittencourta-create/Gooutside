@@ -803,7 +803,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
 
       {/* Tabela por categoria */}
       <div className="card" style={{padding:"16px 14px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 82px 82px 52px",gap:8,marginBottom:10,paddingBottom:10,borderBottom:"2px solid rgba(0,0,0,0.1)"}}>
+        <div className="row-orc" style={{display:"grid",gridTemplateColumns:"1fr 82px 82px 52px",gap:8,marginBottom:10,paddingBottom:10,borderBottom:"2px solid rgba(0,0,0,0.1)"}}>
           {["Categoria","Planejado","Realizado","%"].map(h=>(
             <div key={h} style={{fontSize:10.5,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",textAlign:h!=="Categoria"?"right":"left"}}>{h}</div>
           ))}
@@ -816,7 +816,7 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
           const pct = base>0 ? (gasto/base*100) : 0;
           const over = plan>0 && gasto>plan;
           return (
-            <div key={c.id} style={{display:"grid",gridTemplateColumns:"1fr 82px 82px 52px",gap:8,alignItems:"center",padding:"10px 6px",marginBottom:2,background:idx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
+            <div key={c.id} className="row-orc" style={{display:"grid",gridTemplateColumns:"1fr 82px 82px 52px",gap:8,alignItems:"center",padding:"10px 6px",marginBottom:2,background:idx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
               <div>
                 <div style={{fontSize:14,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6}}><Glyph e={c.emoji} size={15}/>{c.nome}</div>
                 <div style={{marginTop:5}}>
@@ -2555,6 +2555,15 @@ export default function App() {
 function AppMain({user, onLogout}) {
   const userId = user.id;
   const [bgId,      setBgId]      = useLS("v4_bg",     "tartan", userId);
+  // Modo de tela: "auto" (decide pela largura), "celular" ou "pc"
+  const [modoTela,  setModoTela]   = useLS("v4_modo",   "auto", userId);
+  const [larguraTela,setLarguraTela]=useState(typeof window!=="undefined"?window.innerWidth:1024);
+  useEffect(()=>{
+    const f=()=>setLarguraTela(window.innerWidth);
+    window.addEventListener("resize",f);window.addEventListener("orientationchange",f);
+    return ()=>{window.removeEventListener("resize",f);window.removeEventListener("orientationchange",f);};
+  },[]);
+  const isMobile = modoTela==="celular" || (modoTela!=="pc" && larguraTela<=640);
   const [dashCards, setDashCards] = useLS("v4_dash_cards", {}, userId);
   const [dashLayouts, setDashLayouts] = useLS("v4_dash_layout", {}, userId);
   const [dashEditMode, setDashEditMode] = useState(false);
@@ -3347,7 +3356,7 @@ function AppMain({user, onLogout}) {
   const TMUT="rgba(26,18,9,0.45)";
 
   return (
-    <div style={{minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
+    <div className={isMobile?"mobile":""} style={{minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
       <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
@@ -3403,6 +3412,38 @@ function AppMain({user, onLogout}) {
         .plt-select option{background:#fff;color:#1A1209}
         .fade{animation:fd .2s ease} @keyframes fd{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
         .scr::-webkit-scrollbar{display:none}
+        html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+        @media (max-width:640px){html,body{overflow-x:hidden;max-width:100vw}}
+        .mlab{display:none}
+        /* ===== MODO CELULAR ===== */
+        .mobile .main-wrap{padding:12px 12px 96px!important}
+        .mobile input,.mobile select,.mobile textarea{font-size:16px!important}
+        .mobile .main-wrap button{min-height:34px}
+        .mobile .topbar{position:relative!important;top:auto!important}
+        .mobile .row-head{display:none!important}
+        .mobile .card{border-radius:18px}
+        .mobile .row-mov{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 40px!important;gap:6px 8px!important;padding:12px 8px!important;border-radius:12px!important}
+        .mobile .row-mov>*:nth-child(1){grid-column:1/3;grid-row:1}
+        .mobile .row-mov>*:nth-child(5){grid-column:3;grid-row:1;justify-self:end;align-self:start}
+        .mobile .row-mov>*:nth-child(2){grid-column:1/4;grid-row:2}
+        .mobile .row-mov>*:nth-child(3){grid-column:1;grid-row:3}
+        .mobile .row-mov>*:nth-child(4){grid-column:2/4;grid-row:3}
+        .mobile .row-mov>button{width:38px!important;height:38px!important}
+        .mobile .row-plt{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:2px 10px!important;padding:14px 10px!important;border-radius:12px!important}
+        .mobile .row-plt>.mlab{display:block;font-family:'DM Mono',ui-monospace,monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;opacity:.6;margin-top:8px}
+        .mobile .row-plt>*:nth-child(1){grid-column:1/3;grid-row:1}
+        .mobile .row-plt>[data-for="dia"]{grid-column:1;grid-row:2}
+        .mobile .row-plt>[data-for="valor"]{grid-column:2;grid-row:2}
+        .mobile .row-plt>[data-for="prev"]{grid-column:1;grid-row:4}
+        .mobile .row-plt>[data-for="status"]{grid-column:2;grid-row:4}
+        .mobile .row-plt>*:nth-child(2){grid-column:1;grid-row:3}
+        .mobile .row-plt>*:nth-child(3){grid-column:2;grid-row:3}
+        .mobile .row-plt>*:nth-child(4){grid-column:1;grid-row:5}
+        .mobile .row-plt>*:nth-child(5){grid-column:2;grid-row:5;min-height:40px;display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap}
+        .mobile .row-plt>*:nth-child(6){grid-column:1;grid-row:6}
+        .mobile .row-plt>*:nth-child(7){grid-column:2;grid-row:6}
+        .mobile .row-plt>button{width:100%!important;height:38px!important;margin-top:6px}
+        .mobile .row-orc{grid-template-columns:minmax(0,1fr) 62px 62px 40px!important;gap:6px!important}
         .sidebar{position:fixed;top:0;left:0;height:100vh;width:240px;background:rgba(30,15,10,0.94);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);border-right:1px solid rgba(255,255,255,0.15);z-index:100;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:4px 0 32px rgba(0,0,0,.3)}
         .sidebar.open{transform:translateX(0)}
         .overlay-side{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(2px);z-index:99;display:none}
@@ -3436,6 +3477,12 @@ function AppMain({user, onLogout}) {
           ))}
         </div>
         <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+          <div style={{fontSize:10,fontWeight:500,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:7}}>Tela</div>
+          <div style={{display:"flex",gap:5,marginBottom:14}}>
+            {[["auto","Auto"],["celular","Celular"],["pc","Computador"]].map(([id,lb])=>(
+              <button key={id} onClick={()=>setModoTela(id)} style={{flex:1,background:modoTela===id?"rgba(232,32,95,0.5)":"rgba(255,255,255,0.08)",border:`1px solid ${modoTela===id?"#E8205F":"rgba(255,255,255,0.15)"}`,borderRadius:8,padding:"7px 2px",fontSize:10.5,fontWeight:600,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{lb}</button>
+            ))}
+          </div>
           <div style={{fontSize:10,fontWeight:500,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:7}}>Fundo</div>
           <div style={{display:"flex",gap:6,marginBottom:12}}>
             {BG_OPTIONS.map(bg=>(
@@ -3465,7 +3512,7 @@ function AppMain({user, onLogout}) {
 
 
       {/* TOP BAR */}
-      <div style={{background:"rgba(255,255,255,0.78)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",borderBottom:"1px solid rgba(0,0,0,0.08)",padding:"14px 16px 12px",position:"sticky",top:0,zIndex:50,boxShadow:"0 2px 20px rgba(0,0,0,0.1)"}}>
+      <div className="topbar" style={{background:"rgba(255,255,255,0.78)",backdropFilter:"blur(24px) saturate(180%)",WebkitBackdropFilter:"blur(24px) saturate(180%)",borderBottom:"1px solid rgba(0,0,0,0.08)",padding:"14px 16px 12px",position:"sticky",top:0,zIndex:50,boxShadow:"0 2px 20px rgba(0,0,0,0.1)"}}>
         <div style={{maxWidth:1100,margin:"0 auto"}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
             <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -3506,7 +3553,7 @@ function AppMain({user, onLogout}) {
         </div>
       </div>
 
-      <div style={{maxWidth:1100,margin:"0 auto",padding:"14px 24px 80px",position:"relative",zIndex:1}}>
+      <div className="main-wrap" style={{maxWidth:1100,margin:"0 auto",padding:"14px 24px 80px",position:"relative",zIndex:1}}>
 
         {/* ══ DASHBOARD ══ */}
         {tab==="dashboard"&&(
@@ -3950,7 +3997,7 @@ function AppMain({user, onLogout}) {
               return movsFiltrados.length===0?<div className={CARD} style={{textAlign:"center",padding:36,color:"rgba(26,18,9,0.55)",fontSize:14}}>Nenhum lançamento encontrado com esse filtro</div>
               :(
               <div className={CARD} style={{padding:"16px 14px"}}>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 175px 100px 92px 26px",gap:10,marginBottom:8,padding:"0 4px"}}>
+                <div className="row-head" style={{display:"grid",gridTemplateColumns:"1fr 175px 100px 92px 26px",gap:10,marginBottom:8,padding:"0 4px"}}>
                   <div style={{fontSize:10,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Descrição</div>
                   <div style={{fontSize:10,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Categoria</div>
                   <div style={{fontSize:10,fontWeight:500,color:"#1A1209",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Data</div>
@@ -3960,7 +4007,7 @@ function AppMain({user, onLogout}) {
                 {[...movsFiltrados].sort((a,b)=>b.data.localeCompare(a.data)).map((m,idx)=>{
                   const opts = m.tipo==="entrada" ? (cats?.receita||DEFAULT_CATS.receita) : m.tipo==="transferencia" ? [] : (cats?.despesa||DEFAULT_CATS.despesa);
                   return (
-                    <div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 175px 100px 92px 26px",gap:10,alignItems:"center",padding:"10px 4px",background:idx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
+                    <div key={m.id} className="row-mov" style={{display:"grid",gridTemplateColumns:"1fr 175px 100px 92px 26px",gap:10,alignItems:"center",padding:"10px 4px",background:idx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
                       <div>
                         <input value={m.descricao} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,descricao:e.target.value}:x))}
                           style={{background:"transparent",border:"none",padding:"5px 4px",fontSize:13,color:"#1A1209",fontWeight:600,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
@@ -4127,7 +4174,7 @@ function AppMain({user, onLogout}) {
                     <div style={{textAlign:"center",padding:"24px 0",color:"rgba(26,18,9,0.45)",fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>Nenhum plantão em {monthLabel(mk)}</div>
                   ):(
                     <>
-                      <div style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
+                      <div className="row-head" style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
                         <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Empresa</div>
                         <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Dia</div>
                         <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Valor</div>
@@ -4138,7 +4185,7 @@ function AppMain({user, onLogout}) {
                       {grupo.map((p,idx)=>{
                         const emp=empNome(p.empresa);
                         return (
-                          <div key={p.id} style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px 26px",gap:6,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.02)":"transparent",borderRadius:8}}>
+                          <div key={p.id} className="row-plt" style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 92px 26px 26px",gap:6,alignItems:"center",padding:"9px 4px",background:idx%2===0?"rgba(0,0,0,0.02)":"transparent",borderRadius:8}}>
                             <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}>
                               <div style={{width:8,height:8,borderRadius:99,background:emp.cor||C.magenta,flexShrink:0}}/>
                               <select value={p.empresa} onChange={e=>updatePlantao(p.id,{empresa:e.target.value})}
@@ -4174,6 +4221,7 @@ function AppMain({user, onLogout}) {
                             )}
                             <button onClick={()=>openM("plt",p)} title="Editar (inclui horário)" style={{background:p.horaInicio?"rgba(45,90,16,0.1)":"rgba(91,163,212,0.12)",border:"none",borderRadius:6,color:p.horaInicio?"#215010":"#1A4A6E",cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>{p.horaInicio?<Clock size={12} strokeWidth={2.2}/>:<Pencil size={12} strokeWidth={2.2}/>}</button>
                             <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:14,cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                            <span className="mlab" data-for="dia">Dia</span><span className="mlab" data-for="valor">Valor</span><span className="mlab" data-for="prev">Previsão</span><span className="mlab" data-for="status">Status</span>
                           </div>
                         );
                       })}
@@ -4920,7 +4968,7 @@ function AppMain({user, onLogout}) {
                       <div className={CARD} style={{textAlign:"center",padding:24,color:"rgba(26,18,9,0.45)",fontSize:13,fontFamily:"'DM Sans',sans-serif"}}>Nenhuma compra em {monthLabel(selMes)}</div>
                     ):(
                       <div className={CARD} style={{padding:"16px 14px"}}>
-                        <div style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
+                        <div className="row-head" style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 26px",gap:6,marginBottom:8,padding:"0 4px"}}>
                           <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Descrição</div>
                           <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Categoria</div>
                           <div style={{fontSize:10,fontWeight:500,color:"rgba(26,18,9,0.5)",letterSpacing:".06em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Data</div>
@@ -4930,7 +4978,7 @@ function AppMain({user, onLogout}) {
                         {cc.map((m,rowIdx)=>{
                           const opts=cats?.despesa||DEFAULT_CATS.despesa;
                           return (
-                            <div key={m.id} style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 26px",gap:6,alignItems:"center",padding:"9px 4px",background:rowIdx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
+                            <div key={m.id} className="row-mov" style={{display:"grid",gridTemplateColumns:"1fr 95px 85px 100px 26px",gap:6,alignItems:"center",padding:"9px 4px",background:rowIdx%2===0?"rgba(0,0,0,0.025)":"transparent",borderRadius:8}}>
                               <div>
                                 <input value={m.descricao} onChange={e=>setMovs(movs.map(x=>x.id===m.id?{...x,descricao:e.target.value}:x))}
                                   style={{background:"transparent",border:"none",padding:"5px 4px",fontSize:12.5,color:"#1A1209",fontWeight:600,outline:"none",fontFamily:"'DM Sans',sans-serif",width:"100%"}}/>
