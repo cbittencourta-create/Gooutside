@@ -7,7 +7,7 @@ import {
   Smartphone, PenLine, TrendingDown, ClipboardList, Sparkles, Sparkle, Trophy, Square, Sun, Dog,
   Gift, FolderOpen, Bot, Key, FileEdit, AlertCircle, GlassWater, User, Building2, Clock,
   MessageCircle, Bell, Timer, Scissors, Plus, Check, SlidersHorizontal, Eye, EyeOff,
-  GripVertical, LayoutGrid, X,
+  GripVertical, LayoutGrid, X, ArrowUpRight,
 } from "lucide-react";
 import { Responsive as ResponsiveGridLayoutBase, WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
@@ -130,12 +130,12 @@ const C = {
   textDark:"#1A1209", textDarkSub:"#5A4A3A",
   glass:"rgba(255,255,255,0.14)", glassMed:"rgba(255,255,255,0.20)", glassStrong:"rgba(255,255,255,0.28)",
   border:"rgba(255,255,255,0.22)", borderMed:"rgba(255,255,255,0.35)",
-  magenta:"#E8205F", magentaGlass:"rgba(232,32,95,0.35)", magentaDark:"rgba(232,32,95,0.6)",
-  green:"#8FC43A",   greenGlass:"rgba(143,196,58,0.3)",
-  gold:"#D4A843",    goldGlass:"rgba(212,168,67,0.3)",
-  red:"#E05252",     redGlass:"rgba(224,82,82,0.25)",
-  blue:"#5BA3D4",    blueGlass:"rgba(91,163,212,0.25)",
-  amber:"#D4A843",   amberGlass:"rgba(212,168,67,0.25)",
+  magenta:"#B91D55", magentaGlass:"rgba(185,29,85,0.35)", magentaDark:"rgba(160,22,72,0.92)",
+  green:"#6F9560",   greenGlass:"rgba(111,149,96,0.3)",
+  gold:"#B8944F",    goldGlass:"rgba(184,148,79,0.3)",
+  red:"#B5473F",     redGlass:"rgba(181,71,63,0.25)",
+  blue:"#5B7C94",    blueGlass:"rgba(91,124,148,0.25)",
+  amber:"#B8944F",   amberGlass:"rgba(212,168,67,0.25)",
   modalBg:"rgba(245,240,228,0.97)", modalText:"#1A1209", modalSub:"#5A4A3A",
   inputBg:"#F5F0E8", inputBorder:"#DDD5C8",
 };
@@ -165,6 +165,11 @@ const DASH_CARDS = [
 
 // Altura padrão (em unidades de linha do grid) de cada card do Início
 const DASH_H = {
+  resumo:9, semanasLivres:13, desafioPato:9, cartoes:4, graficoGastos:8,
+  graficoEmpresas:7, calendario:9, recebimentos:9, ranking:5, alocacao:4, objetivos:6,
+};
+// alturas antigas: servem só pra reconhecer um layout salvo que nunca foi personalizado
+const DASH_H_OLD = {
   resumo:3, semanasLivres:8, desafioPato:9, cartoes:8, graficoGastos:9,
   graficoEmpresas:9, calendario:9, recebimentos:9, ranking:10, alocacao:12, objetivos:8,
 };
@@ -172,11 +177,11 @@ const DASH_BREAKPOINTS = {lg:996, md:768, sm:480};
 const DASH_COLS = {lg:3, md:2, sm:1};
 
 // Gera um layout padrão (empacotamento simples por coluna mais curta) pra um dado nº de colunas
-function genDashLayout(cols, visibleIds) {
+function genDashLayout(cols, visibleIds, HH=DASH_H) {
   const colH = Array(cols).fill(0);
   const layout = [];
   visibleIds.forEach(id=>{
-    const h = DASH_H[id]||8;
+    const h = HH[id]||8;
     if(id==="resumo"){
       const y = Math.max(...colH);
       layout.push({i:id, x:0, y, w:cols, h});
@@ -190,7 +195,7 @@ function genDashLayout(cols, visibleIds) {
   return layout;
 }
 
-const CHART_COLORS = ["#E8205F","#8FC43A","#5BA3D4","#D4A843","#A07BC8","#E05252","#38B2AC","#ED8936","#48BB78"];
+const CHART_COLORS = ["#B91D55","#6F9560","#5B7C94","#B8944F","#7D6A8E","#B5473F","#4F8A82","#C27A45","#8AA06B"];
 
 const TARTAN_CSS = `background-color:#C4A96A;background-image:repeating-linear-gradient(0deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px),repeating-linear-gradient(90deg,transparent 0px,transparent 18px,rgba(80,72,20,0.55) 18px,rgba(80,72,20,0.55) 26px,transparent 26px,transparent 44px,rgba(80,72,20,0.55) 44px,rgba(80,72,20,0.55) 52px,transparent 52px,transparent 68px,rgba(100,20,20,0.5) 68px,rgba(100,20,20,0.5) 72px,transparent 72px,transparent 88px,rgba(80,72,20,0.55) 88px,rgba(80,72,20,0.55) 96px,transparent 96px,transparent 114px,rgba(80,72,20,0.55) 114px,rgba(80,72,20,0.55) 122px,transparent 122px,transparent 138px,rgba(100,20,20,0.5) 138px,rgba(100,20,20,0.5) 142px,transparent 142px,transparent 160px);background-size:160px 160px;`;
 
@@ -214,6 +219,90 @@ const BG_OPTIONS = [
   { id:"listras_largas", label:"Listras Largas", emoji:"🎗️", isCss:true, css:LISTRAS_LARGAS_CSS },
 ];
 
+// Paleta da área abaixo do cabeçalho: cores chapadas (estilo azulejo / Matisse) combinando com cada fundo
+// base = fundo da folha · acc = detalhe · hero = card grande · tiles = 4 cards pequenos (c = cor, fg = texto, m = motivo)
+const CREAM="#F3E8CF";
+const BG_PALETTES = {
+  tartan: {base:"#F1E9DA", acc:"#9B2C2C", hero:{s:"veludo",z:1,x:0,y:0}, tiles:[{s:"tulipa",z:1.5,x:20,y:30},{s:"manteiga",z:1.4,x:40,y:20},{s:"noite",z:1.5,x:10,y:50},{s:"tulipa",z:1.8,x:70,y:10}]},
+  listras: {base:"#F6EBE7", acc:"#B5253A", hero:{s:"tulipa",z:1,x:0,y:0}, tiles:[{s:"veludo",z:1.4,x:30,y:20},{s:"manteiga",z:1.5,x:40,y:40},{s:"noite",z:1.4,x:60,y:20},{s:"veludo",z:1.7,x:10,y:60}]},
+  sol: {base:"#F5EFDD", acc:"#C48A1C", hero:{s:"manteiga",z:1,x:0,y:0}, tiles:[{s:"tulipa",z:1.5,x:30,y:30},{s:"veludo",z:1.4,x:20,y:40},{s:"noite",z:1.5,x:40,y:20},{s:"tulipa",z:1.8,x:10,y:60}]},
+  cachorro: {base:"#EEEFF3", acc:"#2E4C82", hero:{s:"noite",z:1,x:0,y:0}, tiles:[{s:"manteiga",z:1.5,x:20,y:30},{s:"tulipa",z:1.4,x:40,y:20},{s:"veludo",z:1.5,x:10,y:50},{s:"manteiga",z:1.8,x:70,y:10}]},
+  listras_vinho: {base:"#F0E7E1", acc:"#7A2634", hero:{s:"veludo",z:1,x:0,y:0}, tiles:[{s:"tulipa",z:1.5,x:30,y:20},{s:"manteiga",z:1.4,x:20,y:40},{s:"noite",z:1.5,x:50,y:30},{s:"tulipa",z:1.8,x:60,y:10}]},
+  azulejo_azul: {base:"#EAEEF0", acc:"#8B1A2E", hero:{s:"noite",z:1,x:0,y:0}, tiles:[{s:"tulipa",z:1.5,x:20,y:30},{s:"manteiga",z:1.4,x:40,y:40},{s:"veludo",z:1.5,x:30,y:20},{s:"tulipa",z:1.8,x:70,y:50}]},
+  listras_largas: {base:"#E9ECEC", acc:"#5C1420", hero:{s:"tulipa",z:1,x:0,y:0}, tiles:[{s:"noite",z:1.5,x:30,y:30},{s:"manteiga",z:1.4,x:20,y:40},{s:"veludo",z:1.5,x:40,y:20},{s:"noite",z:1.8,x:10,y:60}]},
+};
+const mixHex=(a,b,t)=>{const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const x=p(a),y=p(b);return "#"+x.map((v,i)=>Math.round(v*(1-t)+y[i]*t).toString(16).padStart(2,"0")).join("");};
+// Ilustrações botânicas (SVG, ocupam o card inteiro) — 4 estilos inspirados em aquarela/guache
+const INK="#2A1E14", PANEL="#FBF4E2";
+const STY={
+  tulipa:  {paper:"#F6EEE0",f1:"#D9581F",f2:"#EE8A3E",l1:"#7F9470",l2:"#6A7F5C",stem:"#5F7352",acc:"#C8501F"},
+  veludo:  {paper:"#6C1D26",f1:"#EBC9BE",f2:"#F3DDD2",l1:"#A99A4A",l2:"#8E8138",stem:"#23301F",acc:"#6C1D26"},
+  noite:   {paper:"#18220F",f1:"#8DB1EC",f2:"#6F95DB",l1:"#4B5F2A",l2:"#3B4C20",stem:"#3B4C20",acc:"#2D4A8A"},
+  manteiga:{paper:"#F8E6B8",f1:"#EDAA26",f2:"#F4BF45",l1:"#7B7B3E",l2:"#6B6B35",stem:"#6B6B35",acc:"#B07A0F"},
+};
+const Motif=({s="tulipa",z=1,x=0,y=0,style})=>{
+  const S=STY[s]||STY.tulipa;
+  const Leaf=({x,y,r=0,k=1,c=S.l1,c2=S.l2,spots})=>(
+    <g transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
+      <path d="M0 0 C 10 -16, 38 -22, 66 -5 C 44 8, 16 12, 0 0Z" fill={c}/>
+      <path d="M0 0 C 14 -2, 40 -2, 66 -5 C 44 8, 16 12, 0 0Z" fill={c2} opacity=".75"/>
+      <path d="M3 0 C 22 -5, 44 -6, 60 -5" fill="none" stroke={S.paper} strokeWidth=".8" opacity=".5"/>
+      {spots&&Array.from({length:15}).map((_,i)=><ellipse key={i} cx={8+i*3.6} cy={-4+((i*7)%5)*1.6-3} rx="1.7" ry=".7" fill="#26331F" transform={`rotate(${(i*53)%60-30} ${8+i*3.6} -4)`}/>)}
+    </g>);
+  const Fan=({x,y,r=0,k=1})=>(
+    <g transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
+      {[-66,-33,0,33,66].map((a,i)=>{const L=[36,44,50,44,36][i];return <g key={i} transform={`rotate(${a})`}>
+        <path d={`M0 0 C -15 -8, -17 -${L*.72}, 0 -${L} C 17 -${L*.72}, 15 -8, 0 0Z`} fill={i%2?S.f2:S.f1} stroke={S.paper} strokeWidth="1.3"/>
+        <path d={`M0 -6 L0 -${L-9}`} stroke={S.paper} strokeWidth=".8" opacity=".7"/></g>;})}
+      <path d="M-5 3 C -4 -3, 4 -3, 5 3Z" fill={S.l1}/>
+    </g>);
+  const Bell=({x,y,r=0,k=1})=>(
+    <g transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
+      <path d="M0 0 C -24 6, -28 42, -8 64 C 0 72, 10 70, 17 60 C 32 40, 26 8, 0 0Z" fill={S.f1}/>
+      <path d="M-3 22 C -10 34, -6 52, 2 60 C 10 50, 10 32, -3 22Z" fill="#E5A93A" opacity=".85"/>
+      {[-16,-8,0,8,16].map((d,i)=><path key={i} d={`M${d*.2} 4 C ${d*1.3} 24, ${d*1.1} 44, ${d*.6} 62`} fill="none" stroke="#B5524B" strokeWidth=".7" opacity=".6"/>)}
+      <path d="M-6 -2 L6 -2 L4 8 L-4 8Z" fill="#2A3A22"/>
+    </g>);
+  const Peri=({x,y,r=0,k=1})=>(
+    <g transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
+      {[0,72,144,216,288].map((a,i)=><g key={i} transform={`rotate(${a})`}><path d="M0 0 C -17 -10, -19 -42, 0 -56 C 19 -42, 17 -10, 0 0Z" fill={i%2?S.l1:S.f1}/><path d="M0 -4 C 7 -10, 8 -30, 0 -50 C 14 -34, 14 -12, 0 -4Z" fill={i%2?S.l2:S.f2} opacity=".8"/></g>)}
+      <ellipse cx="0" cy="0" rx="5.5" ry="8" fill={S.f1}/>
+    </g>);
+  const Poppy=({x,y,r=0,k=1})=>(
+    <g transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
+      {[[-28,S.f1],[26,S.f1],[0,S.f2]].map(([a,c],i)=><ellipse key={i} cx="0" cy="-26" rx={i===2?19:17} ry={i===2?32:28} fill={c} opacity=".93" transform={`rotate(${a})`}/>)}
+      <path d="M-9 4 C -6 -7, 6 -7, 9 4" fill="none" stroke={S.l2} strokeWidth="3" strokeLinecap="round"/>
+    </g>);
+  const St=(d,w=2.2)=><path d={d} fill="none" stroke={S.stem} strokeWidth={w} strokeLinecap="round"/>;
+  let corpo;
+  if(s==="veludo"){
+    corpo=<>
+      <Leaf x={-14} y={44} r={-34} k={2} spots/><Leaf x={214} y={150} r={188} k={1.9} spots/><Leaf x={120} y={216} r={-152} k={1.7} spots/><Leaf x={-12} y={206} r={-62} k={1.9} spots/><Leaf x={208} y={14} r={158} k={1.6} spots/>
+      {St("M30 -6 C 22 44, 70 30, 80 62")}<Bell x={80} y={62} r={6} k={.95}/>
+      {St("M182 -6 C 196 44, 150 40, 140 72")}<Bell x={140} y={72} r={-14} k={.85}/>
+      {St("M22 140 C 16 92, 44 96, 54 122")}<Bell x={54} y={122} r={10} k={.7}/>
+    </>;
+  } else if(s==="noite"){
+    corpo=<><Leaf x={-10} y={120} r={-20} k={1.4}/><Leaf x={210} y={80} r={170} k={1.4}/><Leaf x={100} y={214} r={-100} k={1.3}/>
+      <Peri x={52} y={58} r={20} k={1.05}/><Peri x={152} y={38} r={-30} k={1}/><Peri x={102} y={142} r={60} k={1.15}/><Peri x={22} y={176} r={100} k={.95}/><Peri x={182} y={158} r={-80} k={1}/></>;
+  } else if(s==="manteiga"){
+    corpo=<>
+      <path d="M100 150 C 70 118, 40 130, 14 98" fill="none" stroke={S.l1} strokeWidth="1.5" opacity=".7"/><path d="M104 122 C 130 98, 160 110, 196 78" fill="none" stroke={S.l1} strokeWidth="1.5" opacity=".7"/><path d="M60 190 C 76 160, 70 150, 86 138" fill="none" stroke={S.l1} strokeWidth="1.5" opacity=".6"/>
+      {St("M100 216 C 98 160, 104 112, 100 70",3)}<Poppy x={100} y={68} k={1.15}/>
+      {St("M38 216 C 44 170, 34 140, 30 112",2.6)}<Poppy x={28} y={104} r={-10} k={.95}/>
+      {St("M166 216 C 160 170, 172 132, 178 98",2.6)}<Poppy x={180} y={90} r={12} k={1}/>
+    </>;
+  } else {
+    corpo=<>
+      {St("M100 216 C 98 172, 112 142, 100 112 C 90 86, 104 70, 100 42")}
+      {St("M100 122 C 80 114, 62 114, 50 100")}{St("M104 90 C 128 84, 140 70, 150 58")}{St("M100 162 C 120 152, 140 152, 154 142")}{St("M98 176 C 80 170, 60 168, 46 152")}
+      <Leaf x={100} y={110} r={-150} k={1.05}/><Leaf x={102} y={96} r={-30} k={1}/><Leaf x={98} y={150} r={170} k={1.1}/><Leaf x={100} y={190} r={-20} k={1.15}/><Leaf x={100} y={60} r={-100} k={.8}/><Leaf x={100} y={190} r={-165} k={1.2}/>
+      <Fan x={48} y={98} r={-52} k={.95}/><Fan x={152} y={56} r={36} k={1}/><Fan x={156} y={140} r={78} k={.9}/><Fan x={44} y={150} r={-76} k={.9}/><Fan x={100} y={38} r={4} k={.7}/>
+    </>;
+  }
+  const w=200/z;
+  return <svg viewBox={`${x} ${y} ${w} ${w}`} preserveAspectRatio="xMidYMid slice" width="100%" height="100%" style={style} aria-hidden="true"><rect x="-60" y="-60" width="320" height="320" fill={S.paper}/>{corpo}</svg>;
+};
 function bgToStyle(bg) {
   if(!bg) return {};
   if(bg.isCss) {
@@ -404,7 +493,7 @@ function MultiCalendar({plantoes, movs, onAddWithDate}) {
             <div style={{display:"flex",gap:5,marginTop:8}}>
               <button onClick={()=>onAddWithDate&&onAddWithDate("entrada",selDay)} style={{flex:1,background:"rgba(45,90,16,0.1)",border:"1px solid rgba(45,90,16,0.25)",borderRadius:8,padding:"6px",fontSize:10,fontWeight:700,color:"#2D5A10",cursor:"pointer",fontFamily:"inherit"}}>+ Entrada</button>
               <button onClick={()=>onAddWithDate&&onAddWithDate("saida",selDay)} style={{flex:1,background:"rgba(139,26,26,0.1)",border:"1px solid rgba(139,26,26,0.25)",borderRadius:8,padding:"6px",fontSize:10,fontWeight:700,color:"#8B1A1A",cursor:"pointer",fontFamily:"inherit"}}>+ Saída</button>
-              <button onClick={()=>onAddWithDate&&onAddWithDate("plantao",selDay)} style={{flex:1,background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.25)",borderRadius:8,padding:"6px",fontSize:10,fontWeight:700,color:"#E8205F",cursor:"pointer",fontFamily:"inherit"}}>+ Plantão</button>
+              <button onClick={()=>onAddWithDate&&onAddWithDate("plantao",selDay)} style={{flex:1,background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.25)",borderRadius:8,padding:"6px",fontSize:10,fontWeight:700,color:"#B91D55",cursor:"pointer",fontFamily:"inherit"}}>+ Plantão</button>
             </div>
           </div>
         );
@@ -445,7 +534,7 @@ const Sel = ({label,children,...p}) => (
 const G2=({children,gap=10})=><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap}}>{children}</div>;
 const Btn=({variant="primary",children,style:extraStyle,...p})=>{
   const styles={
-    primary:  {background:"linear-gradient(135deg,#F0356E,#D01050)",color:"#fff",border:"1px solid rgba(208,16,80,0.6)",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"},
+    primary:  {background:"linear-gradient(135deg,#C8235F,#9B1448)",color:"#fff",border:"1px solid rgba(208,16,80,0.6)",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"},
     secondary:{background:"rgba(0,0,0,0.06)",color:C.modalText,border:"1.5px solid rgba(0,0,0,0.12)"},
     green:    {background:"rgba(143,196,58,0.7)",color:"#fff",border:"1px solid rgba(143,196,58,0.5)"},
     danger:   {background:"rgba(224,82,82,0.12)",color:"#C0392B",border:"1.5px solid rgba(224,82,82,0.3)"},
@@ -453,7 +542,31 @@ const Btn=({variant="primary",children,style:extraStyle,...p})=>{
   };
   return <button style={{...styles[variant],borderRadius:12,fontSize:14,fontWeight:600,padding:"11px 16px",cursor:"pointer",transition:"all .15s",fontFamily:"inherit",...extraStyle}} {...p}>{children}</button>;
 };
-const SL=({children,style:st})=><div style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.55)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:10,...st}}>{children}</div>;
+const Money=({v,size=26,color,unit=true})=>{
+  const m=R(v).match(/^(-?)R\$\s?(.*)$/);
+  if(!m) return <span>{R(v)}</span>;
+  const [int,dec]=m[2].split(",");
+  return (
+    <span style={{whiteSpace:"nowrap",color}}>
+      {unit&&<span style={{fontFamily:"'DM Sans',sans-serif",fontSize:Math.max(10,size*0.42),opacity:.65,marginRight:3,letterSpacing:0}}>{m[1]}R$</span>}
+      <span style={{fontFamily:"'Fraunces',Georgia,serif",fontSize:size,fontWeight:400,letterSpacing:"-.03em"}}>{int}</span>
+      <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:Math.max(10,size*0.42),opacity:.6,letterSpacing:0}}>,{dec||"00"}</span>
+    </span>
+  );
+};
+const Spark=({data,color="#6F9560",w=92,h=34})=>{
+  const mx=Math.max(...data,0.0001), mn=Math.min(...data,0);
+  const rng=(mx-mn)||1, pad=4;
+  const pts=data.map((v,i)=>[pad+i*((w-2*pad)/Math.max(data.length-1,1)), h-pad-((v-mn)/rng)*(h-2*pad)]);
+  const d=pts.map((p,i)=>(i?"L":"M")+p[0].toFixed(1)+" "+p[1].toFixed(1)).join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{display:"block",overflow:"visible"}}>
+      <path d={d} fill="none" stroke={color} strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round" opacity=".55"/>
+      {pts.map((p,i)=><circle key={i} cx={p[0]} cy={p[1]} r={i===pts.length-1?3.6:2} fill={i===pts.length-1?color:"#fff"} stroke={color} strokeWidth={i===pts.length-1?0:1.2}/>)}
+    </svg>
+  );
+};
+const SL=({children,style:st})=><div className="sl" style={{fontSize:11,fontWeight:700,color:"rgba(26,18,9,0.55)",letterSpacing:".08em",textTransform:"uppercase",marginBottom:10,...st}}>{children}</div>;
 const DashDragHandle=()=>(
   <div className="dash-drag-handle" style={{position:"absolute",top:6,right:6,width:24,height:24,borderRadius:7,background:"rgba(232,32,95,0.12)",border:"1px solid rgba(232,32,95,0.3)",display:"flex",alignItems:"center",justifyContent:"center",color:"#C4185A",cursor:"grab",zIndex:5}}>
     <GripVertical size={13} strokeWidth={2.2}/>
@@ -636,7 +749,7 @@ function GerenciarCategorias({cats, setCats, onClose}) {
       <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:4}}>
         {["despesa","receita"].map(t=>(
           <button key={t} onClick={()=>{setTipo(t);setSelCat(null);setEditMode(null);}}
-            style={{flex:1,background:tipo===t?(t==="despesa"?"#E8205F":"#4A7A1A"):"transparent",color:tipo===t?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+            style={{flex:1,background:tipo===t?(t==="despesa"?"#B91D55":"#4A7A1A"):"transparent",color:tipo===t?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
             {t==="despesa"?"Despesa":"Receita"}
           </button>
         ))}
@@ -647,7 +760,7 @@ function GerenciarCategorias({cats, setCats, onClose}) {
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <div style={{fontSize:11,fontWeight:700,color:"#5A4A3A",letterSpacing:".06em",textTransform:"uppercase"}}>Categoria</div>
-            <button onClick={addCat} style={{background:"none",border:"none",color:"#E8205F",fontSize:18,cursor:"pointer",lineHeight:1,padding:"0 2px"}}>+</button>
+            <button onClick={addCat} style={{background:"none",border:"none",color:"#B91D55",fontSize:18,cursor:"pointer",lineHeight:1,padding:"0 2px"}}>+</button>
           </div>
           <div style={{maxHeight:200,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
             {lista.map(c=>(
@@ -668,7 +781,7 @@ function GerenciarCategorias({cats, setCats, onClose}) {
         <div>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
             <div style={{fontSize:11,fontWeight:700,color:"#5A4A3A",letterSpacing:".06em",textTransform:"uppercase"}}>Subcategoria</div>
-            {selCat&&<button onClick={addSubcat} style={{background:"none",border:"none",color:"#E8205F",fontSize:18,cursor:"pointer",lineHeight:1,padding:"0 2px"}}>+</button>}
+            {selCat&&<button onClick={addSubcat} style={{background:"none",border:"none",color:"#B91D55",fontSize:18,cursor:"pointer",lineHeight:1,padding:"0 2px"}}>+</button>}
           </div>
           <div style={{maxHeight:200,overflowY:"auto",display:"flex",flexDirection:"column",gap:4}}>
             {catSel?.subcats.map(s=>(
@@ -701,12 +814,12 @@ function GerenciarCategorias({cats, setCats, onClose}) {
           </div>
           <div style={{display:"flex",gap:8}}>
             <button onClick={()=>setEditMode(null)} style={{flex:1,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:10,padding:"8px",fontSize:13,fontWeight:600,cursor:"pointer",color:"#5A4A3A",fontFamily:"inherit"}}>Cancelar</button>
-            <button onClick={saveEdit} style={{flex:2,background:"#E8205F",border:"none",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer",color:"#fff",fontFamily:"inherit"}}>Salvar</button>
+            <button onClick={saveEdit} style={{flex:2,background:"#B91D55",border:"none",borderRadius:10,padding:"8px",fontSize:13,fontWeight:700,cursor:"pointer",color:"#fff",fontFamily:"inherit"}}>Salvar</button>
           </div>
         </div>
       )}
 
-      <button onClick={onClose} style={{background:"#E8205F",border:"none",borderRadius:12,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#fff",fontFamily:"inherit",marginTop:4}}>
+      <button onClick={onClose} style={{background:"#B91D55",border:"none",borderRadius:12,padding:"12px",fontSize:14,fontWeight:700,cursor:"pointer",color:"#fff",fontFamily:"inherit",marginTop:4}}>
         Fechar
       </button>
     </div>
@@ -777,11 +890,11 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
       {/* Toggle % */}
       <div style={{display:"flex",background:"rgba(255,255,255,0.9)",borderRadius:12,padding:3,marginBottom:14,border:"1px solid rgba(0,0,0,0.1)",boxShadow:"0 2px 8px rgba(0,0,0,0.06)"}}>
         <button onClick={()=>setViewMode("planejado")}
-          style={{flex:1,background:viewMode==="planejado"?"#E8205F":"transparent",color:viewMode==="planejado"?"#fff":"#1A1209",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+          style={{flex:1,background:viewMode==="planejado"?"#B91D55":"transparent",color:viewMode==="planejado"?"#fff":"#1A1209",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
           % do Planejado
         </button>
         <button onClick={()=>setViewMode("recebimento")}
-          style={{flex:1,background:viewMode==="recebimento"?"#E8205F":"transparent",color:viewMode==="recebimento"?"#fff":"#1A1209",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
+          style={{flex:1,background:viewMode==="recebimento"?"#B91D55":"transparent",color:viewMode==="recebimento"?"#fff":"#1A1209",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>
           % do Recebimento Previsto
         </button>
       </div>
@@ -972,7 +1085,7 @@ function BalancoTab({movs, plantoes, cartoes, selMes}) {
                 </div>
               </div>
               <div style={{background:"rgba(0,0,0,0.2)",borderRadius:99,height:6,overflow:"hidden"}}>
-                <div style={{width:`${Math.min(c.pct,100)}%`,height:"100%",background:c.pct>100?"#FF8A80":c.pct>80?"#FFD580":"#E8205F",borderRadius:99,transition:"width .5s"}}/>
+                <div style={{width:`${Math.min(c.pct,100)}%`,height:"100%",background:c.pct>100?"#FF8A80":c.pct>80?"#FFD580":"#B91D55",borderRadius:99,transition:"width .5s"}}/>
               </div>
               <div style={{fontSize:10,color:"rgba(26,18,9,0.45)",marginTop:3,fontFamily:"'DM Sans',sans-serif"}}>Limite: {R(c.limite)} · Disponível: {R(Math.max(c.limite-c.usado,0))}</div>
             </div>
@@ -1009,7 +1122,7 @@ function BalancoTab({movs, plantoes, cartoes, selMes}) {
                   {subList.map(([sub, val],idx)=>{
                     const pct = total>0 ? val/total*100 : 0;
                     const alerta = pct >= 60;
-                    const color = alerta ? "#C0392B" : idx===0 ? "#E8205F" : "#5BA3D4";
+                    const color = alerta ? "#C0392B" : idx===0 ? "#B91D55" : "#5B7C94";
                     return (
                       <div key={sub} style={{marginBottom:8}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:3}}>
@@ -1479,7 +1592,7 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
             {/* Tipo de importação */}
             <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:3}}>
               {[["arquivo",FileText,"Arquivo"],["foto",Camera,"Print/Foto"]].map(([v,Ic,l])=>(
-                <button key={v} onClick={()=>setModo(v)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:modo===v?"#E8205F":"transparent",color:modo===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}><Ic size={14} strokeWidth={2.2}/>{l}</button>
+                <button key={v} onClick={()=>setModo(v)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:modo===v?"#B91D55":"transparent",color:modo===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}><Ic size={14} strokeWidth={2.2}/>{l}</button>
               ))}
             </div>
 
@@ -1489,8 +1602,8 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
                   Aceita <strong>PDF</strong> (com ou sem senha), <strong>OFX</strong> e <strong>CSV</strong> do C6 Bank e Itaú.
                 </div>
                 <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(232,32,95,0.06)",border:"2px dashed rgba(232,32,95,0.3)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
-                  <FolderOpen size={32} strokeWidth={1.6} color="#E8205F"/>
-                  <span style={{fontSize:13,fontWeight:600,color:"#E8205F",fontFamily:"'DM Sans',sans-serif"}}>Clique para selecionar arquivo</span>
+                  <FolderOpen size={32} strokeWidth={1.6} color="#B91D55"/>
+                  <span style={{fontSize:13,fontWeight:600,color:"#B91D55",fontFamily:"'DM Sans',sans-serif"}}>Clique para selecionar arquivo</span>
                   <span style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>PDF · OFX · CSV</span>
                   <input type="file" accept=".pdf,.ofx,.csv,.txt" onChange={handleFile} style={{display:"none"}}/>
                 </label>
@@ -1508,20 +1621,20 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
                     <div style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Acesse <strong>aistudio.google.com</strong> → Get API Key → criar chave gratuita (sem cartão).</div>
                     <div style={{display:"flex",gap:6}}>
                       <input id="gemini_key_input" placeholder="AIza..." style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
-                      <button onClick={()=>{const v=document.getElementById("gemini_key_input").value;if(v.length>10){localStorage.setItem("velara_gemini_key",v);setErro("");}}} style={{background:"#E8205F",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+                      <button onClick={()=>{const v=document.getElementById("gemini_key_input").value;if(v.length>10){localStorage.setItem("velara_gemini_key",v);setErro("");}}} style={{background:"#B91D55",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
                     </div>
                   </div>
                 )}
                 <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(91,163,212,0.08)",border:"2px dashed rgba(91,163,212,0.4)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
                   <Camera size={36} strokeWidth={1.6}/>
-                  <span style={{fontSize:13,fontWeight:600,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif"}}>Clique para enviar print ou foto</span>
+                  <span style={{fontSize:13,fontWeight:600,color:"#5B7C94",fontFamily:"'DM Sans',sans-serif"}}>Clique para enviar print ou foto</span>
                   <span style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>PNG · JPG — qualquer banco</span>
                   <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={handleFile} style={{display:"none"}}/>
                 </label>
                 {localStorage.getItem("velara_gemini_key")&&(
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:10,padding:"8px 12px"}}>
                     <span style={{fontSize:11,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}><CheckCircle2 size={13} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Chave Gemini salva</span>
-                    <button onClick={()=>{localStorage.removeItem("velara_gemini_key");setErro("");}} style={{background:"none",border:"none",color:"#E8205F",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Trocar chave</button>
+                    <button onClick={()=>{localStorage.removeItem("velara_gemini_key");setErro("");}} style={{background:"none",border:"none",color:"#B91D55",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Trocar chave</button>
                   </div>
                 )}
                 
@@ -1554,7 +1667,7 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
             {erro&&<div style={{background:"rgba(224,82,82,0.1)",border:"1px solid rgba(224,82,82,0.3)",borderRadius:10,padding:"10px 14px",fontSize:13,color:"#C0392B",fontFamily:"'DM Sans',sans-serif"}}><Glyph e="⚠" size={13} style={{marginRight:5}}/>{erro}</div>}
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>{setPedeSenha(false);setErro("");}} style={{flex:1,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"12px",fontSize:14,fontWeight:600,color:"#5A4A3A",cursor:"pointer",fontFamily:"inherit"}}>Cancelar</button>
-              <button onClick={handleSenha} style={{flex:2,background:"#E8205F",border:"none",borderRadius:12,padding:"12px",fontSize:14,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}><Unlock size={14} strokeWidth={2.2} style={{marginRight:5,verticalAlign:"-2px"}}/>Desbloquear</button>
+              <button onClick={handleSenha} style={{flex:2,background:"#B91D55",border:"none",borderRadius:12,padding:"12px",fontSize:14,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}><Unlock size={14} strokeWidth={2.2} style={{marginRight:5,verticalAlign:"-2px"}}/>Desbloquear</button>
             </div>
           </div>
         )}
@@ -1588,7 +1701,7 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
               {txns.map((t,i)=>(
                 <div key={t.id} style={{background:t.duplicata?"rgba(91,163,212,0.08)":!t.confiante&&t.selected?"rgba(212,168,67,0.12)":t.selected?"rgba(255,255,255,0.9)":"rgba(0,0,0,0.04)",border:`1px solid ${t.duplicata?"rgba(91,163,212,0.35)":!t.confiante&&t.selected?"rgba(212,168,67,0.5)":t.selected?"rgba(0,0,0,0.1)":"rgba(0,0,0,0.06)"}`,borderRadius:12,padding:"10px 12px",opacity:t.selected?1:0.6}}>
                   <div style={{display:"flex",alignItems:"flex-start",gap:8}}>
-                    <input type="checkbox" checked={t.selected} onChange={()=>setTxns(txns.map((x,j)=>j===i?{...x,selected:!x.selected}:x))} style={{marginTop:2,cursor:"pointer",accentColor:"#E8205F"}}/>
+                    <input type="checkbox" checked={t.selected} onChange={()=>setTxns(txns.map((x,j)=>j===i?{...x,selected:!x.selected}:x))} style={{marginTop:2,cursor:"pointer",accentColor:"#B91D55"}}/>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                         <span style={{fontSize:12,fontWeight:600,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"60%"}}>{t.desc}</span>
@@ -1599,7 +1712,7 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
                         <span style={{fontSize:10,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>{t.data||"—"}</span>
                         <select value={t.tipo} onChange={e=>setTxns(txns.map((x,j)=>j===i?{...x,tipo:e.target.value}:x))}
                           className="plt-select"
-                          style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:t.tipo==="entrada"?"#2D5A10":t.tipo==="transferencia"?"#5BA3D4":"#8B1A1A",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
+                          style={{fontSize:10,border:"1px solid rgba(0,0,0,0.12)",borderRadius:6,padding:"1px 4px",background:"transparent",color:t.tipo==="entrada"?"#2D5A10":t.tipo==="transferencia"?"#5B7C94":"#8B1A1A",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>
                           <option value="entrada">↑ Entrada</option>
                           <option value="saida">↓ Saída</option>
                           <option value="transferencia">Transfer.</option>
@@ -1617,7 +1730,7 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
                 </div>
               ))}
             </div>
-            <button onClick={confirmar} disabled={total===0} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:total===0?"rgba(0,0,0,0.1)":"#E8205F",border:"none",borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,color:"#fff",cursor:total===0?"default":"pointer",fontFamily:"inherit"}}>
+            <button onClick={confirmar} disabled={total===0} style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:total===0?"rgba(0,0,0,0.1)":"#B91D55",border:"none",borderRadius:14,padding:"14px",fontSize:14,fontWeight:700,color:"#fff",cursor:total===0?"default":"pointer",fontFamily:"inherit"}}>
               <Check size={15} strokeWidth={2.5}/> Importar {total} transação{total!==1?"ões":""}
             </button>
           </div>
@@ -1767,7 +1880,7 @@ function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto
             <g>
               <ellipse cx={cx+10} cy={bodyCy+bodyRy+2} rx={62} ry={30} fill="#F582AC"/>
               <ellipse cx={cx+10} cy={bodyCy+bodyRy+2} rx={62} ry={30} fill="none" stroke="#E8548A" strokeWidth={3}/>
-              <ellipse cx={cx+10} cy={bodyCy+bodyRy+2} rx={38} ry={16} fill="#5BA3D4" opacity={0.55}/>
+              <ellipse cx={cx+10} cy={bodyCy+bodyRy+2} rx={38} ry={16} fill="#5B7C94" opacity={0.55}/>
             </g>
           )}
           {/* asa (normal ou espalhada quando correndo/alarmado) */}
@@ -1831,7 +1944,7 @@ function PatoMascote({progresso, alerta, relaxado, morto, correndo, onClickMorto
           )}
           {/* sementinha "comida" no bico (alimentando) */}
           {alimentando&&(
-            <circle className="patoSemente" cx={bicoTipX} cy={bicoTipY} r={5} fill="#8FC43A" stroke="#5A8A1A" strokeWidth={1}/>
+            <circle className="patoSemente" cx={bicoTipX} cy={bicoTipY} r={5} fill="#6F9560" stroke="#5A8A1A" strokeWidth={1}/>
           )}
           {/* bochecha rosada */}
           {mostrarBochecha&&<ellipse cx={headX-17} cy={headY+8} rx={6.5} ry={4.2} fill="#F5A0B0" opacity={0.6}/>}
@@ -1975,13 +2088,13 @@ function LoginScreen({onLogin}) {
             style={{background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"12px 14px",fontSize:14,color:"#1A1209",outline:"none",width:"100%"}}/>
           {error&&<div style={{fontSize:12,color:error.includes("criada")?"#2D6E20":"#C0392B",fontFamily:"'DM Sans',sans-serif",textAlign:"center"}}>{error}</div>}
           <button onClick={submit} disabled={loading}
-            style={{background:"#E8205F",color:"#fff",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:4,opacity:loading?0.7:1}}>
+            style={{background:"#B91D55",color:"#fff",border:"none",borderRadius:12,padding:"13px",fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",marginTop:4,opacity:loading?0.7:1}}>
             {loading?"Aguarde...":(mode==="login"?"Entrar":"Criar conta")}
           </button>
           <div style={{textAlign:"center",fontSize:12,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif"}}>
             {mode==="login"?"Não tem conta?":"Já tem conta?"}{" "}
             <button onClick={()=>{setMode(mode==="login"?"signup":"login");setError("");}}
-              style={{background:"none",border:"none",color:"#E8205F",fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>
+              style={{background:"none",border:"none",color:"#B91D55",fontWeight:700,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>
               {mode==="login"?"Cadastrar":"Fazer login"}
             </button>
           </div>
@@ -2150,9 +2263,9 @@ function LancamentoRapido({movs,cartoes,cats,onSalvar,onEditar}) {
   const pillBtn=(ativo)=>({background:ativo?C.magentaDark:"rgba(0,0,0,0.06)",color:ativo?"#fff":"#1A1209",border:"none",borderRadius:9,padding:"7px 10px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"});
   const cartaoSel=item&&item.formaPagamento==="cartao"?cartoes:[];
   return (
-    <div className="card" style={{padding:"12px 14px",marginBottom:10,borderRadius:14}}>
+    <div className={"card lr"+(item?"":" lr-idle")} style={{padding:"12px 14px",marginBottom:10,borderRadius:14}}>
       <div style={{display:"flex",gap:8,alignItems:"center"}}>
-        <input value={texto} onChange={e=>setTexto(e.target.value)}
+        <input className="lr-in" value={texto} onChange={e=>setTexto(e.target.value)}
           onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();salvar();}}}
           placeholder="Lançar rápido: uber 23 cartão · mercado 187 pix · recebi 1500 plantão"
           style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:10,padding:"11px 13px",color:"#1A1209",fontSize:14,outline:"none",fontFamily:"inherit",minWidth:0}}/>
@@ -2182,7 +2295,7 @@ function LancamentoRapido({movs,cartoes,cats,onSalvar,onEditar}) {
               <div>
                 {!item.categoria&&<div style={{fontSize:11.5,fontWeight:700,color:"#8B6F14",marginBottom:4,fontFamily:"'DM Sans',sans-serif"}}>Não sei a categoria — escolhe aqui:</div>}
                 <select value={item.categoria} onChange={e=>setOv({...ov,categoria:e.target.value})} className="filter-select"
-                  style={{background:"#F5F0E8",border:`1.5px solid ${item.categoria?"#DDD5C8":"#D4A843"}`,borderRadius:10,padding:"9px 30px 9px 12px",color:"#1A1209",fontSize:13,outline:"none",width:"100%",fontFamily:"inherit",cursor:"pointer"}}>
+                  style={{background:"#F5F0E8",border:`1.5px solid ${item.categoria?"#DDD5C8":"#B8944F"}`,borderRadius:10,padding:"9px 30px 9px 12px",color:"#1A1209",fontSize:13,outline:"none",width:"100%",fontFamily:"inherit",cursor:"pointer"}}>
                   {!item.categoria&&<option value="">Escolher categoria…</option>}
                   {opcoesCategoria(item.tipo,cats).map(o=><option key={o} value={o}>{o}</option>)}
                 </select>
@@ -2520,7 +2633,7 @@ class ErrorBoundary extends React.Component {
           <div style={{fontSize:18,fontWeight:700,color:"#1A1209",marginBottom:10}}>Algo deu errado</div>
           <div style={{fontSize:13,color:"#5A4A3A",marginBottom:20,maxWidth:400,wordBreak:"break-word"}}>{String(this.state.error?.message||this.state.error||"Erro desconhecido")}</div>
           <button onClick={()=>{localStorage.clear();window.location.reload();}}
-            style={{background:"#E8205F",color:"#fff",border:"none",borderRadius:12,padding:"12px 24px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
+            style={{background:"#B91D55",color:"#fff",border:"none",borderRadius:12,padding:"12px 24px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
             <RefreshCw size={14} strokeWidth={2.2}/>Limpar dados e recarregar
           </button>
         </div>
@@ -2589,6 +2702,8 @@ function AppMain({user, onLogout}) {
   const [extra,setExtra]=useState(null);
   const [selMes,setSelMes]=useState(today().slice(0,7));
   const [sideOpen,setSideOpen]=useState(false);
+  const [metaPrincipal,setMetaPrincipal]=useLS("v4_meta_principal","",userId);
+  const [goalIdx,setGoalIdx]=useState(0);
   const [cdiAtual,setCdiAtual]=useState(()=>{try{return JSON.parse(localStorage.getItem("velara_cdi")||"null")?.valor||null;}catch{return null;}});
   useEffect(()=>{fetchCDI().then(v=>{if(v)setCdiAtual(v);});},[]);
   const jaAconteceu = p => {
@@ -2699,7 +2814,7 @@ function AppMain({user, onLogout}) {
   const [movDist,setMovDist]=useState(null);
 
   const [fMov,setFMov]=useState({tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:"",formaPagamento:"dinheiro",cartaoId:"",parcelado:false,numParcelas:"2"});
-  const [fEmp,setFEmp]=useState({nome:"",contato:"",prazo:"30",cor:"#E8205F"});
+  const [fEmp,setFEmp]=useState({nome:"",contato:"",prazo:"30",cor:"#B91D55"});
   const [fPlt,setFPlt]=useState({empresa:"",data:"",horaInicio:"",horaFim:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
   const [fPltLote,setFPltLote]=useState({empresa:"",valorTotal:"",horas:"",horaInicio:"",horaFim:"",previsao:"",diasSelecionados:[],mesLote:today().slice(0,7)});
   const [agendaView,setAgendaView]=useState("7");
@@ -2731,7 +2846,7 @@ function AppMain({user, onLogout}) {
   const openM=(m,item=null,ex=null)=>{
     setEdit(item);setExtra(ex);setModal(m);
     if(m==="mov")   setFMov(item?{...item,subtipo:item.subtipo||"aporte",investId:item.investId||"",formaPagamento:item.formaPagamento||"dinheiro",cartaoId:item.cartaoId||"",parcelado:false,numParcelas:"2"}:{tipo:"saida",descricao:"",valor:"",categoria:CATS_OUT[0],data:today(),subtipo:"aporte",investId:"",formaPagamento:"dinheiro",cartaoId:"",parcelado:false,numParcelas:"2"});
-    if(m==="emp")   setFEmp(item?{...item}:{nome:"",contato:"",prazo:"30",cor:"#E8205F"});
+    if(m==="emp")   setFEmp(item?{...item}:{nome:"",contato:"",prazo:"30",cor:"#B91D55"});
     if(m==="plt"){
       if(item)pularRecalcPrevisao.current=true;
       setFPlt(item?{...item,horaInicio:item.horaInicio||"",horaFim:item.horaFim||""}:{empresa:"",data:"",horaInicio:"",horaFim:"",horas:"",valorH:"",valorTotal:"",prazo:"30",previsao:"",status:"pendente",obs:""});
@@ -3267,6 +3382,19 @@ function AppMain({user, onLogout}) {
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const parcelasDividaMes=dividas.filter(d=>d.tipo==="cartao_desconto").reduce((s,d)=>s+(d.parcelasStatus||[]).filter(p=>!p.pago&&monthKey(p.dataVencimento)===selMes).length*(+d.valorComDesconto||0),0);
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
+  const palBg=BG_PALETTES[bgId]||BG_PALETTES.tartan;
+  const serie6=fn=>Array.from({length:6},(_,i)=>fn(shiftMonth(selMes,i-5)));
+  const gastosSerie=serie6(m=>movs.filter(x=>x.tipo==="saida"&&monthKey(x.data)===m).reduce((s,x)=>s+(+x.valor||0),0));
+  const gastosAnt=gastosSerie[4]||0;
+  const gastosVar=gastosAnt>0?Math.round((saidas-gastosAnt)/gastosAnt*100):null;
+  const receberSerie=Array.from({length:6},(_,i)=>{const m=shiftMonth(selMes,i);return plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)&&mesDoPlantao(p)===m).reduce((s,p)=>s+(+p.valorTotal||0),0);});
+  const aporteSerie=serie6(m=>movs.filter(x=>x.tipo==="transferencia"&&monthKey(x.data)<=m).reduce((s,x)=>s+(x.subtipo==="resgate"?-1:1)*(+x.valor||0),0));
+  const dividaTotalBruto=dividas.reduce((s,d)=>s+(+d.total||0),0);
+  const dividaPct=dividaTotalBruto>0?Math.round(dividas.reduce((s,d)=>s+(+d.pago||0),0)/dividaTotalBruto*100):0;
+  const aReceberMes=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)&&mesDoPlantao(p)===selMes).reduce((s,p)=>s+(+p.valorTotal||0),0);
+  const _hoje=new Date(); const _mesAtual=selMes===_hoje.toISOString().slice(0,7);
+  const _ultDia=new Date(+selMes.slice(0,4),+selMes.slice(5,7),0).getDate();
+  const diasRestantes=_mesAtual?_ultDia-_hoje.getDate()+1:0;
   const empNome=n=>empresas.find(e=>e.nome===n)||{nome:n,cor:C.magenta};
   const ccGastosMes=cid=>movs.filter(m=>m.formaPagamento==="cartao"&&m.cartaoId===cid&&monthKey(m.data)===selMes).reduce((s,m)=>s+m.valor,0);
 
@@ -3344,7 +3472,9 @@ function AppMain({user, onLogout}) {
   Object.entries(DASH_COLS).forEach(([bp,cols])=>{
     const stored=dashLayouts[bp]||[];
     const base=genDashLayout(cols,visibleDashIds);
-    dashLayoutsResolved[bp]=base.map(item=>stored.find(it=>it.i===item.i)||item);
+    const oldBase=genDashLayout(cols,visibleDashIds,DASH_H_OLD);
+    const nuncaMexeu=stored.length===0||oldBase.every(o=>{const st=stored.find(it=>it.i===o.i);return !st||(st.x===o.x&&st.y===o.y&&st.h===o.h);});
+    dashLayoutsResolved[bp]=nuncaMexeu?base:base.map(item=>stored.find(it=>it.i===item.i)||item);
   });
 
   const CARD="card"; // className shorthand
@@ -3353,7 +3483,7 @@ function AppMain({user, onLogout}) {
   const TMUT="rgba(26,18,9,0.45)";
 
   return (
-    <div className={"vl"+(isMobile?" mobile":"")} style={{minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
+    <div className={"vl"+(isMobile?" mobile":"")} style={{...((p)=>({"--m1":p.m1,"--m2":p.m2,"--m3":p.m3,"--m4":p.m4,"--base":p.base,"--h1":p.h1,"--h2":p.h2,"--h3":p.h3,"--hb":p.hb,"--acc":p.acc}))(BG_PALETTES[bgId]||BG_PALETTES.tartan),minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
       <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap');
@@ -3416,12 +3546,50 @@ function AppMain({user, onLogout}) {
         .vl .wallpaper-bg{display:none}
         .vl,body:has(.vl){background:#7A0E3A}
         .vl .topbar{display:none!important}
-        .vl .sheet{background:#F7F3EE;border-radius:30px 30px 0 0;margin-top:-26px;position:relative;z-index:1;min-height:70vh}
+        .vl .sheet{background:var(--base);border-radius:30px 30px 0 0;margin-top:-26px;position:relative;z-index:1;min-height:70vh}
         .mobile .sheet{margin-top:-24px}
         .mobile .main-wrap{padding:24px 14px 96px!important}
         .vl .main-wrap{padding-top:28px!important}
-        .vl .card{background:#fff!important;border:1px solid rgba(40,20,10,.06)!important;box-shadow:0 6px 22px rgba(60,20,30,.07)!important;border-radius:22px!important}
+        .vl .card{background:#FFFCF4!important;border:1px solid rgba(35,21,25,.10)!important;box-shadow:none!important;border-radius:24px!important}
+        .vl .bento{display:grid;grid-template-columns:1.3fr 1fr 1fr;grid-template-rows:minmax(190px,auto) minmax(190px,auto);gap:14px}
+        .vl .bento-hero{grid-row:1/3;border-radius:32px;padding:0;color:#fff;display:flex;flex-direction:column;min-height:300px;position:relative;overflow:hidden;background:#8F2427;box-shadow:none}
+        .vl .bento-hero *{color:inherit}
+        .vl .goal-pill{display:inline-flex;align-items:center;gap:8px;background:#FBF4E2;color:#2A1E14;border-radius:999px;padding:5px 14px 5px 5px;max-width:calc(100% - 96px)}
+        .vl .goal-pill .ring{width:28px;height:28px;border-color:rgba(42,30,20,.3)}
+        .vl .goal-panel{margin-top:auto;background:#FBF4E2;color:#2A1E14;border-radius:22px;padding:16px 18px 14px;box-shadow:0 10px 26px -14px rgba(42,30,20,.5)}
+        .vl .tile-panel{background:#FBF4E2;color:#2A1E14;border-radius:18px;padding:11px 13px;margin-top:auto;position:relative;z-index:1}
+        .vl .tile-ic{background:#FBF4E2;border:none!important;color:#2A1E14;position:relative;z-index:1;width:32px;height:32px}
+        .vl .tile-ic *{color:#2A1E14!important}
+        .vl .goal-track{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;height:100%;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+        .vl .goal-track::-webkit-scrollbar{display:none}
+        .vl .goal-slide{flex:0 0 100%;scroll-snap-align:start;padding:14px;display:flex;flex-direction:column;min-height:300px;min-width:0}
+        .vl .goal-dots{display:flex;justify-content:center;gap:5px;margin-top:12px}
+        .vl .goal-dots i{height:6px;border-radius:99px;display:inline-block;transition:all .2s}
+        .vl .bento-tile{border-radius:26px;padding:10px;display:flex;flex-direction:column;min-height:190px;position:relative;overflow:hidden;box-shadow:none}
+        .vl .bento-tile *{color:inherit}
+        
+        .vl .bento-hero>.goal-track{position:relative;z-index:1}
+        
+        .vl .ring{width:34px;height:34px;border-radius:50%;border:1px solid rgba(35,21,25,.22);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+        .vl .arrow-btn{width:38px;height:38px;min-height:38px!important;border-radius:50%;border:none;background:#fff;color:#1D1A1C!important;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;box-shadow:0 6px 16px -8px rgba(0,0,0,.4)}
+        .vl .arrow-btn *{color:#1D1A1C!important}
+        .vl .arrow-btn.star-off *{color:#fff!important}
+        .vl .arrow-btn-sm{width:34px;height:34px;min-height:34px!important;background:#1D1A1C;box-shadow:none}
+        .vl .arrow-btn-sm *{color:#fff!important}
+        .mobile .bento{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+        .mobile .bento-hero{grid-column:1/3;grid-row:auto;min-height:220px}
+        .mobile .bento-tile{min-height:172px;padding:8px}
+        .mobile .tile-panel{padding:9px 10px;border-radius:15px}
+        .mobile .bento-hero{min-height:300px}
+                .vl .lr.card.lr-idle{background:transparent!important;border:none!important;box-shadow:none!important;padding:0!important}
+        .vl .lr-in{background:#FBF9F5!important;border:1px solid rgba(35,21,25,.16)!important;border-radius:999px!important;padding:14px 22px!important;font-size:15px!important}
+        .vl .dash-item .sl::before{content:"";display:inline-block;width:16px;height:2px;background:var(--acc,#B8944F);margin-right:10px;vertical-align:middle;position:relative;top:-2px}
         .vl .num{font-family:'Fraunces',Georgia,serif!important;font-weight:400!important;letter-spacing:-.02em}
+        .vl .dash-item>*{height:auto!important;overflow:visible!important}
+        .vl .dash-item>.card{padding:20px!important}
+        .vl .dash-item .sl,.vl .dash-item .dash-h{font-family:'Fraunces',Georgia,serif!important;font-size:19px!important;font-weight:400!important;letter-spacing:-.015em!important;text-transform:none!important;color:#1A1209!important;line-height:1.15!important}
+        .vl .dash-item .sl{margin-bottom:12px!important}
+        .vl .dash-item .card .sl+div{}
         .vl .m-hero{background:#5E0A2E;color:#fff;padding:max(14px,env(safe-area-inset-top)) 18px 50px;position:relative;overflow:hidden}
         .vl .m-hero-in{max-width:1100px;margin:0 auto;position:relative;z-index:2;display:block}
         .vl .m-hero>.m-hero-bg,.vl .m-hero>.m-hero-scrim{position:absolute;inset:0;z-index:0;pointer-events:none}
@@ -3457,11 +3625,9 @@ function AppMain({user, onLogout}) {
         .vl .overlay-side{display:none!important}
         .sidebar .m-close{display:none}
         .vl .sidebar .m-close{display:flex}
-        @media (min-width:900px){
-          .vl .sidebar>div{padding-left:max(24px,calc((100vw - 1100px)/2 + 32px))!important;padding-right:max(24px,calc((100vw - 1100px)/2 + 32px))!important}
-          .vl .sidebar .navitem{font-size:44px;padding:6px max(24px,calc((100vw - 1100px)/2 + 32px))}
-          .vl .sidebar .nav-list{padding-left:0!important;padding-right:0!important}
-        }
+        .vl:not(.mobile) .sidebar{width:340px!important;box-shadow:6px 0 40px rgba(0,0,0,.3)}
+        .vl:not(.mobile) .sidebar .navitem{font-size:27px;padding:4px 28px}
+        .vl:not(.mobile) .overlay-side.open{display:block!important}
         .mobile input,.mobile select,.mobile textarea{font-size:16px!important}
         .mobile .main-wrap button{min-height:34px}
         .mobile .topbar{position:relative!important;top:auto!important}
@@ -3531,14 +3697,14 @@ function AppMain({user, onLogout}) {
           <div style={{fontSize:10,fontWeight:500,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:7}}>Tela</div>
           <div style={{display:"flex",gap:5,marginBottom:14}}>
             {[["auto","Auto"],["celular","Celular"],["pc","Computador"]].map(([id,lb])=>(
-              <button key={id} onClick={()=>setModoTela(id)} style={{flex:1,background:modoTela===id?"rgba(232,32,95,0.5)":"rgba(255,255,255,0.08)",border:`1px solid ${modoTela===id?"#E8205F":"rgba(255,255,255,0.15)"}`,borderRadius:8,padding:"7px 2px",fontSize:10.5,fontWeight:600,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{lb}</button>
+              <button key={id} onClick={()=>setModoTela(id)} style={{flex:1,background:modoTela===id?"rgba(232,32,95,0.5)":"rgba(255,255,255,0.08)",border:`1px solid ${modoTela===id?"#B91D55":"rgba(255,255,255,0.15)"}`,borderRadius:8,padding:"7px 2px",fontSize:10.5,fontWeight:600,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{lb}</button>
             ))}
           </div>
           <div style={{fontSize:10,fontWeight:500,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:7}}>Fundo</div>
           <div style={{display:"flex",gap:6,marginBottom:12}}>
             {BG_OPTIONS.map(bg=>(
               <button key={bg.id} onClick={()=>setBgId(bg.id)}
-                style={{flex:1,background:bgId===bg.id?"rgba(232,32,95,0.5)":"rgba(255,255,255,0.08)",border:`2px solid ${bgId===bg.id?"#E8205F":"rgba(255,255,255,0.15)"}`,borderRadius:10,padding:0,cursor:"pointer",overflow:"hidden",display:"flex",flexDirection:"column",alignItems:"center"}}>
+                style={{flex:1,background:bgId===bg.id?"rgba(232,32,95,0.5)":"rgba(255,255,255,0.08)",border:`2px solid ${bgId===bg.id?"#B91D55":"rgba(255,255,255,0.15)"}`,borderRadius:10,padding:0,cursor:"pointer",overflow:"hidden",display:"flex",flexDirection:"column",alignItems:"center"}}>
                 <div style={{width:"100%",height:36,...bgToStyle(bg)}}/>
                 <div style={{fontSize:8,fontWeight:600,color:"#fff",padding:"3px 0"}}>{bg.label}</div>
               </button>
@@ -3594,7 +3760,7 @@ function AppMain({user, onLogout}) {
           <div className="m-stats">
             <div><div className="l">Entradas</div><div className="v">{R(entradas)}</div></div>
             <div><div className="l">Saídas</div><div className="v">{R(saidas)}</div></div>
-            <div><div className="l">A receber</div><div className="v">{R(totalPendPlant)}</div></div>
+            <div><div className="l">A receber</div><div className="v">{R(aReceberMes)}</div></div>
           </div>
           </div>
         </div>
@@ -3623,7 +3789,7 @@ function AppMain({user, onLogout}) {
               <div style={{fontSize:12,color:"#2D6E20",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▲ {R(entradas)}</div>
               <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600,display:"flex",alignItems:"center",gap:3}}><Hourglass size={10} strokeWidth={2.2}/>{R(totalPendPlant)}</div>}
-              {totalPatrimonio>0&&<div style={{fontSize:10,color:"#5BA3D4",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}><TrendingUp size={10} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-2px"}}/>{R(totalPatrimonio)} patrimônio</div>}
+              {totalPatrimonio>0&&<div style={{fontSize:10,color:"#5B7C94",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}><TrendingUp size={10} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-2px"}}/>{R(totalPatrimonio)} patrimônio</div>}
             </div>
           </div>
           {parcelasDividaMes>0&&(
@@ -3636,7 +3802,7 @@ function AppMain({user, onLogout}) {
           )}
           <div className="scr" style={{display:"flex",gap:5,overflowX:"auto",paddingBottom:2}}>
             {Array.from({length:20},(_,i)=>{const d=new Date();d.setMonth(d.getMonth()-12+i);const ym=d.toISOString().slice(0,7);const isSel=ym===selMes;
-              return <button key={ym} onClick={()=>setSelMes(ym)} style={{flexShrink:0,background:isSel?"#E8205F":"rgba(0,0,0,0.08)",color:isSel?"#fff":"rgba(26,18,9,0.7)",border:isSel?"1px solid #E8205F":"1px solid rgba(0,0,0,0.12)",borderRadius:99,padding:"4px 12px",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",boxShadow:isSel?"0 2px 8px rgba(232,32,95,0.3)":"none"}}>{monthLabel(ym)}</button>;
+              return <button key={ym} onClick={()=>setSelMes(ym)} style={{flexShrink:0,background:isSel?"#B91D55":"rgba(0,0,0,0.08)",color:isSel?"#fff":"rgba(26,18,9,0.7)",border:isSel?"1px solid #B91D55":"1px solid rgba(0,0,0,0.12)",borderRadius:99,padding:"4px 12px",fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",transition:"all .15s",boxShadow:isSel?"0 2px 8px rgba(232,32,95,0.3)":"none"}}>{monthLabel(ym)}</button>;
             })}
           </div>
         </div>
@@ -3650,12 +3816,12 @@ function AppMain({user, onLogout}) {
           <div className="fade">
             <LancamentoRapido movs={movs} cartoes={cartoes} cats={cats} onSalvar={salvarRapido} onEditar={editarRapido}/>
             <div style={{display:"flex",justifyContent:"flex-end",flexWrap:"wrap",gap:8,marginBottom:10}}>
-              <button onClick={()=>setDashEditMode(!dashEditMode)} style={{background:dashEditMode?C.magenta:"rgba(255,255,255,0.88)",border:`1px solid ${dashEditMode?C.magenta:"rgba(0,0,0,0.12)"}`,borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:dashEditMode?"#fff":"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+              <button onClick={()=>setDashEditMode(!dashEditMode)} style={{background:dashEditMode?C.magenta:"rgba(251,249,245,0.6)",border:`1px solid ${dashEditMode?C.magenta:"rgba(0,0,0,0.12)"}`,borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:dashEditMode?"#fff":"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
                 {dashEditMode?<Check size={14} strokeWidth={2.5}/>:<LayoutGrid size={14} strokeWidth={2.2}/>}
                 {dashEditMode?"Concluir":"Reorganizar"}
               </button>
-              <button onClick={()=>setModal("dashCustom")} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 10px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}} title="Escolher o que mostrar"><SlidersHorizontal size={14} strokeWidth={2.2}/></button>
-              <button onClick={()=>setImportOpen(true)} style={{background:"rgba(255,255,255,0.88)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}><Glyph e="📥" size={14}/>Importar Extrato</button>
+              <button onClick={()=>setModal("dashCustom")} style={{background:"rgba(251,249,245,0.6)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 10px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}} title="Escolher o que mostrar"><SlidersHorizontal size={14} strokeWidth={2.2}/></button>
+              <button onClick={()=>setImportOpen(true)} style={{background:"rgba(251,249,245,0.6)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}><Glyph e="📥" size={14}/>Importar Extrato</button>
               <button onClick={()=>setSimularOpen(true)} style={{background:C.magentaDark,border:`1px solid ${C.magenta}`,borderRadius:12,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6,boxShadow:`0 2px 10px ${C.magenta}44`}}><Lightbulb size={13} strokeWidth={2.2}/>Simular Compra</button>
             </div>
 
@@ -3665,46 +3831,107 @@ function AppMain({user, onLogout}) {
               </div>
             )}
 
-            <ResponsiveGridLayout
-              layouts={dashLayoutsResolved}
-              breakpoints={DASH_BREAKPOINTS}
-              cols={DASH_COLS}
-              rowHeight={26}
-              margin={[10,10]}
-              isDraggable={dashEditMode}
-              isResizable={dashEditMode}
-              draggableHandle=".dash-drag-handle"
-              onLayoutChange={(cur,all)=>setDashLayouts(all)}
-            >
+            {(()=>{
+              const dc={};
 
-              {/* ── Linha 1: Cards resumo ── */}
-              {showCard("resumo")&&(
+              // ── Linha 1: Cards resumo ── 
+              dc.resumo = showCard("resumo")&&(
               <div key="resumo" style={{height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
-                <div style={{display:"grid",gridTemplateColumns:"repeat(3,minmax(0,1fr))",gap:8,height:"100%"}}>
+                <div className="bento">
+                  <div className="bento-hero" style={{background:STY[palBg.hero.s].paper,color:INK}}>
+                    <Motif s={palBg.hero.s} style={{position:"absolute",inset:0,zIndex:0,pointerEvents:"none"}}/>
+                    {(()=>{
+                      const lista=[...objetivos].sort((x,y)=>(y.id===metaPrincipal)-(x.id===metaPrincipal));
+                      if(lista.length===0) return (
+                        <div className="goal-slide" style={{justifyContent:"space-between"}}>
+                          <div className="goal-pill"><span className="ring"><Target size={14} strokeWidth={1.6}/></span><span style={{fontSize:12.5,lineHeight:1.15}}>Sua meta principal</span></div>
+                          <div className="goal-panel">
+                            <div style={{fontFamily:"'Fraunces',Georgia,serif",fontSize:28,fontWeight:300,lineHeight:1.1,marginBottom:14}}>Defina o que<br/>você está buscando</div>
+                            <button className="arrow-btn" style={{width:"auto",padding:"0 18px",borderRadius:999,fontSize:13,fontWeight:600,gap:6}} onClick={()=>navTo("objetivos")}>Criar meta <ArrowUpRight size={15} strokeWidth={1.8}/></button>
+                          </div>
+                        </div>
+                      );
+                      return (
+                        <div className="goal-track" onScroll={e=>{const el=e.currentTarget;const i=Math.round(el.scrollLeft/Math.max(el.clientWidth,1));if(i!==goalIdx)setGoalIdx(i);}}>
+                          {lista.map((o,idx)=>{
+                            const meta=+o.meta||0, atual=+o.atual||0;
+                            const pct=meta>0?Math.min(100,Math.round(atual/meta*100)):0;
+                            const falta=Math.max(0,meta-atual);
+                            const ehPrinc=o.id===metaPrincipal||(!metaPrincipal&&idx===0);
+                            const ativoNo=Math.min(4,Math.floor(pct/25));
+                            const mesesPrazo=o.prazo?Math.max(0,Math.round((new Date(o.prazo+"T12:00:00")-new Date())/(86400000*30.44))):null;
+                            return (
+                              <div key={o.id} className="goal-slide">
+                                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                                  <div className="goal-pill" style={{minWidth:0}}>
+                                    <span className="ring"><Target size={14} strokeWidth={1.6}/></span>
+                                    <span style={{fontSize:13,lineHeight:1.2,minWidth:0}}>
+                                      <span className="mono" style={{fontSize:9.5,letterSpacing:".12em",textTransform:"uppercase",opacity:.75}}>{ehPrinc?"Meta principal":"Meta"}</span><br/>
+                                      <b style={{fontWeight:600,display:"inline-block",maxWidth:"100%",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",verticalAlign:"bottom"}}>{o.nome}</b>
+                                    </span>
+                                  </div>
+                                  <div style={{display:"flex",gap:8,flexShrink:0}}>
+                                    <button className={"arrow-btn"+(ehPrinc?"":" star-off")} onClick={()=>setMetaPrincipal(o.id)} aria-label="Definir como meta principal" title="Definir como meta principal" style={{background:ehPrinc?PANEL:INK}}>
+                                      <Sparkle size={15} strokeWidth={1.8} fill={ehPrinc?"#C48A1C":"none"} style={{color:ehPrinc?"#C48A1C":"#fff"}}/>
+                                    </button>
+                                    <button className="arrow-btn" onClick={()=>navTo("objetivos")} aria-label="Ver metas"><ArrowUpRight size={16} strokeWidth={1.8}/></button>
+                                  </div>
+                                </div>
+                                <div className="goal-panel">
+                                  <div style={{display:"flex",alignItems:"center",gap:6,margin:"0 0 14px 2px"}}>
+                                    {[0,1,2,3,4].map(k=>{const on=k===ativoNo;return <React.Fragment key={k}><i style={{width:on?16:6,height:on?16:6,borderRadius:99,background:k<=ativoNo?STY[palBg.hero.s].acc:"rgba(42,30,20,.22)",display:"inline-block",boxShadow:on?"0 0 0 4px "+mixHex(STY[palBg.hero.s].acc,PANEL,.78):"none"}}/>{k<4&&<i style={{flex:1,height:1,background:"rgba(42,30,20,.25)",display:"inline-block"}}/>}</React.Fragment>;})}
+                                  </div>
+                                  <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                                    <Money v={atual} size={isMobile?32:42} color={INK}/>
+                                    <span className="mono" style={{fontSize:10,letterSpacing:".1em",textTransform:"uppercase",opacity:.9,paddingBottom:6,textAlign:"right"}}>{pct}% de {R(meta)}</span>
+                                  </div>
+                                  <div style={{fontSize:12,opacity:.85,marginTop:6}}>
+                                    {falta>0?<>faltam <b style={{fontWeight:600}}>{R(falta)}</b></>:"meta atingida"}{mesesPrazo!==null&&falta>0?<> · {mesesPrazo===0?"vence este mês":`${mesesPrazo} ${mesesPrazo===1?"mês":"meses"} de prazo`}</>:null}
+                                  </div>
+                                  {lista.length>1&&<div className="goal-dots">{lista.map((q,i)=><i key={q.id} style={{width:i===idx?16:6,background:i===idx?STY[palBg.hero.s].acc:"rgba(42,30,20,.25)"}}/>)}</div>}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </div>
                   {[
-                    {label:"A Receber", val:totalPendPlant, dot:C.gold, color:"#1A1209"},
-                    {label:"Patrimônio", val:totalPatrimonio, dot:C.green, color:"#1A1209"},
-                    {label:"Dívidas", val:totalDividas,   dot:C.magenta, color:"#1A1209"},
-                  ].map(c=>(
-                    <div key={c.label} className={CARD} style={{padding:"10px 12px",textAlign:"left",borderRadius:16,display:"flex",flexDirection:"column",justifyContent:"center"}}>
-                      <div className="mono" style={{fontSize:8.5,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",marginBottom:6,display:"flex",alignItems:"center",gap:5,opacity:.75}}><i style={{width:6,height:6,borderRadius:99,background:c.dot,display:"inline-block"}}/>{c.label}</div>
-                      <div className="num" style={{fontSize:14,fontWeight:500,color:c.color,letterSpacing:"-.02em",whiteSpace:"nowrap"}}>{R(c.val)}</div>
+                    {ic:<TrendingUp size={15} strokeWidth={1.6}/>,l1:"Patrimônio",l2:invests.length+" investimentos",v:totalPatrimonio,sp:aporteSerie,c:"#6F9560"},
+                    {ic:<Hourglass size={15} strokeWidth={1.6}/>,l1:"A receber",l2:"próx. 6 meses",v:totalPendPlant,sp:receberSerie,c:"#B8944F"},
+                    {ic:<Wallet size={15} strokeWidth={1.6}/>,l1:"Gastos",l2:gastosVar===null?"no mês":(gastosVar>0?"+":"")+gastosVar+"% vs mês ant.",v:saidas,sp:gastosSerie,c:"#B91D55"},
+                    {ic:<CreditCard size={15} strokeWidth={1.6}/>,l1:"Dívidas",l2:dividaPct+"% quitado",v:totalDividas,sp:null,c:"#B5473F"},
+                  ].map((t,ti)=>{
+                    const tp=palBg.tiles[ti]; 
+                    return (
+                    <div key={t.l1} className="bento-tile" style={{background:STY[tp.s].paper}}>
+                      <Motif s={tp.s} z={tp.z} x={tp.x} y={tp.y} style={{position:"absolute",inset:0,zIndex:0,pointerEvents:"none"}}/>
+                      <span className="ring tile-ic">{t.ic}</span>
+                      <div className="tile-panel">
+                        <div style={{fontSize:12.5,lineHeight:1.2,marginBottom:8}}><b style={{fontWeight:600}}>{t.l1}</b> {!isMobile&&<span style={{opacity:.6,fontSize:11}}>· {t.l2}</span>}</div>
+                        <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:8}}>
+                          <Money v={t.v} size={isMobile?19:24} color={INK}/>
+                          {t.sp&&!isMobile&&<Spark data={t.sp} color={STY[tp.s].acc}/>}
+                        </div>
+                        {t.sp&&isMobile&&<div style={{marginTop:6}}><Spark data={t.sp} color={STY[tp.s].acc} w={110} h={24}/></div>}
+                      </div>
                     </div>
-                  ))}
+                  );})}
                 </div>
               </div>
-              )}
+              );
 
-              {/* ── Semanas com espaço livre ── */}
-              {showCard("semanasLivres")&&(
+              // ── Semanas com espaço livre ── 
+              dc.semanasLivres = showCard("semanasLivres")&&(
               <div key="semanasLivres" className={CARD} style={{padding:16,height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 {semanasLivres.some(s=>s.horas>0)?(
                 <>
                 <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
                   <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#1A4A6E"}}><CalendarDays size={13} strokeWidth={2.2}/></div>
-                  <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Suas próximas semanas</span>
+                  <span className="dash-h" style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Suas próximas semanas</span>
                 </div>
                 {semanasLivres.map((sem,idx)=>(
                   <div key={idx} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 4px",borderBottom:idx<semanasLivres.length-1?"1px solid rgba(0,0,0,0.05)":"none"}}>
@@ -3730,17 +3957,17 @@ function AppMain({user, onLogout}) {
                   </div>
                 )}
               </div>
-              )}
+              );
 
-              {/* ── Desafio do Pato 100% ── */}
-              {showCard("desafioPato")&&(
+              // ── Desafio do Pato 100% ── 
+              dc.desafioPato = showCard("desafioPato")&&(
               <div key="desafioPato" className={CARD} style={{padding:16,height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                   <div style={{display:"flex",alignItems:"center",gap:8}}>
                     <div style={{width:26,height:26,borderRadius:8,background:"rgba(255,196,32,0.2)",display:"flex",alignItems:"center",justifyContent:"center",color:"#8B6000"}}><Flower2 size={13} strokeWidth={2.2}/></div>
                     <div>
-                      <div style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",lineHeight:1.2}}>Desafio do Pato 100%</div>
+                      <div className="dash-h" style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",lineHeight:1.2}}>Desafio do Pato 100%</div>
                       <div style={{fontSize:9.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",textTransform:"capitalize"}}>{monthLabel(selMes)} · reseta todo mês</div>
                     </div>
                   </div>
@@ -3761,15 +3988,15 @@ function AppMain({user, onLogout}) {
                   </div>
                 )}
               </div>
-              )}
+              );
 
-              {/* ── Resumo de Cartões ── */}
-              {showCard("cartoes")&&cartoes.length>0&&(
+              // ── Resumo de Cartões ── 
+              dc.cartoes = showCard("cartoes")&&cartoes.length>0&&(
               <div key="cartoes" className={CARD} style={{padding:14,height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <SL style={{marginBottom:0}}>▭ Cartões</SL>
-                  <button onClick={()=>navTo("cartoes")} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.1)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Ver todos</button>
+                  <SL style={{marginBottom:0}}>Cartões</SL>
+                  <button className="arrow-btn arrow-btn-sm" onClick={()=>navTo("cartoes")} aria-label="Ver todos"><ArrowUpRight size={14} strokeWidth={1.8}/></button>
                 </div>
                 {cartoes.map(c=>{
                   const usado=ccGastosMes(c.id);
@@ -3786,10 +4013,10 @@ function AppMain({user, onLogout}) {
                   );
                 })}
               </div>
-              )}
+              );
 
-              {/* Pizza gastos */}
-              {showCard("graficoGastos")&&(
+              // Pizza gastos 
+              dc.graficoGastos = showCard("graficoGastos")&&(
               <div key="graficoGastos" className={CARD} style={{padding:14,height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 <SL>Gastos</SL>
@@ -3817,14 +4044,14 @@ function AppMain({user, onLogout}) {
                       <CreditCard size={24} strokeWidth={1.6} style={{opacity:.4}}/>
                     </div>
                     <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",textAlign:"center",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Sem gastos<br/>em {monthLabel(selMes)}</div>
-                    <button onClick={()=>openM("mov")} style={{background:"#E8205F",border:"1px solid #C0154A",borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Lançar</button>
+                    <button onClick={()=>openM("mov")} style={{background:"#B91D55",border:"1px solid #C0154A",borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Lançar</button>
                   </div>
                 )}
               </div>
-              )}
+              );
 
-              {/* Pizza receita por empresa */}
-              {showCard("graficoEmpresas")&&(
+              // Pizza receita por empresa 
+              dc.graficoEmpresas = showCard("graficoEmpresas")&&(
               <div key="graficoEmpresas" className={CARD} style={{padding:14,height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 <SL>Empresas</SL>
@@ -3853,22 +4080,22 @@ function AppMain({user, onLogout}) {
                       <Cross size={24} strokeWidth={1.6} style={{opacity:.4}}/>
                     </div>
                     <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",textAlign:"center",fontFamily:"'DM Sans',sans-serif",lineHeight:1.4}}>Sem plantões<br/>cadastrados</div>
-                    <button onClick={()=>navTo("plantoes")} style={{background:"#E8205F",border:"1px solid #C0154A",borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Plantão</button>
+                    <button onClick={()=>navTo("plantoes")} style={{background:"#B91D55",border:"1px solid #C0154A",borderRadius:99,color:"#fff",fontSize:9,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Plantão</button>
                   </div>
                 )}
               </div>
-              )}
+              );
 
-              {/* Calendário */}
-              {showCard("calendario")&&(
+              // Calendário 
+              dc.calendario = showCard("calendario")&&(
               <div key="calendario" className={CARD} style={{padding:12,height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 <MultiCalendar plantoes={plantoes} movs={movs} onAddWithDate={(tipo,data)=>{if(tipo==="plantao"){openM("plt");setFPlt(f=>({...f,data}));}else{openM("mov");setFMov(f=>({...f,tipo,data}));}}}/>
               </div>
-              )}
+              );
 
-              {/* Próximos recebimentos */}
-              {showCard("recebimentos")&&(
+              // Próximos recebimentos 
+              dc.recebimentos = showCard("recebimentos")&&(
               <div key="recebimentos" className={CARD} style={{padding:14,height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 <SL>Recebimentos</SL>
@@ -3896,10 +4123,10 @@ function AppMain({user, onLogout}) {
                   </div>
                 )}
               </div>
-              )}
+              );
 
-              {/* ── Ranking empresas: quem paga mais / quem atrasa mais ── */}
-              {showCard("ranking")&&(
+              // ── Ranking empresas: quem paga mais / quem atrasa mais ── 
+              dc.ranking = showCard("ranking")&&(
               <div key="ranking" className={CARD} style={{height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 <SL>Ranking de empresas</SL>
@@ -3926,17 +4153,17 @@ function AppMain({user, onLogout}) {
                   </div>
                 )}
               </div>
-              )}
+              );
 
-              {/* ── Alocação ── */}
-              {showCard("alocacao")&&(
+              // ── Alocação ── 
+              dc.alocacao = showCard("alocacao")&&(
               <div key="alocacao" className={CARD} style={{borderLeft:`3px solid ${C.magenta}`,height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                   <SL>Alocação de receita</SL>
                   <div style={{display:"flex",gap:6}}>
                     {alocacoes.length>0&&<button onClick={()=>setAlocExpanded(!alocExpanded)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{alocExpanded?"▲ Fechar":"▼ Extrato"}</button>}
-                    <button onClick={()=>setModal("regras")} style={{background:"#E8205F",border:"none",borderRadius:8,color:"#fff",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Settings size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Regras</button>
+                    <button onClick={()=>setModal("regras")} style={{background:"#B91D55",border:"none",borderRadius:8,color:"#fff",fontSize:10,fontWeight:700,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}><Settings size={11} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Regras</button>
                   </div>
                 </div>
                 {alocacoes.length>0 ? (
@@ -3982,15 +4209,15 @@ function AppMain({user, onLogout}) {
                   </div>
                 )}
               </div>
-              )}
+              );
 
-              {/* ── Objetivos ── */}
-              {showCard("objetivos")&&(
+              // ── Objetivos ── 
+              dc.objetivos = showCard("objetivos")&&(
               <div key="objetivos" className={CARD} style={{height:"100%",overflow:"auto",position:"relative"}}>
                 {dashEditMode&&<DashDragHandle/>}
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                   <SL>Objetivos</SL>
-                  <button onClick={()=>navTo("objetivos")} style={{background:"rgba(0,0,0,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,color:"#1A1209",fontSize:10,fontWeight:600,padding:"4px 10px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>Ver todos</button>
+                  <button className="arrow-btn arrow-btn-sm" onClick={()=>navTo("objetivos")} aria-label="Ver todos"><ArrowUpRight size={14} strokeWidth={1.8}/></button>
                 </div>
                 {objetivos.length>0 ? objetivos.map(o=>{const pct=o.meta>0?Math.min(o.atual/o.meta*100,100):0;
                   return <div key={o.id} style={{marginBottom:10}}>
@@ -4005,9 +4232,45 @@ function AppMain({user, onLogout}) {
                   </div>
                 )}
               </div>
-              )}
+              );
 
-            </ResponsiveGridLayout>
+              const ORDER=DASH_CARDS.map(d=>d.id);
+              if(dashEditMode){
+                return (
+            <ResponsiveGridLayout
+              layouts={dashLayoutsResolved}
+              breakpoints={DASH_BREAKPOINTS}
+              cols={DASH_COLS}
+              rowHeight={26}
+              margin={[10,10]}
+              isDraggable={dashEditMode}
+              isResizable={dashEditMode}
+              draggableHandle=".dash-drag-handle"
+              onLayoutChange={(cur,all)=>setDashLayouts(all)}
+            >
+                  {ORDER.map(id=>dc[id])}
+                </ResponsiveGridLayout>
+                );
+              }
+              const cw=Math.min(larguraTela,1100)-(isMobile?28:64);
+              const bp=cw>=DASH_BREAKPOINTS.lg?"lg":cw>=DASH_BREAKPOINTS.md?"md":"sm";
+              const ncols=DASH_COLS[bp];
+              const lay=(dashLayoutsResolved[bp]||[]).filter(it=>dc[it.i]);
+              const colsArr=Array.from({length:ncols},()=>[]);
+              lay.filter(it=>it.i!=="resumo").sort((a,b)=>a.y-b.y||a.x-b.x).forEach(it=>{colsArr[Math.min(Math.max(it.x,0),ncols-1)].push(it.i);});
+              return (
+                <div className="dash-scope">
+                  {dc.resumo&&<div className="dash-item" style={{marginBottom:14}}>{dc.resumo}</div>}
+                  <div style={{display:"grid",gridTemplateColumns:`repeat(${ncols},minmax(0,1fr))`,gap:14,alignItems:"start"}}>
+                    {colsArr.map((ids,ci)=>(
+                      <div key={ci} style={{display:"flex",flexDirection:"column",gap:14,minWidth:0}}>
+                        {ids.map(id=><div key={id} className="dash-item">{dc[id]}</div>)}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
           </div>
         )}
@@ -4023,7 +4286,7 @@ function AppMain({user, onLogout}) {
                 </div>
                 <div style={{display:"flex",gap:7}}>
                   <button onClick={()=>setImportOpen(true)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"9px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6}}><Glyph e="📥" size={14}/>Importar</button>
-                  <button onClick={()=>openM("mov")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"9px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
+                  <button onClick={()=>openM("mov")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#C8235F,#9B1448)",border:"none",borderRadius:12,padding:"9px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
                     <Plus size={14} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Lançamento
                   </button>
                 </div>
@@ -4069,7 +4332,7 @@ function AppMain({user, onLogout}) {
                   </select>
                 </div>
                 {(filtroMov.tipo!=="todos"||filtroMov.categoria!=="todos"||filtroMov.formaPagamento!=="todos")&&(
-                  <button onClick={()=>setFiltroMov({tipo:"todos",categoria:"todos",formaPagamento:"todos"})} style={{display:"flex",alignItems:"center",gap:5,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:10,color:"#fff",fontSize:12,fontWeight:700,padding:"8px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.3)"}}>✕ Limpar</button>
+                  <button onClick={()=>setFiltroMov({tipo:"todos",categoria:"todos",formaPagamento:"todos"})} style={{display:"flex",alignItems:"center",gap:5,background:"linear-gradient(135deg,#C8235F,#9B1448)",border:"none",borderRadius:10,color:"#fff",fontSize:12,fontWeight:700,padding:"8px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.3)"}}>✕ Limpar</button>
                 )}
               </div>
             </div>
@@ -4155,7 +4418,7 @@ function AppMain({user, onLogout}) {
                 <div style={{fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>a receber</div>
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 18px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)",transition:"transform .15s"}}
+                <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#C8235F,#9B1448)",border:"none",borderRadius:12,padding:"10px 18px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)",transition:"transform .15s"}}
                   onMouseEnter={e=>e.currentTarget.style.transform="translateY(-1px)"} onMouseLeave={e=>e.currentTarget.style.transform="translateY(0)"}>
                   <Plus size={15} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Plantão
                 </button>
@@ -4188,7 +4451,7 @@ function AppMain({user, onLogout}) {
             )}
             <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:3,marginBottom:14,maxWidth:220}}>
               {[["tabela",BarChart3,"Tabela"],["cards",ClipboardList,"Cards"]].map(([v,Ic,l])=>(
-                <button key={v} onClick={()=>setPltView(v)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:pltView===v?"#E8205F":"transparent",color:pltView===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}><Ic size={13} strokeWidth={2.2}/>{l}</button>
+                <button key={v} onClick={()=>setPltView(v)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:pltView===v?"#B91D55":"transparent",color:pltView===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"8px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}><Ic size={13} strokeWidth={2.2}/>{l}</button>
               ))}
             </div>
             <div className={CARD} style={{marginBottom:14,padding:"14px 16px"}}>
@@ -4229,7 +4492,7 @@ function AppMain({user, onLogout}) {
                   </div>
                 </div>
                 {(filtroPlt.empresa!=="todos"||filtroPlt.status!=="todos"||filtroPlt.dataDe||filtroPlt.dataAte)&&(
-                  <button onClick={()=>setFiltroPlt({empresa:"todos",status:"todos",dataDe:"",dataAte:""})} style={{display:"flex",alignItems:"center",gap:5,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:10,color:"#fff",fontSize:12,fontWeight:700,padding:"8px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.3)"}}>✕ Limpar</button>
+                  <button onClick={()=>setFiltroPlt({empresa:"todos",status:"todos",dataDe:"",dataAte:""})} style={{display:"flex",alignItems:"center",gap:5,background:"linear-gradient(135deg,#C8235F,#9B1448)",border:"none",borderRadius:10,color:"#fff",fontSize:12,fontWeight:700,padding:"8px 14px",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.3)"}}>✕ Limpar</button>
                 )}
               </div>
             </div>
@@ -4307,7 +4570,7 @@ function AppMain({user, onLogout}) {
                             {p.status==="recebido"?(
                               <div style={{background:"rgba(143,196,58,0.2)",border:"1px solid rgba(45,90,16,0.3)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#2D5A10",textAlign:"center",fontFamily:"'DM Sans',sans-serif"}}><Check size={11} strokeWidth={3} style={{marginRight:3}}/>Recebido{recebidoSemEntrada(p)&&<button onClick={()=>marcarRecebido(p.id)} title="Este plantão está como recebido mas não entrou no caixa. Toque para informar a data." style={{display:"block",width:"100%",marginTop:3,background:"#E8A020",border:"none",borderRadius:5,color:"#fff",fontSize:9,fontWeight:700,padding:"2px 0",cursor:"pointer",fontFamily:"inherit"}}>Informar data</button>}{p.dataRecebimento&&<div style={{fontSize:9,fontWeight:600,opacity:.8}}>{fd(p.dataRecebimento)}</div>}</div>
                             ):(
-                              <button onClick={()=>marcarRecebido(p.id)} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.35)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#E8205F",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%"}}>Receber</button>
+                              <button onClick={()=>marcarRecebido(p.id)} style={{background:"rgba(232,32,95,0.1)",border:"1px solid rgba(232,32,95,0.35)",borderRadius:7,padding:"6px 4px",fontSize:10,fontWeight:700,color:"#B91D55",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",width:"100%"}}>Receber</button>
                             )}
                             <button onClick={()=>openM("plt",p)} title="Editar (inclui horário)" style={{background:p.horaInicio?"rgba(45,90,16,0.1)":"rgba(91,163,212,0.12)",border:"none",borderRadius:6,color:p.horaInicio?"#215010":"#1A4A6E",cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>{p.horaInicio?<Clock size={12} strokeWidth={2.2}/>:<Pencil size={12} strokeWidth={2.2}/>}</button>
                             <button onClick={()=>remove(plantoes,setPlantoes,p.id)} style={{background:"rgba(0,0,0,0.05)",border:"none",borderRadius:6,color:"#8B1A1A",fontSize:14,cursor:"pointer",lineHeight:1,width:22,height:22,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
@@ -4558,7 +4821,7 @@ function AppMain({user, onLogout}) {
                 <div className="num" style={{fontSize:26,fontWeight:700,color:C.green,letterSpacing:"-.02em",lineHeight:1}}>{R(totalInvestido)}</div>
                 <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:3}}>total investido</div>
               </div>
-              <button onClick={()=>openM("inv")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
+              <button onClick={()=>openM("inv")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#C8235F,#9B1448)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
                 <Plus size={15} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Investimento
               </button>
             </div>
@@ -4575,7 +4838,7 @@ function AppMain({user, onLogout}) {
                         <span className="num" style={{fontSize:12,fontWeight:700,color:idx===0?"#2D5A10":"#1A1209"}}>{i.txEf.toFixed(2)}% a.a.</span>
                       </div>
                       <div style={{background:"rgba(0,0,0,0.1)",borderRadius:99,height:6,overflow:"hidden"}}>
-                        <div style={{width:`${(i.txEf/maxTx*100)}%`,height:"100%",background:idx===0?"#2D9A1A":"#5BA3D4",borderRadius:99,transition:"width .5s"}}/>
+                        <div style={{width:`${(i.txEf/maxTx*100)}%`,height:"100%",background:idx===0?"#2D9A1A":"#5B7C94",borderRadius:99,transition:"width .5s"}}/>
                       </div>
                     </div>
                   ))}
@@ -4608,7 +4871,7 @@ function AppMain({user, onLogout}) {
                       <div style={{display:"flex",gap:5,justifyContent:"center",marginBottom:14,flexWrap:"wrap"}}>
                         {invests.map((inv,dotIdx)=>(
                           <button key={inv.id} onClick={()=>setInvestIdx(dotIdx)} title={inv.nome}
-                            style={{width:dotIdx===idx?18:7,height:7,borderRadius:99,border:"none",background:dotIdx===idx?"#E8205F":"rgba(0,0,0,0.18)",cursor:"pointer",transition:"all .2s",padding:0}}/>
+                            style={{width:dotIdx===idx?18:7,height:7,borderRadius:99,border:"none",background:dotIdx===idx?"#B91D55":"rgba(0,0,0,0.18)",cursor:"pointer",transition:"all .2s",padding:0}}/>
                         ))}
                       </div>
                     )}
@@ -4678,7 +4941,7 @@ function AppMain({user, onLogout}) {
                                 style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 8px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
                               <input placeholder="Taxa % a.a." value={fJuros.taxa} onChange={e=>setFJuros({...fJuros,taxa:e.target.value})}
                                 style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"7px 8px",fontSize:11,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
-                              <button onClick={()=>addJuros(i.id)} style={{background:"#E8205F",border:"none",borderRadius:8,padding:"7px 12px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>+ Add</button>
+                              <button onClick={()=>addJuros(i.id)} style={{background:"#B91D55",border:"none",borderRadius:8,padding:"7px 12px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>+ Add</button>
                             </div>
                           </div>
                         );
@@ -4753,7 +5016,7 @@ function AppMain({user, onLogout}) {
                 <div className="num" style={{fontSize:26,fontWeight:700,color:C.magenta,letterSpacing:"-.02em",lineHeight:1}}>{objetivos.length}</div>
                 <div style={{fontSize:10,color:"rgba(26,18,9,0.55)",fontFamily:"'DM Sans',sans-serif",marginTop:3}}>{objetivos.length===1?"meta cadastrada":"metas cadastradas"}</div>
               </div>
-              <button onClick={()=>openM("obj")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
+              <button onClick={()=>openM("obj")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#C8235F,#9B1448)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12.5,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
                 <Plus size={15} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Objetivo
               </button>
             </div>
@@ -4818,7 +5081,7 @@ function AppMain({user, onLogout}) {
                             <option value="">Sem vínculo de investimento</option>
                             {invests.map(i=><option key={i.id} value={i.id}>{i.nome}{i.banco?" · "+i.banco:""}</option>)}
                           </select>
-                          <button onClick={()=>addParte(o.id)} style={{background:"#E8205F",border:"none",borderRadius:8,padding:"7px 14px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>+ Adicionar</button>
+                          <button onClick={()=>addParte(o.id)} style={{background:"#B91D55",border:"none",borderRadius:8,padding:"7px 14px",fontSize:11,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>+ Adicionar</button>
                         </div>
                       </div>
                     </div>
@@ -4854,7 +5117,7 @@ function AppMain({user, onLogout}) {
                 <button onClick={()=>openM("div")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"10px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>
                   <Plus size={14} strokeWidth={2.5} style={{display:"inline-block",verticalAlign:"-2px"}}/> Dívida
                 </button>
-                <button onClick={()=>setModal("cartaoRenegoc")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
+                <button onClick={()=>setModal("cartaoRenegoc")} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:"linear-gradient(135deg,#C8235F,#9B1448)",border:"none",borderRadius:12,padding:"10px 16px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 2px 8px rgba(232,32,95,0.22)"}}>
                   <CreditCard size={14} strokeWidth={2.2}/> Cartão Renegociado
                 </button>
               </div>
@@ -5037,7 +5300,7 @@ function AppMain({user, onLogout}) {
                       <div style={{display:"flex",gap:5,justifyContent:"center",marginBottom:14,flexWrap:"wrap"}}>
                         {cartoes.map((cd,dotIdx)=>(
                           <button key={cd.id} onClick={()=>setCartaoIdx(dotIdx)} title={cd.nome}
-                            style={{width:dotIdx===idx?18:7,height:7,borderRadius:99,border:"none",background:dotIdx===idx?"#E8205F":"rgba(0,0,0,0.18)",cursor:"pointer",transition:"all .2s",padding:0}}/>
+                            style={{width:dotIdx===idx?18:7,height:7,borderRadius:99,border:"none",background:dotIdx===idx?"#B91D55":"rgba(0,0,0,0.18)",cursor:"pointer",transition:"all .2s",padding:0}}/>
                         ))}
                       </div>
                     )}
@@ -5122,7 +5385,7 @@ function AppMain({user, onLogout}) {
                       <div style={{position:"absolute",top:-24,fontSize:9,fontWeight:700,color:"#8B1043",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",background:"rgba(232,32,95,0.1)",borderRadius:6,padding:"2px 6px"}}>{R(f.entradas)}</div>
                     )}
                     <div style={{display:"flex",gap:3,alignItems:"flex-end",height:120}}>
-                      <div style={{width:11,background:isNow?"linear-gradient(180deg,#4ABE2A,#215010)":"linear-gradient(180deg,#8FC43A99,#21501099)",borderRadius:"6px 6px 2px 2px",height:`${Math.max(hE,3)}%`,transition:"height .6s ease",boxShadow:isNow?"0 0 10px rgba(45,90,16,0.35)":"none"}}/>
+                      <div style={{width:11,background:isNow?"linear-gradient(180deg,#4ABE2A,#215010)":"linear-gradient(180deg,#6F956099,#21501099)",borderRadius:"6px 6px 2px 2px",height:`${Math.max(hE,3)}%`,transition:"height .6s ease",boxShadow:isNow?"0 0 10px rgba(45,90,16,0.35)":"none"}}/>
                       <div style={{width:11,background:isNow?"linear-gradient(180deg,#F0356E,#8B1043)":"linear-gradient(180deg,#F0356E99,#8B104399)",borderRadius:"6px 6px 2px 2px",height:`${Math.max(hS,3)}%`,transition:"height .6s ease",boxShadow:isNow?"0 0 10px rgba(232,32,95,0.35)":"none"}}/>
                     </div>
                     <div style={{fontSize:10,color:isNow?"#1A1209":"rgba(26,18,9,0.45)",fontFamily:"'DM Sans',sans-serif",fontWeight:isNow?700:600,textTransform:"capitalize"}}>{monthLabel(f.ym).split(" ")[0]}</div>
@@ -5149,7 +5412,7 @@ function AppMain({user, onLogout}) {
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                     <div style={{display:"flex",alignItems:"center",gap:9}}>
                       <div style={{fontSize:17,fontWeight:500,fontFamily:"'DM Sans',sans-serif",color:isNow?"#8B1043":"#1A1209",textTransform:"capitalize"}}>{monthLabel(f.ym)}</div>
-                      {isNow&&<span style={{fontSize:9,fontWeight:700,background:"linear-gradient(135deg,#F0356E,#D01050)",color:"#fff",borderRadius:99,padding:"3px 10px",letterSpacing:".04em",textTransform:"uppercase",boxShadow:"0 2px 6px rgba(232,32,95,0.3)"}}>✦ Atual</span>}
+                      {isNow&&<span style={{fontSize:9,fontWeight:700,background:"linear-gradient(135deg,#C8235F,#9B1448)",color:"#fff",borderRadius:99,padding:"3px 10px",letterSpacing:".04em",textTransform:"uppercase",boxShadow:"0 2px 6px rgba(232,32,95,0.3)"}}>✦ Atual</span>}
                     </div>
                     <div style={{textAlign:"right"}}>
                       <div style={{display:"flex",alignItems:"center",gap:5,justifyContent:"flex-end"}}>
@@ -5184,12 +5447,12 @@ function AppMain({user, onLogout}) {
                   </div>
                 </div>
                 <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,#F0356E,#D01050)",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 3px 10px rgba(232,32,95,0.3)"}}>
+                  <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,#C8235F,#9B1448)",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 3px 10px rgba(232,32,95,0.3)"}}>
                     <span style={{fontSize:14,lineHeight:1}}>✚</span> Plantão
                   </button>
                   <div style={{display:"flex",background:"#EDE8E0",borderRadius:10,padding:3}}>
                     {[["7","7 dias"],["14","14 dias"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setAgendaView(v)} style={{background:agendaView===v?"#E8205F":"transparent",color:agendaView===v?"#fff":"#5A4A3A",border:"none",borderRadius:8,padding:"7px 12px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
+                      <button key={v} onClick={()=>setAgendaView(v)} style={{background:agendaView===v?"#B91D55":"transparent",color:agendaView===v?"#fff":"#5A4A3A",border:"none",borderRadius:8,padding:"7px 12px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
                     ))}
                   </div>
                   <button onClick={()=>{const d=new Date(agendaInicio+"T12:00:00");d.setDate(d.getDate()-(+agendaView));setAgendaInicio(d.toISOString().slice(0,10));}} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:14}}>‹</button>
@@ -5213,7 +5476,7 @@ function AppMain({user, onLogout}) {
                       <div key={dia.data} style={{flex:1,minWidth:88,borderLeft:"1px solid rgba(0,0,0,0.06)"}}>
                         <div style={{textAlign:"center",paddingBottom:6,marginBottom:2}}>
                           <div style={{fontSize:9,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Mono',ui-monospace,monospace",fontWeight:500,textTransform:"uppercase"}}>{nomeDia}</div>
-                          <div style={{width:24,height:24,borderRadius:99,background:hoje?"#E8205F":"transparent",color:hoje?"#fff":"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",margin:"2px auto 0",fontSize:12,fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>{dia.diaNum}</div>
+                          <div style={{width:24,height:24,borderRadius:99,background:hoje?"#B91D55":"transparent",color:hoje?"#fff":"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",margin:"2px auto 0",fontSize:12,fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>{dia.diaNum}</div>
                         </div>
                         {dia.plantoesSemHorario.length>0&&(
                           <div style={{padding:"0 2px 4px"}}>
@@ -5280,8 +5543,8 @@ function AppMain({user, onLogout}) {
                         style={{width:"100%",display:"flex",alignItems:"flex-end",height:70,cursor:"pointer"}}>
                         <div
                           style={{width:"100%",height:`${Math.max(alturaPct,3)}%`,
-                            background:sem.ehAtual?"linear-gradient(180deg,#4ABE2A,#215010)":sem.ehFutura?"rgba(91,163,212,0.3)":"linear-gradient(180deg,#8FC43A99,#21501099)",
-                            border:sem.ehFutura?"1.5px dashed #5BA3D4":"none",
+                            background:sem.ehAtual?"linear-gradient(180deg,#4ABE2A,#215010)":sem.ehFutura?"rgba(91,163,212,0.3)":"linear-gradient(180deg,#6F956099,#21501099)",
+                            border:sem.ehFutura?"1.5px dashed #5B7C94":"none",
                             outline:isHovered?"2px solid rgba(232,32,95,0.5)":"none",outlineOffset:1,
                             borderRadius:"5px 5px 2px 2px",transition:"height .5s"}}/>
                       </div>
@@ -5291,8 +5554,8 @@ function AppMain({user, onLogout}) {
                 })}
               </div>
               <div style={{display:"flex",gap:14,justifyContent:"center",fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>
-                <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:2,background:"#8FC43A"}}/>Já trabalhado</span>
-                <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:2,background:"rgba(91,163,212,0.3)",border:"1px dashed #5BA3D4"}}/>Agendado (futuro)</span>
+                <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:2,background:"#6F9560"}}/>Já trabalhado</span>
+                <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:2,background:"rgba(91,163,212,0.3)",border:"1px dashed #5B7C94"}}/>Agendado (futuro)</span>
               </div>
             </div>
 
@@ -5498,7 +5761,7 @@ function AppMain({user, onLogout}) {
           <Inp label="Aporte (R$)" placeholder="0,00" value={fInv.aporte} onChange={e=>setFInv({...fInv,aporte:e.target.value})}/>
           <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:4}}>
             {[["fixo","Taxa Fixa"],["cdi","% do CDI"]].map(([v,l])=>(
-              <button key={v} onClick={()=>setFInv({...fInv,taxaModo:v})} style={{flex:1,background:fInv.taxaModo===v?"#E8205F":"transparent",color:fInv.taxaModo===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{l}</button>
+              <button key={v} onClick={()=>setFInv({...fInv,taxaModo:v})} style={{flex:1,background:fInv.taxaModo===v?"#B91D55":"transparent",color:fInv.taxaModo===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}>{l}</button>
             ))}
           </div>
           {fInv.taxaModo==="cdi" ? (
@@ -5560,7 +5823,7 @@ function AppMain({user, onLogout}) {
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div style={{display:"flex",background:"#EDE8E0",borderRadius:12,padding:4}}>
             {[["ativa",CreditCard,"Dívida Ativa"],["fundo",Landmark,"Fundo de Dívida"]].map(([v,Ic,l])=>(
-              <button key={v} onClick={()=>setFDiv({...fDiv,tipo:v})} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:(fDiv.tipo||"ativa")===v?(v==="fundo"?"rgba(255,179,71,0.8)":"#E8205F"):"transparent",color:(fDiv.tipo||"ativa")===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}><Ic size={13} strokeWidth={2.2}/>{l}</button>
+              <button key={v} onClick={()=>setFDiv({...fDiv,tipo:v})} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:(fDiv.tipo||"ativa")===v?(v==="fundo"?"rgba(255,179,71,0.8)":"#B91D55"):"transparent",color:(fDiv.tipo||"ativa")===v?"#fff":"#5A4A3A",border:"none",borderRadius:10,padding:"9px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit",transition:"all .15s"}}><Ic size={13} strokeWidth={2.2}/>{l}</button>
             ))}
           </div>
           <Inp label="Credor" placeholder="Ex: Banco Itaú..." value={fDiv.credor} onChange={e=>setFDiv({...fDiv,credor:e.target.value})}/>
@@ -5640,7 +5903,7 @@ function AppMain({user, onLogout}) {
                     <button key={dia} onClick={()=>{
                       const novos=sel?fPltLote.diasSelecionados.filter(d=>d!==dia):[...fPltLote.diasSelecionados,dia];
                       setFPltLote({...fPltLote,diasSelecionados:novos});
-                    }} style={{aspectRatio:"1",background:sel?"#E8205F":"rgba(255,255,255,0.7)",color:sel?"#fff":C.modalText,border:`1px solid ${sel?"#E8205F":"rgba(0,0,0,0.1)"}`,borderRadius:8,fontSize:11.5,fontWeight:sel?700:500,cursor:"pointer",fontFamily:"inherit"}}>{dia}</button>
+                    }} style={{aspectRatio:"1",background:sel?"#B91D55":"rgba(255,255,255,0.7)",color:sel?"#fff":C.modalText,border:`1px solid ${sel?"#B91D55":"rgba(0,0,0,0.1)"}`,borderRadius:8,fontSize:11.5,fontWeight:sel?700:500,cursor:"pointer",fontFamily:"inherit"}}>{dia}</button>
                   );
                 });
                 return [...espacos,...dias];
