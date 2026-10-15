@@ -240,7 +240,7 @@ const STY={
   noite:   {paper:"#18220F",f1:"#8DB1EC",f2:"#6F95DB",l1:"#4B5F2A",l2:"#3B4C20",stem:"#3B4C20",acc:"#2D4A8A"},
   manteiga:{paper:"#F8E6B8",f1:"#EDAA26",f2:"#F4BF45",l1:"#7B7B3E",l2:"#6B6B35",stem:"#6B6B35",acc:"#B07A0F"},
 };
-const Motif=({s="tulipa",z=1,x=0,y=0,style})=>{
+const Motif=({s="tulipa",z=1,x=0,y=0,p=1,style})=>{
   const S=STY[s]||STY.tulipa;
   const Leaf=({x,y,r=0,k=1,c=S.l1,c2=S.l2,spots})=>(
     <g transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
@@ -301,7 +301,7 @@ const Motif=({s="tulipa",z=1,x=0,y=0,style})=>{
     </>;
   }
   const w=200/z;
-  return <svg viewBox={`${x} ${y} ${w} ${w}`} preserveAspectRatio="xMidYMid slice" width="100%" height="100%" style={style} aria-hidden="true"><rect x="-60" y="-60" width="320" height="320" fill={S.paper}/>{corpo}</svg>;
+  return <svg viewBox={`${x} ${y} ${w} ${w}`} preserveAspectRatio="xMidYMid slice" width="100%" height="100%" style={{...style,filter:`saturate(${(.15+.85*p).toFixed(2)})`,transition:"filter .5s"}} aria-hidden="true"><rect x="-60" y="-60" width="320" height="320" fill={S.paper}/>{corpo}{p<1&&<rect x="-60" y="-60" width="320" height="320" fill={S.paper} opacity={((1-p)*.62).toFixed(2)} style={{transition:"opacity .5s"}}/>}</svg>;
 };
 function bgToStyle(bg) {
   if(!bg) return {};
@@ -3883,7 +3883,7 @@ function AppMain({user, onLogout}) {
                                     {[0,1,2,3,4].map(k=>{const on=k===ativoNo;return <React.Fragment key={k}><i style={{width:on?16:6,height:on?16:6,borderRadius:99,background:k<=ativoNo?STY[palBg.hero.s].acc:"rgba(42,30,20,.22)",display:"inline-block",boxShadow:on?"0 0 0 4px "+mixHex(STY[palBg.hero.s].acc,PANEL,.78):"none"}}/>{k<4&&<i style={{flex:1,height:1,background:"rgba(42,30,20,.25)",display:"inline-block"}}/>}</React.Fragment>;})}
                                   </div>
                                   <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-                                    <Money v={atual} size={isMobile?32:42} color={INK}/>
+                                    <Money v={atual} size={isMobile?32:42} color={mixHex(mixHex(STY[palBg.hero.s].acc,PANEL,.74),STY[palBg.hero.s].acc,Math.max(0,Math.min(1,meta>0?atual/meta:0)))}/>
                                     <span className="mono" style={{fontSize:10,letterSpacing:".1em",textTransform:"uppercase",opacity:.9,paddingBottom:6,textAlign:"right"}}>{pct}% de {R(meta)}</span>
                                   </div>
                                   <div style={{fontSize:12,opacity:.85,marginTop:6}}>
