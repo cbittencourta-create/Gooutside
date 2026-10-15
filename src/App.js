@@ -240,7 +240,7 @@ const STY={
   noite:   {paper:"#18220F",f1:"#8DB1EC",f2:"#6F95DB",l1:"#4B5F2A",l2:"#3B4C20",stem:"#3B4C20",acc:"#2D4A8A"},
   manteiga:{paper:"#F8E6B8",f1:"#EDAA26",f2:"#F4BF45",l1:"#7B7B3E",l2:"#6B6B35",stem:"#6B6B35",acc:"#B07A0F"},
 };
-const Motif=({s="tulipa",z=1,x=0,y=0,p=1,style})=>{
+const Motif=({s="tulipa",z=1,x=0,y=0,p=1,bare=false,style})=>{
   const S=STY[s]||STY.tulipa;
   const Leaf=({x,y,r=0,k=1,c=S.l1,c2=S.l2,spots})=>(
     <g transform={`translate(${x} ${y}) rotate(${r}) scale(${k})`}>
@@ -301,7 +301,7 @@ const Motif=({s="tulipa",z=1,x=0,y=0,p=1,style})=>{
     </>;
   }
   const w=200/z;
-  return <svg viewBox={`${x} ${y} ${w} ${w}`} preserveAspectRatio="xMidYMid slice" width="100%" height="100%" style={{...style,filter:`saturate(${(.15+.85*p).toFixed(2)})`,transition:"filter .5s"}} aria-hidden="true"><rect x="-60" y="-60" width="320" height="320" fill={S.paper}/>{corpo}{p<1&&<rect x="-60" y="-60" width="320" height="320" fill={S.paper} opacity={((1-p)*.62).toFixed(2)} style={{transition:"opacity .5s"}}/>}</svg>;
+  return <svg viewBox={`${x} ${y} ${w} ${w}`} preserveAspectRatio="xMidYMid slice" width="100%" height="100%" style={{...style,filter:`saturate(${(.15+.85*p).toFixed(2)})`,transition:"filter .5s"}} aria-hidden="true">{!bare&&<rect x="-60" y="-60" width="320" height="320" fill={S.paper}/>}{corpo}{p<1&&<rect x="-60" y="-60" width="320" height="320" fill={S.paper} opacity={((1-p)*.62).toFixed(2)} style={{transition:"opacity .5s"}}/>}</svg>;
 };
 function bgToStyle(bg) {
   if(!bg) return {};
@@ -2819,6 +2819,8 @@ function AppMain({user, onLogout}) {
   const [fPltLote,setFPltLote]=useState({empresa:"",valorTotal:"",horas:"",horaInicio:"",horaFim:"",previsao:"",diasSelecionados:[],mesLote:today().slice(0,7)});
   const [agendaView,setAgendaView]=useState("7");
   const [hoveredWeek,setHoveredWeek]=useState(null);
+  const [agMes,setAgMes]=useState(()=>today().slice(0,7));
+  const [agSel,setAgSel]=useState(()=>today());
   const [agendaInicio,setAgendaInicio]=useState(()=>{
     const hoje=new Date(today()+"T12:00:00");
     hoje.setDate(hoje.getDate()-hoje.getDay());
@@ -5436,75 +5438,163 @@ function AppMain({user, onLogout}) {
         )}
 
         {/* ══ AGENDA ══ */}
-        {tab==="agenda"&&(
+        {tab==="agenda"&&(()=>{
+          const hojeS=today();
+          const accA=STY[palBg.hero.s].acc;
+          const DS=["dom","seg","ter","qua","qui","sex","sáb"], DSL=["DOMINGO","SEGUNDA","TERÇA","QUARTA","QUINTA","SEXTA","SÁBADO"];
+          const MESES=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+          const hd=new Date(hojeS+"T12:00:00");
+          const corEmp=nome=>empresas.find(e=>e.nome===nome)?.cor||C.magenta;
+          const hSem=horasPorSemana.semanaAtual?.horas||0, media=horasPorSemana.mediaHoras||0;
+          const cargaPct=media>0?Math.round(hSem/media*100):(hSem>0?100:0);
+          const prox=[...plantoes].filter(p=>p.data&&p.data>=hojeS).sort((a,b)=>(a.data+(a.horaInicio||"99")).localeCompare(b.data+(b.horaInicio||"99")))[0];
+          const proxD=prox?new Date(prox.data+"T12:00:00"):null;
+          const diasLivres=agendaDias.filter(d=>d.plantoes.length===0&&d.plantoesSemHorario.length===0).length;
+          const mono={fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10,letterSpacing:".12em",textTransform:"uppercase",color:"rgba(29,26,28,.62)"};
+          const Gauge=({pct})=>(<div style={{position:"relative",width:6,height:40,borderRadius:99,background:`linear-gradient(180deg,${accA},${mixHex(accA,PANEL,.6)})`,flexShrink:0}}><i style={{position:"absolute",left:-4,right:-4,top:`${Math.max(4,Math.min(96,100-pct))}%`,height:2,background:"#1D1A1C",display:"block"}}/></div>);
+          const gm=(()=>{const[y,m]=agMes.split("-").map(Number);const prim=new Date(y,m-1,1);const nd=new Date(y,m,0).getDate();return {y,m,off:prim.getDay(),nd};})();
+          const cells=[...Array(gm.off).fill(null),...Array.from({length:gm.nd},(_,i)=>{const ds=`${agMes}-${String(i+1).padStart(2,"0")}`;const ps=plantoes.filter(p=>p.data===ds);return {ds,n:i+1,ps};})];
+          const selPs=plantoes.filter(p=>p.data===agSel).sort((a,b)=>(a.horaInicio||"").localeCompare(b.horaInicio||""));
+          const selD=new Date(agSel+"T12:00:00");
+          const shiftMes=n=>setAgMes(shiftMonth(agMes,n));
+          const btn={background:"transparent",border:"1px solid rgba(29,26,28,.18)",borderRadius:999,width:34,height:34,cursor:"pointer",fontSize:15,color:"#1D1A1C",display:"inline-flex",alignItems:"center",justifyContent:"center"};
+          return (
           <div className="fade">
-            <div className={CARD} style={{marginBottom:14,padding:"16px 18px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:12}}>
-                <div>
-                  <div style={{fontSize:11,fontWeight:500,letterSpacing:".08em",textTransform:"uppercase",color:"rgba(26,18,9,0.55)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>▦ Agenda</div>
-                  <div style={{fontSize:20,fontWeight:300,fontFamily:"'DM Sans',sans-serif",color:"#1A1209"}}>
-                    {fd(agendaDias[0]?.data)} – {fd(agendaDias[agendaDias.length-1]?.data)}
-                  </div>
+            {/* ── Hero: ilustração botânica (mesmo estilo do Início) ── */}
+            <div className="ag-wrap" style={{borderRadius:32,overflow:"hidden",marginBottom:16,background:"#FFFCF4",border:"1px solid rgba(35,21,25,.10)"}}>
+              <div style={{position:"relative",minHeight:isMobile?330:340,padding:14,background:STY[palBg.hero.s].paper,color:"#2A1E14",display:"flex",flexDirection:"column",justifyContent:"space-between"}}>
+                <Motif s={palBg.hero.s} style={{position:"absolute",inset:0,zIndex:0,pointerEvents:"none"}}/>
+                <div style={{position:"relative",zIndex:1,display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                  <div className="goal-pill"><span className="ring"><CalendarDays size={14} strokeWidth={1.6}/></span><span style={{fontSize:12.5,lineHeight:1.15}}><span className="mono" style={{fontSize:9.5,letterSpacing:".12em",textTransform:"uppercase",opacity:.7}}>Hoje</span><br/><b style={{fontWeight:600}}>{DS[hd.getDay()]}, {hd.toLocaleDateString("pt-BR")}</b></span></div>
+                  <button onClick={()=>openM("plt")} className="arrow-btn" style={{width:"auto",padding:"0 18px",borderRadius:999,fontSize:13,fontWeight:700,gap:6,background:PANEL}}><span style={{fontSize:16,lineHeight:1}}>+</span> Plantão</button>
                 </div>
-                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  <button onClick={()=>openM("plt")} style={{display:"flex",alignItems:"center",gap:6,background:"linear-gradient(135deg,#C8235F,#9B1448)",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",boxShadow:"0 3px 10px rgba(232,32,95,0.3)"}}>
-                    <span style={{fontSize:14,lineHeight:1}}>✚</span> Plantão
-                  </button>
-                  <div style={{display:"flex",background:"#EDE8E0",borderRadius:10,padding:3}}>
-                    {[["7","7 dias"],["14","14 dias"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setAgendaView(v)} style={{background:agendaView===v?"#B91D55":"transparent",color:agendaView===v?"#fff":"#5A4A3A",border:"none",borderRadius:8,padding:"7px 12px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>
-                    ))}
+                <div className="goal-panel" style={{position:"relative",zIndex:1,display:"flex",alignItems:"flex-end",justifyContent:"space-between",gap:12,padding:isMobile?"14px 18px 12px":"16px 22px 14px"}}>
+                  <div style={{fontFamily:"'DM Sans',sans-serif",fontWeight:800,fontSize:isMobile?92:112,lineHeight:.82,letterSpacing:"-.06em",color:accA}}>{hd.getDate()}</div>
+                  <div style={{textAlign:"right",fontFamily:"'DM Sans',sans-serif",paddingBottom:4}}>
+                    <div style={{fontSize:isMobile?17:20,fontWeight:800,letterSpacing:".02em"}}>{MESES[hd.getMonth()]}</div>
+                    <div style={{fontSize:isMobile?17:20,fontWeight:500,color:"#9A8468"}}>{hd.getFullYear()}</div>
+                    <div className="mono" style={{fontSize:10,letterSpacing:".14em",marginTop:8,opacity:.7}}>{DSL[hd.getDay()]}</div>
                   </div>
-                  <button onClick={()=>{const d=new Date(agendaInicio+"T12:00:00");d.setDate(d.getDate()-(+agendaView));setAgendaInicio(d.toISOString().slice(0,10));}} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:14}}>‹</button>
-                  <button onClick={()=>{const hoje=new Date(today()+"T12:00:00");hoje.setDate(hoje.getDate()-hoje.getDay());setAgendaInicio(hoje.toISOString().slice(0,10));}} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,padding:"0 10px",height:32,cursor:"pointer",fontSize:11,fontWeight:700,color:"#1A1209"}}>Hoje</button>
-                  <button onClick={()=>{const d=new Date(agendaInicio+"T12:00:00");d.setDate(d.getDate()+(+agendaView));setAgendaInicio(d.toISOString().slice(0,10));}} style={{background:"rgba(0,0,0,0.06)",border:"none",borderRadius:8,width:32,height:32,cursor:"pointer",fontSize:14}}>›</button>
                 </div>
               </div>
+              <div style={{padding:isMobile?"22px 20px 22px":"26px 30px 28px",color:"#1D1A1C"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20}}>
+                  <span style={mono}>Plantões de hoje</span>
+                  <span style={{...mono,marginLeft:"auto"}}>{hd.toLocaleDateString("pt-BR")}</span>
+                </div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:isMobile?"22px 18px":"26px 40px"}}>
+                  <div><div style={mono}>Essa semana</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:8,gap:10}}><span style={{fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?30:38,fontWeight:400,letterSpacing:"-.03em"}}>{hSem}<small style={{fontSize:"45%",opacity:.5,marginLeft:3}}>h</small></span><Gauge pct={media>0?Math.min(100,hSem/(media*1.5)*100):(hSem>0?60:5)}/></div></div>
+                  <div><div style={mono}>Média · 8 semanas</div><div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:8,gap:10}}><span style={{fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?30:38,fontWeight:400,letterSpacing:"-.03em"}}>{media.toFixed(0)}<small style={{fontSize:"45%",opacity:.5,marginLeft:3}}>h</small></span><Gauge pct={50}/></div></div>
+                  <div><div style={mono}>Próximo plantão</div><div style={{marginTop:8,fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?19:23,fontWeight:500,letterSpacing:"-.02em",lineHeight:1.15}}>{prox?<>{prox.data===hojeS?"Hoje":DS[proxD.getDay()]+" "+proxD.getDate()}{prox.horaInicio?<span style={{opacity:.55}}> · {prox.horaInicio}</span>:null}<div style={{fontSize:12.5,fontWeight:500,opacity:.6,marginTop:3,display:"flex",alignItems:"center",gap:6}}><i style={{width:8,height:8,borderRadius:99,background:corEmp(prox.empresa),display:"inline-block"}}/>{prox.empresa}</div></>:<span style={{opacity:.5}}>nenhum agendado</span>}</div></div>
+                  <div><div style={mono}>Dias livres · {agendaView} dias</div><div style={{marginTop:8,fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?30:38,fontWeight:400,letterSpacing:"-.03em"}}>{diasLivres}<small style={{fontSize:"45%",opacity:.5,marginLeft:3}}>de {agendaView}</small></div></div>
+                </div>
+                <div style={{...mono,margin:"26px 0 10px"}}>% carga da semana vs média</div>
+                <div style={{position:"relative",height:isMobile?54:60,borderRadius:16,background:mixHex(accA,PANEL,.86),overflow:"hidden"}}>
+                  <div style={{position:"absolute",left:0,top:0,bottom:0,width:`${Math.min(100,cargaPct)}%`,minWidth:cargaPct>0?60:0,background:`linear-gradient(90deg,${mixHex(accA,PANEL,.55)},${accA})`,borderRadius:16,transition:"width .6s"}}/>
+                  <div style={{position:"relative",height:"100%",display:"flex",alignItems:"center",paddingLeft:18,fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?26:30,letterSpacing:"-.03em"}}>{cargaPct}<small style={{fontSize:"48%",opacity:.45,marginLeft:2}}>%</small></div>
+                </div>
+              </div>
+            </div>
 
-              {/* Grid de calendário */}
-              <div style={{display:"flex",overflowX:"auto"}}>
-                <div style={{width:40,flexShrink:0,paddingTop:34}}>
-                  {Array.from({length:24},(_,h)=>(
-                    <div key={h} style={{height:26,fontSize:8.5,color:"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",textAlign:"right",paddingRight:4,transform:"translateY(-6px)"}}>{String(h).padStart(2,"0")}h</div>
-                  ))}
+            {/* ── Calendário de bolinhas ── */}
+            <div className={CARD} style={{marginBottom:16,padding:isMobile?"22px 18px":"28px 30px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:isMobile?18:24,gap:10}}>
+                <div style={{fontFamily:"'DM Sans',sans-serif",lineHeight:1.05}}>
+                  <div style={{fontSize:isMobile?26:32,fontWeight:800,letterSpacing:"-.03em",color:"#1D1A1C"}}>{MESES[gm.m-1]}</div>
+                  <div style={{fontSize:isMobile?26:32,fontWeight:500,letterSpacing:"-.03em",color:"#9A8468"}}>{gm.y}</div>
                 </div>
-                <div style={{display:"flex",flex:1,minWidth:agendaDias.length*90}}>
-                  {agendaDias.map(dia=>{
-                    const hoje=dia.data===today();
-                    const nomeDia=["dom","seg","ter","qua","qui","sex","sáb"][dia.diaSemana];
-                    return (
-                      <div key={dia.data} style={{flex:1,minWidth:88,borderLeft:"1px solid rgba(0,0,0,0.06)"}}>
-                        <div style={{textAlign:"center",paddingBottom:6,marginBottom:2}}>
-                          <div style={{fontSize:9,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Mono',ui-monospace,monospace",fontWeight:500,textTransform:"uppercase"}}>{nomeDia}</div>
-                          <div style={{width:24,height:24,borderRadius:99,background:hoje?"#B91D55":"transparent",color:hoje?"#fff":"#1A1209",display:"flex",alignItems:"center",justifyContent:"center",margin:"2px auto 0",fontSize:12,fontWeight:700,fontFamily:"'DM Sans',sans-serif"}}>{dia.diaNum}</div>
-                        </div>
-                        {dia.plantoesSemHorario.length>0&&(
-                          <div style={{padding:"0 2px 4px"}}>
-                            {dia.plantoesSemHorario.map(p=>(
-                              <div key={p.id} title={`${p.empresa}${p.horas?" · "+p.horas+"h":""} (sem horário definido) — clique para editar`}
-                                onClick={e=>{e.stopPropagation();openM("plt",p);}}
-                                style={{background:p.cor,opacity:0.85,borderRadius:5,padding:"3px 5px",marginBottom:2,overflow:"hidden",cursor:"pointer"}}>
-                                <div style={{fontSize:8.5,fontWeight:700,color:"#fff",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.empresa}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        <div onClick={()=>{openM("plt");setFPlt(f=>({...f,data:dia.data}));}} title="Clique para adicionar plantão nesse dia"
-                          style={{position:"relative",height:24*26,cursor:"copy",background:"repeating-linear-gradient(to bottom, transparent, transparent 25px, rgba(0,0,0,0.04) 25px, rgba(0,0,0,0.04) 26px)"}}>
-                          {dia.plantoes.map(p=>(
-                            <div key={p.id} title={`${p.empresa} · ${p.horaInicio}–${p.horaFim} — clique para editar`}
-                              onClick={e=>{e.stopPropagation();openM("plt",p);}}
-                              style={{position:"absolute",top:(p.iniMin/1440*24*26),height:Math.max(((p.fimMin-p.iniMin)/1440*24*26),16),left:2,right:2,background:p.cor,opacity:0.88,borderRadius:5,padding:"3px 5px",overflow:"hidden",boxShadow:"0 1px 4px rgba(0,0,0,0.15)",cursor:"pointer"}}>
-                              <div style={{fontSize:8.5,fontWeight:700,color:"#fff",lineHeight:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{p.empresa}</div>
-                              <div style={{fontSize:7.5,color:"rgba(255,255,255,0.85)",fontFamily:"'DM Sans',sans-serif"}}>{p.horaInicio}–{p.horaFim}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div style={{display:"flex",gap:8}}>
+                  <button style={btn} onClick={()=>shiftMes(-1)} aria-label="Mês anterior">‹</button>
+                  <button style={{...btn,width:"auto",padding:"0 14px",fontSize:11.5,fontWeight:700}} onClick={()=>{setAgMes(hojeS.slice(0,7));setAgSel(hojeS);}}>Hoje</button>
+                  <button style={btn} onClick={()=>shiftMes(1)} aria-label="Próximo mês">›</button>
                 </div>
               </div>
+              <div style={{display:isMobile?"block":"grid",gridTemplateColumns:"minmax(0,520px) minmax(0,1fr)",gap:56,alignItems:"start"}}>
+              <div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:isMobile?6:10,marginBottom:10}}>
+                {DS.map(d=><div key={d} style={{...mono,fontSize:isMobile?8.5:9.5,textAlign:"center",letterSpacing:".08em"}}>{d}</div>)}
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:isMobile?6:10}}>
+                {cells.map((c,i)=>{
+                  if(!c)return <div key={"e"+i}/>;
+                  const passado=c.ds<hojeS, ehHoje=c.ds===hojeS, sel=c.ds===agSel, tem=c.ps.length>0;
+                  const cores=[...new Set(c.ps.map(p=>corEmp(p.empresa)))];
+                  let bg=passado?"#1D1A1C":"#DDD5C6", fg=passado?"#F3E8CF":"#9A8F7C";
+                  if(tem){bg=cores.length>1?`linear-gradient(135deg,${cores[0]} 50%,${cores[1]} 50%)`:cores[0];fg="#fff";}
+                  if(ehHoje&&!tem){bg=accA;fg="#fff";}
+                  return (
+                    <div key={c.ds} style={{position:"relative"}}>
+                    {ehHoje&&<svg viewBox="-50 -50 100 100" style={{position:"absolute",left:"-30%",top:"-30%",width:"160%",height:"160%",pointerEvents:"none",overflow:"visible"}} aria-hidden="true">{Array.from({length:10}).map((_,k)=><ellipse key={k} cx="0" cy="-36" rx="9" ry="17" fill={accA} opacity={k%2?.38:.55} transform={`rotate(${k*36})`}/>)}</svg>}
+                    <button onClick={()=>setAgSel(c.ds)} title={tem?c.ps.map(p=>p.empresa+(p.horaInicio?" · "+p.horaInicio+"–"+p.horaFim:"")).join("\n"):"Sem plantão"}
+                      style={{aspectRatio:"1",width:"100%",borderRadius:"50%",border:"none",background:bg,color:fg,fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?10.5:12.5,fontWeight:600,cursor:"pointer",padding:0,position:"relative",outline:sel?"2px solid #1D1A1C":"none",outlineOffset:3,boxShadow:ehHoje&&tem?"0 0 0 3px "+accA:"none",transition:"transform .15s"}}>
+                      {c.n}
+                    </button></div>);
+                })}
+              </div>
+              <div style={{display:"flex",gap:16,flexWrap:"wrap",marginTop:20,...mono,fontSize:9.5}}>
+                <span style={{display:"flex",alignItems:"center",gap:6}}><i style={{width:9,height:9,borderRadius:99,background:"#1D1A1C",display:"inline-block"}}/>Passou</span>
+                <span style={{display:"flex",alignItems:"center",gap:6}}><i style={{width:9,height:9,borderRadius:99,background:accA,display:"inline-block"}}/>Hoje</span>
+                <span style={{display:"flex",alignItems:"center",gap:6}}><i style={{width:9,height:9,borderRadius:99,background:"linear-gradient(135deg,#B8643A,#6F7B3C)",display:"inline-block"}}/>Plantão (cor da empresa)</span>
+                <span style={{display:"flex",alignItems:"center",gap:6}}><i style={{width:9,height:9,borderRadius:99,background:"#DDD5C6",display:"inline-block"}}/>Livre</span>
+              </div>
+              </div>
+              {/* dia selecionado */}
+              <div style={isMobile?{marginTop:22,paddingTop:20,borderTop:"1px solid rgba(29,26,28,.1)"}:{paddingTop:6}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,gap:10}}>
+                  <div style={{display:"flex",alignItems:"baseline",gap:10}}>
+                    <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:38,fontWeight:800,letterSpacing:"-.05em",color:accA,lineHeight:1}}>{selD.getDate()}</span>
+                    <span style={mono}>{DSL[selD.getDay()]} · {MESES[selD.getMonth()].slice(0,3)}</span>
+                  </div>
+                  <button onClick={()=>{openM("plt");setFPlt(f=>({...f,data:agSel}));}} style={{background:"#1D1A1C",color:"#FBF4E2",border:"none",borderRadius:999,padding:"9px 16px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>+ Plantão neste dia</button>
+                </div>
+                {selPs.length===0?<div style={{display:"flex",alignItems:"center",gap:16}}><div style={{width:96,height:96,borderRadius:24,overflow:"hidden",flexShrink:0}}>{(agSel.slice(-2)|0)%2?<Motif s="manteiga" z={1.5} x={22} y={0}/>:<Motif s="tulipa" z={1.55} x={0} y={36}/>}</div><div style={{fontSize:13.5,lineHeight:1.4,color:"rgba(29,26,28,.6)",fontFamily:"'DM Sans',sans-serif"}}>Dia livre.<br/>Sem plantões agendados.</div></div>:selPs.map(p=>(
+                  <div key={p.id} onClick={()=>openM("plt",p)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderBottom:"1px solid rgba(29,26,28,.07)",cursor:"pointer"}}>
+                    <i style={{width:12,height:12,borderRadius:99,background:corEmp(p.empresa),flexShrink:0}}/>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:14,fontWeight:600,fontFamily:"'DM Sans',sans-serif"}}>{p.empresa}</div>
+                      <div style={{...mono,marginTop:3,fontSize:9.5}}>{p.horaInicio&&p.horaFim?`${p.horaInicio} – ${p.horaFim}`:"sem horário"}{p.horas?` · ${p.horas}h`:""}</div>
+                    </div>
+                    <div className="num" style={{fontSize:16}}>{R(+p.valorTotal||0)}</div>
+                  </div>))}
+              </div>
+              </div>
+            </div>
+
+            {/* ── Próximos dias: linhas de 24h ── */}
+            <div className={CARD} style={{marginBottom:16,padding:isMobile?"22px 18px":"26px 30px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10,marginBottom:18}}>
+                <div>
+                  <div style={mono}>Linha do tempo</div>
+                  <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?19:22,fontWeight:700,letterSpacing:"-.02em",marginTop:4}}>{fd(agendaDias[0]?.data)} – {fd(agendaDias[agendaDias.length-1]?.data)}</div>
+                </div>
+                <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                  <div style={{display:"flex",background:"rgba(29,26,28,.07)",borderRadius:999,padding:3}}>
+                    {[["7","7 dias"],["14","14 dias"]].map(([v,l])=><button key={v} onClick={()=>setAgendaView(v)} style={{background:agendaView===v?"#1D1A1C":"transparent",color:agendaView===v?"#FBF4E2":"#1D1A1C",border:"none",borderRadius:999,padding:"7px 13px",fontSize:11.5,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>{l}</button>)}
+                  </div>
+                  <button style={btn} onClick={()=>{const d=new Date(agendaInicio+"T12:00:00");d.setDate(d.getDate()-(+agendaView));setAgendaInicio(d.toISOString().slice(0,10));}}>‹</button>
+                  <button style={{...btn,width:"auto",padding:"0 14px",fontSize:11.5,fontWeight:700}} onClick={()=>{const h=new Date(hojeS+"T12:00:00");h.setDate(h.getDate()-h.getDay());setAgendaInicio(h.toISOString().slice(0,10));}}>Hoje</button>
+                  <button style={btn} onClick={()=>{const d=new Date(agendaInicio+"T12:00:00");d.setDate(d.getDate()+(+agendaView));setAgendaInicio(d.toISOString().slice(0,10));}}>›</button>
+                </div>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:(isMobile?"46px":"64px")+" 1fr "+(isMobile?"34px":"44px"),gap:isMobile?8:14,alignItems:"center",marginBottom:6}}>
+                <span/><div style={{display:"flex",justifyContent:"space-between",...mono,fontSize:8.5}}>{["00","06","12","18","24"].map(h=><span key={h}>{h}</span>)}</div><span/>
+              </div>
+              {agendaDias.map(dia=>{
+                const ehHoje=dia.data===hojeS, hrs=dia.plantoes.reduce((s,p)=>s+(p.fimMin-p.iniMin)/60,0);
+                return (
+                  <div key={dia.data} onClick={()=>{setAgSel(dia.data);setAgMes(dia.data.slice(0,7));}} style={{display:"grid",gridTemplateColumns:(isMobile?"46px":"64px")+" 1fr "+(isMobile?"34px":"44px"),gap:isMobile?8:14,alignItems:"center",padding:"7px 0",cursor:"pointer"}}>
+                    <div style={{display:"flex",alignItems:"baseline",gap:5}}>
+                      <b style={{fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?17:20,fontWeight:800,letterSpacing:"-.04em",color:ehHoje?accA:"#1D1A1C"}}>{dia.diaNum}</b>
+                      <span style={{...mono,fontSize:9,color:ehHoje?accA:undefined}}>{DS[dia.diaSemana]}</span>
+                    </div>
+                    <div style={{position:"relative",height:18,borderRadius:99,background:"#E6DFD0",overflow:"hidden"}}>
+                      {[25,50,75].map(l=><i key={l} style={{position:"absolute",left:l+"%",top:0,bottom:0,width:1,background:"rgba(29,26,28,.12)"}}/>)}
+                      {dia.plantoes.map(p=><i key={p.id} onClick={e=>{e.stopPropagation();openM("plt",p);}} title={`${p.empresa} · ${p.horaInicio}–${p.horaFim}`} style={{position:"absolute",top:2,bottom:2,left:(p.iniMin/1440*100)+"%",width:Math.max((p.fimMin-p.iniMin)/1440*100,2.5)+"%",background:p.cor,borderRadius:99,display:"block"}}/>)}
+                      {dia.plantoesSemHorario.length>0&&<span style={{position:"absolute",right:6,top:0,bottom:0,display:"flex",alignItems:"center",gap:3}}>{dia.plantoesSemHorario.map(p=><i key={p.id} title={p.empresa+" (sem horário)"} style={{width:9,height:9,borderRadius:99,background:p.cor,display:"block",border:"1.5px solid #E6DFD0"}}/>)}</span>}
+                    </div>
+                    <span className="mono" style={{fontSize:11,textAlign:"right",color:"rgba(29,26,28,.6)"}}>{hrs>0?Math.round(hrs)+"h":""}</span>
+                  </div>);
+              })}
             </div>
 
             {/* Horas trabalhadas por semana */}
@@ -5601,7 +5691,8 @@ function AppMain({user, onLogout}) {
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* ══ BALANÇO ══ */}
         {tab==="balanco"&&(
