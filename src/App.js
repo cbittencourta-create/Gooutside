@@ -980,14 +980,15 @@ const EST_SEED=[
 
 // ── Alternador entre mini-apps (Finanças ⇄ Estudos) ──
 function AppSwitch({atual,onTrocar}){
-  const itens=[["fin","Finanças","◐"],["est","Estudos","✦"]];
+  const itens=[["fin","Finanças","#8B2B3A"],["est","Estudos","#3E5C8A"],["idi","Idiomas","#B8832A"]];
   const idx=itens.findIndex(i=>i[0]===atual);
+  const estreito=typeof window!=="undefined"&&window.innerWidth<400;
   return (
-    <div role="tablist" aria-label="Trocar de aplicativo" style={{position:"relative",display:"inline-grid",gridTemplateColumns:"1fr 1fr",background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.3)",borderRadius:999,padding:3,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
-      <i style={{position:"absolute",top:3,bottom:3,left:3,width:"calc(50% - 3px)",borderRadius:999,background:"#FBF4E2",boxShadow:"0 6px 18px -8px rgba(0,0,0,.55)",transform:`translateX(${idx*100}%)`,transition:"transform .45s cubic-bezier(.5,0,.15,1)"}}/>
-      {itens.map(([id,l,ic])=>(
-        <button key={id} role="tab" aria-selected={id===atual} onClick={()=>onTrocar(id)} style={{position:"relative",zIndex:1,height:34,minHeight:34,padding:"0 14px",border:"none",background:"transparent",cursor:"pointer",borderRadius:999,fontFamily:"'DM Sans',sans-serif",fontSize:12.5,fontWeight:id===atual?700:500,color:id===atual?"#15251E":"rgba(255,255,255,.88)",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,transition:"color .3s",whiteSpace:"nowrap"}}>
-          <span style={{width:6,height:6,borderRadius:"50%",background:id===atual?(id==="est"?"#3E5C8A":"#8B2B3A"):"rgba(255,255,255,.55)",transition:"background .3s"}}/>{l}
+    <div role="tablist" aria-label="Trocar de aplicativo" style={{position:"relative",display:"inline-grid",gridTemplateColumns:"1fr 1fr 1fr",background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.3)",borderRadius:999,padding:3,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+      <i style={{position:"absolute",top:3,bottom:3,left:3,width:"calc((100% - 6px) / 3)",borderRadius:999,background:"#FBF4E2",boxShadow:"0 6px 18px -8px rgba(0,0,0,.55)",transform:`translateX(${idx*100}%)`,transition:"transform .45s cubic-bezier(.5,0,.15,1)"}}/>
+      {itens.map(([id,l,cor])=>(
+        <button key={id} role="tab" aria-selected={id===atual} onClick={()=>onTrocar(id)} style={{position:"relative",zIndex:1,height:34,minHeight:34,padding:estreito?"0 6px":"0 9px",border:"none",background:"transparent",cursor:"pointer",borderRadius:999,fontFamily:"'DM Sans',sans-serif",fontSize:estreito?11:12,fontWeight:id===atual?700:500,color:id===atual?"#15251E":"rgba(255,255,255,.88)",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:estreito?4:5,transition:"color .3s",whiteSpace:"nowrap"}}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:id===atual?cor:"rgba(255,255,255,.55)",transition:"background .3s"}}/>{l}
         </button>))}
     </div>);
 }
@@ -1293,6 +1294,439 @@ function EstudosApp({userId,isMobile,onMenu,onTrocar}){
               <span style={{...serif,fontSize:22}}>{s.min}<small style={{fontSize:"55%",opacity:.55}}> min</small></span>
               <button onClick={()=>setSess(sess.filter(x=>x.id!==s.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(21,37,30,.35)"}}>×</button>
             </div>);})}
+        </Card>
+      </>)}
+
+      </div></div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// IDIOMAS — mini-plataforma de alemão e francês dentro do Velara
+// ═══════════════════════════════════════════════════════════════════
+const IDI_INK="#2A1E14", IDI_CREAM="#F6EBD3", IDI_PAPER="#FCF6E8", IDI_GOLD="#D9A441", IDI_BLUE="#6F86D6", IDI_RED="#C4503A";
+const NIVEIS=["A1","A2","B1","B2","C1","C2"];
+const HAB=[["ouvir","Ouvir"],["falar","Falar"],["ler","Ler"],["escrever","Escrever"],["gramatica","Gramática"],["vocab","Vocabulário"]];
+const IDI_TIPOS=[...HAB,["aula","Aula"]];
+const LEIT=[1,3,7,14,30,60];
+const IDI_LANGS=[
+  {id:"de",nome:"Alemão",cod:"DE",cor:IDI_GOLD,nivel:"B1",alvo:"B2",prova:"",metaSem:4},
+  {id:"fr",nome:"Francês",cod:"FR",cor:IDI_BLUE,nivel:"A2",alvo:"B1",prova:"",metaSem:3},
+];
+
+function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
+  const [cfg,setCfg]=useLS("v5_idi_cfg",IDI_LANGS,userId);
+  const [log,setLog]=useLS("v5_idi_log",[],userId);
+  const [vocab,setVocab]=useLS("v5_idi_voc",[],userId);
+  const [rv,setRv]=useLS("v5_idi_rv",{},userId);
+  const [aval,setAval]=useLS("v5_idi_aval",[],userId);
+  const [marcos,setMarcos]=useLS("v5_idi_marcos",[],userId);
+  const [sel,setSel]=useState("all");
+  const [sub,setSub]=useState("hoje");
+  const [editL,setEditL]=useState(null);
+  const [fL,setFL]=useState(null);
+  const [fp,setFp]=useState({lang:"",tipo:"ouvir",min:"",nota:"",data:""});
+  const [fw,setFw]=useState({lang:"",termo:"",trad:"",ex:""});
+  const [busca,setBusca]=useState("");
+  const [verTodas,setVerTodas]=useState(false);
+  const [rs,setRs]=useState(null);
+  const [avLang,setAvLang]=useState("");
+  const [avN,setAvN]=useState({ouvir:3,falar:3,ler:3,escrever:3,gramatica:3,vocab:3});
+  const [fm,setFm]=useState({lang:"",titulo:"",data:""});
+
+  const hoje=today();
+  const L=id=>cfg.find(l=>l.id===id)||{id,nome:id,cod:String(id).toUpperCase(),cor:"#999"};
+  const inSel=id=>sel==="all"||sel===id;
+  const ativas=sel==="all"?cfg:cfg.filter(l=>l.id===sel);
+  const defLang=sel!=="all"?sel:(cfg[0]?.id||"");
+  const iniSemD=new Date(hoje+"T12:00:00"); iniSemD.setDate(iniSemD.getDate()-iniSemD.getDay());
+  const iniSem=iniSemD.toISOString().slice(0,10);
+  const logSel=log.filter(s=>inSel(s.lang));
+  const minSem=logSel.filter(s=>s.data>=iniSem).reduce((a,s)=>a+(+s.min||0),0);
+  const hSem=minSem/60;
+  const metaTot=ativas.reduce((a,l)=>a+(+l.metaSem||0),0);
+  const vocSel=vocab.filter(v=>inSel(v.lang));
+  const due=vocSel.filter(v=>v.prox<=hoje).sort((a,b)=>a.prox.localeCompare(b.prox));
+  const dominadas=vocSel.filter(v=>(v.box||0)>=4).length;
+  const ativos=new Set([...logSel.map(s=>s.data),...Object.entries(rv).filter(([d,o])=>ativas.some(l=>o[l.id]&&(o[l.id].ok+o[l.id].er)>0)).map(([d])=>d)]);
+  let streak=0, dd=hoje; if(!ativos.has(dd))dd=addDays(dd,-1); while(ativos.has(dd)){streak++;dd=addDays(dd,-1);}
+  const semana=Array.from({length:7},(_,i)=>{const ds=addDays(iniSem,i);const min=logSel.filter(s=>s.data===ds).reduce((a,s)=>a+(+s.min||0),0);return {ds,min,ativo:ativos.has(ds),ehHoje:ds===hoje,lbl:["D","S","T","Q","Q","S","S"][i]};});
+  const diasAte=p=>p?Math.ceil((new Date(p+"T12:00:00")-new Date(hoje+"T12:00:00"))/86400000):null;
+  const unica=sel!=="all"?L(sel):null;
+  const dProva=unica?diasAte(unica.prova):null;
+  const okTot=Object.values(rv).reduce((a,o)=>a+ativas.reduce((b,l)=>b+((o[l.id]||{}).ok||0),0),0);
+  const erTot=Object.values(rv).reduce((a,o)=>a+ativas.reduce((b,l)=>b+((o[l.id]||{}).er||0),0),0);
+  const acertoV=okTot+erTot>0?Math.round(okTot/(okTot+erTot)*100):null;
+
+  const addPratica=()=>{
+    const min=+fp.min; const lang=fp.lang||defLang;
+    if(!(min>0)||!lang)return;
+    setLog([{id:uid(),lang,tipo:fp.tipo,min,nota:fp.nota.trim(),data:fp.data||hoje},...log]);
+    setFp({...fp,min:"",nota:""});
+  };
+  const addPalavra=()=>{
+    const lang=fw.lang||defLang; const termo=fw.termo.trim(); const trad=fw.trad.trim();
+    if(!termo||!trad||!lang)return;
+    setVocab([{id:uid(),lang,termo,trad,ex:fw.ex.trim(),criada:hoje,box:0,prox:hoje,ok:0,er:0},...vocab]);
+    setFw({...fw,termo:"",trad:"",ex:""});
+  };
+  const iniciarRev=()=>{ if(due.length===0)return; setRs({fila:due.map(v=>v.id),i:0,show:false,ok:0,er:0,rep:{},fim:false}); };
+  const responder=ok=>{
+    if(!rs||rs.fim)return;
+    const id=rs.fila[rs.i]; const w=vocab.find(v=>v.id===id);
+    if(!w){setRs({...rs,i:rs.i+1,show:false,fim:rs.i+1>=rs.fila.length});return;}
+    const b=w.box||0;
+    setVocab(vocab.map(v=>v.id!==id?v:{...v,box:ok?Math.min(b+1,5):0,prox:ok?addDays(hoje,LEIT[Math.min(b,5)]):addDays(hoje,1),ok:(v.ok||0)+(ok?1:0),er:(v.er||0)+(ok?0:1)}));
+    const dia=rv[hoje]||{}; const c=dia[w.lang]||{ok:0,er:0};
+    setRv({...rv,[hoje]:{...dia,[w.lang]:{ok:c.ok+(ok?1:0),er:c.er+(ok?0:1)}}});
+    const fila=(!ok&&!rs.rep[id])?[...rs.fila,id]:rs.fila;
+    const prox=rs.i+1;
+    setRs({...rs,fila,i:prox,show:false,ok:rs.ok+(ok?1:0),er:rs.er+(ok?0:1),rep:ok?rs.rep:{...rs.rep,[id]:1},fim:prox>=fila.length});
+  };
+  const abrirEdit=l=>{setFL({nivel:l.nivel,alvo:l.alvo,prova:l.prova||"",metaSem:l.metaSem});setEditL(l.id);};
+  const salvarEdit=()=>{
+    const l=L(editL);
+    setCfg(cfg.map(x=>x.id!==editL?x:{...x,nivel:fL.nivel,alvo:fL.alvo,prova:fL.prova,metaSem:+fL.metaSem||0}));
+    if(fL.nivel!==l.nivel)setMarcos([{id:uid(),lang:editL,data:hoje,titulo:"Nível "+fL.nivel,tipo:"nivel"},...marcos]);
+    setEditL(null);
+  };
+  const subirNivel=l=>{
+    const i=NIVEIS.indexOf(l.nivel); if(i<0||i>=NIVEIS.length-1)return;
+    const n=NIVEIS[i+1];
+    setCfg(cfg.map(x=>x.id!==l.id?x:{...x,nivel:n}));
+    setMarcos([{id:uid(),lang:l.id,data:hoje,titulo:"Nível "+n+" atingido",tipo:"nivel"},...marcos]);
+  };
+  const avLangAtual=avLang||defLang;
+  const avsDe=id=>aval.filter(a=>a.lang===id).sort((a,b)=>b.data.localeCompare(a.data));
+  const trocaAvLang=id=>{setAvLang(id);const u=avsDe(id)[0];setAvN(u?{...u.notas}:{ouvir:3,falar:3,ler:3,escrever:3,gramatica:3,vocab:3});};
+  const salvarAval=()=>{if(!avLangAtual)return;setAval([{id:uid(),lang:avLangAtual,data:hoje,notas:{...avN}},...aval]);};
+  const addMarco=()=>{const t=fm.titulo.trim();const lang=fm.lang||defLang;if(!t||!lang)return;setMarcos([{id:uid(),lang,data:fm.data||hoje,titulo:t,tipo:"outro"},...marcos]);setFm({...fm,titulo:""});};
+
+  const lab={fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10,letterSpacing:".12em",textTransform:"uppercase",color:"rgba(42,30,20,.6)"};
+  const serif={fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,letterSpacing:"-.03em"};
+  const chipBtn=ativo=>({background:ativo?IDI_CREAM:"rgba(246,235,211,.1)",color:ativo?IDI_INK:"rgba(246,235,211,.88)",border:"1px solid "+(ativo?IDI_CREAM:"rgba(246,235,211,.3)"),borderRadius:999,padding:"0 16px",height:36,fontSize:12.5,fontWeight:ativo?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'DM Sans',sans-serif",display:"inline-flex",alignItems:"center",gap:7});
+  const inp={background:"#fff",border:"1px solid rgba(42,30,20,.18)",borderRadius:12,padding:"11px 14px",fontSize:14,fontFamily:"'DM Sans',sans-serif",color:IDI_INK,width:"100%",minWidth:0,outline:"none"};
+  const btnP={background:IDI_INK,color:IDI_CREAM,border:"none",borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
+  const btnS={background:"transparent",color:IDI_INK,border:"1px solid rgba(42,30,20,.25)",borderRadius:999,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
+  const Card=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(42,30,20,.1)",borderRadius:24,padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  const Titulo=({k,t,dir})=><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,marginBottom:18}}><div><div style={lab}>{k}</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:6,lineHeight:1,color:IDI_INK}}>{t}</div></div>{dir}</div>;
+  const Vazio=({children})=><div style={{fontSize:14,lineHeight:1.45,color:"rgba(42,30,20,.62)"}}>{children}</div>;
+  const Pick=({val,set,opts})=>(
+    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{opts.map(([id,l,cor])=>{const on=val===id;return (
+      <button key={id} onClick={()=>set(id)} style={{height:36,padding:"0 14px",borderRadius:999,border:"1px solid "+(on?(cor||IDI_INK):"rgba(42,30,20,.22)"),background:on?(cor||IDI_INK):"transparent",color:on?(cor?IDI_INK:IDI_CREAM):IDI_INK,fontSize:12.5,fontWeight:on?700:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>{cor&&!on&&<i style={{width:7,height:7,borderRadius:"50%",background:cor}}/>}{l}</button>);})}</div>);
+  const langOpts=cfg.map(l=>[l.id,l.nome,l.cor]);
+  const Hist=({lista,cor})=>lista.map(s=>(
+    <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(42,30,20,.08)"}}>
+      <i style={{width:10,height:10,borderRadius:"50%",background:L(s.lang).cor,flexShrink:0}}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:14.5,fontWeight:600}}>{L(s.lang).nome} · {(IDI_TIPOS.find(t=>t[0]===s.tipo)||[0,s.tipo])[1]}</div>
+        <div style={{...lab,fontSize:9.5,marginTop:3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{fd(s.data)}{s.nota?" · "+s.nota:""}</div>
+      </div>
+      <span style={{...serif,fontSize:22}}>{s.min}<small style={{fontSize:"55%",opacity:.55}}> min</small></span>
+      <button onClick={()=>setLog(log.filter(x=>x.id!==s.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(42,30,20,.35)"}}>×</button>
+    </div>));
+  const tiles=[
+    {l:"Palavras hoje",v:String(due.length),u:due.length===1?"para revisar":"para revisar",s:"tulipa",z:1.5,x:20,y:30,to:"palavras"},
+    {l:"Horas na semana",v:hSem.toFixed(1).replace(".0",""),u:"h de "+metaTot+"h",s:"manteiga",z:1.4,x:40,y:20,to:"pratica"},
+    {l:"Vocabulário",v:String(vocSel.length),u:dominadas+" dominadas",s:"noite",z:1.5,x:10,y:50,to:"palavras"},
+    {l:"Sequência",v:String(streak),u:streak===1?"dia seguido":"dias seguidos",s:"veludo",z:1.4,x:30,y:20,to:"evol"},
+  ];
+  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(due.length?" · "+due.length:"")],["evol","Evolução"]];
+  const nomeSel=sel==="all"?cfg.map(l=>l.nome+" "+l.nivel).join(" · "):`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
+
+  // Evolução
+  const semanas=Array.from({length:8},(_,k)=>{const ini=addDays(iniSem,-7*(7-k));const fim=addDays(ini,6);return {ini,fim,por:ativas.map(l=>({l,min:log.filter(s=>s.lang===l.id&&s.data>=ini&&s.data<=fim).reduce((a,s)=>a+(+s.min||0),0)}))};});
+  const maxSem=Math.max(60,...semanas.map(w=>w.por.reduce((a,x)=>a+x.min,0)));
+  const serieV=ativas.map(l=>({l,pts:semanas.map(w=>vocab.filter(v=>v.lang===l.id&&v.criada<=w.fim).length)}));
+  const maxV=Math.max(5,...serieV.flatMap(s=>s.pts));
+  const ult30=addDays(hoje,-29);
+  const porTipo=IDI_TIPOS.map(([id,n])=>({id,n,min:logSel.filter(s=>s.tipo===id&&s.data>=ult30).reduce((a,s)=>a+(+s.min||0),0)}));
+  const maxTipo=Math.max(1,...porTipo.map(t=>t.min));
+  const avs=avsDe(avLangAtual); const avUlt=avs[0]?.notas, avAnt=avs[1]?.notas;
+  const marcosSel=marcos.filter(m=>inSel(m.lang)).sort((a,b)=>b.data.localeCompare(a.data));
+  const palavrasLista=vocSel.filter(v=>!busca||(v.termo+" "+v.trad).toLowerCase().includes(busca.toLowerCase()));
+  const cur=rs&&!rs.fim?vocab.find(v=>v.id===rs.fila[rs.i]):null;
+
+  return (
+    <div className="idi" style={{minHeight:"100vh",background:IDI_INK,position:"relative",zIndex:1,color:IDI_INK,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
+      <style>{`
+        .idi .idi-hero{position:relative;overflow:hidden;background:${IDI_INK};color:${IDI_CREAM}}
+        .idi .idi-scrim{position:absolute;inset:0;background:linear-gradient(95deg,rgba(32,21,12,.96) 0%,rgba(32,21,12,.8) 45%,rgba(32,21,12,.28) 100%)}
+        .idi .idi-in{position:relative;max-width:1100px;margin:0 auto;padding:${isMobile?"18px 18px 54px":"26px 28px 62px"}}
+        .idi .idi-sheet{position:relative;background:${IDI_CREAM};border-radius:30px 30px 0 0;margin-top:-28px;min-height:70vh;padding:${isMobile?"26px 14px 110px":"34px 28px 110px"}}
+        .idi .idi-wrap{max-width:1100px;margin:0 auto}
+        .idi .idi-grid4{display:grid;grid-template-columns:repeat(${isMobile?2:4},1fr);gap:14px;margin-bottom:16px}
+        .idi .idi-grid2{display:grid;grid-template-columns:${isMobile?"1fr":"1fr 1fr"};gap:16px}
+        .idi .idi-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+        .idi .idi-row::-webkit-scrollbar{display:none}
+        .idi input:focus,.idi select:focus{border-color:${IDI_INK}!important}
+        .idi input[type=range]{accent-color:${IDI_INK};width:100%}
+        .idi button:active{transform:scale(.98)}
+      `}</style>
+      <div className="idi-hero">
+        <Motif s="manteiga" z={1.2} x={45} y={15} style={{position:"absolute",inset:0,opacity:.95}}/>
+        <div className="idi-scrim"/>
+        <div className="idi-in">
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:isMobile?22:30}}>
+            <button onClick={onMenu} aria-label="Abrir menu" style={{background:"rgba(246,235,211,.12)",border:"1px solid rgba(246,235,211,.3)",borderRadius:99,width:40,height:40,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5}}>{[0,1,2].map(i=><i key={i} style={{width:16,height:1.5,background:IDI_CREAM,display:"block"}}/>)}</button>
+            <AppSwitch atual="idi" onTrocar={onTrocar}/>
+            <span style={{width:40,height:40}}/>
+          </div>
+          <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".16em",textTransform:"uppercase",opacity:.75,marginBottom:6,lineHeight:1.5}}>{nomeSel}</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:14,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?104:150,lineHeight:.85,color:IDI_CREAM}}>{streak}</span><span style={{...serif,fontSize:isMobile?22:30,opacity:.85}}>{streak===1?"dia":"dias"}<br/>de prática</span></div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginTop:20}}>
+            <div style={{width:isMobile?150:200,height:6,borderRadius:99,background:"rgba(246,235,211,.2)",overflow:"hidden"}}><div style={{width:Math.min(100,metaTot>0?hSem/metaTot*100:0)+"%",height:"100%",background:IDI_GOLD,borderRadius:99,transition:"width .5s"}}/></div>
+            <span style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".1em",opacity:.85}}>{hSem.toFixed(1).replace(".0","")}H DE {metaTot}H NA SEMANA</span>
+          </div>
+          <div className="idi-row" style={{marginTop:20}}>
+            {[["all","Todos",null],...cfg.map(l=>[l.id,l.nome,l.cor])].map(([id,l,cor])=><button key={id} onClick={()=>{setSel(id);setAvLang("");setRs(null);}} style={{...chipBtn(sel===id),height:32,padding:"0 14px",fontSize:12}}>{cor&&<i style={{width:7,height:7,borderRadius:"50%",background:cor}}/>}{l}</button>)}
+          </div>
+          <div className="idi-row" style={{marginTop:12}}>{subs.map(([id,l])=><button key={id} onClick={()=>setSub(id)} style={chipBtn(sub===id)}>{l}</button>)}</div>
+        </div>
+      </div>
+
+      <div className="idi-sheet"><div className="idi-wrap">
+
+      {editL&&fL&&(
+        <Card>
+          <Titulo k="Configuração" t={L(editL).nome}/>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:12,marginBottom:16}}>
+            <div><div style={{...lab,marginBottom:6}}>Nível atual</div><select style={inp} value={fL.nivel} onChange={e=>setFL({...fL,nivel:e.target.value})}>{NIVEIS.map(n=><option key={n}>{n}</option>)}</select></div>
+            <div><div style={{...lab,marginBottom:6}}>Meta de nível</div><select style={inp} value={fL.alvo} onChange={e=>setFL({...fL,alvo:e.target.value})}>{NIVEIS.map(n=><option key={n}>{n}</option>)}</select></div>
+            <div><div style={{...lab,marginBottom:6}}>Data da prova</div><input style={inp} type="date" value={fL.prova} onChange={e=>setFL({...fL,prova:e.target.value})}/></div>
+            <div><div style={{...lab,marginBottom:6}}>Meta (h/semana)</div><input style={inp} type="number" min="0" value={fL.metaSem} onChange={e=>setFL({...fL,metaSem:e.target.value})}/></div>
+          </div>
+          <div style={{display:"flex",gap:10}}><button style={btnP} onClick={salvarEdit}>Salvar</button><button style={btnS} onClick={()=>setEditL(null)}>Cancelar</button></div>
+        </Card>)}
+
+      {/* ═ HOJE ═ */}
+      {sub==="hoje"&&(<>
+        <div className="idi-grid4">
+          {tiles.map(t=>(
+            <div key={t.l} className="bento-tile" onClick={()=>setSub(t.to)} style={{background:STY[t.s].paper,cursor:"pointer",minHeight:isMobile?172:200}}>
+              <Motif s={t.s} z={t.z} x={t.x} y={t.y} style={{position:"absolute",inset:0,zIndex:0,pointerEvents:"none"}}/>
+              <div className="tile-panel" style={{marginTop:"auto"}}>
+                <div style={{...lab,fontSize:9.5,color:"rgba(42,30,20,.65)"}}>{t.l}</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:6,marginTop:6,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?34:42,lineHeight:1,color:IDI_INK}}>{t.v}</span><span style={{fontSize:11.5,opacity:.6}}>{t.u}</span></div>
+              </div>
+            </div>))}
+        </div>
+        <div className="idi-grid2">
+          <Card>
+            <Titulo k="Níveis" t="Onde você está"/>
+            {ativas.map((l,k)=>{
+              const iN=NIVEIS.indexOf(l.nivel), iA=NIVEIS.indexOf(l.alvo);
+              const mSem=log.filter(s=>s.lang===l.id&&s.data>=iniSem).reduce((a,s)=>a+(+s.min||0),0)/60;
+              const dp=diasAte(l.prova);
+              return (
+                <div key={l.id} style={{padding:"16px 0 "+(k===ativas.length-1?0:16)+"px",borderTop:k===0?"none":"1px solid rgba(42,30,20,.08)"}}>
+                  <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:10}}>
+                    <div style={{display:"flex",alignItems:"center",gap:10}}><i style={{width:12,height:12,borderRadius:"50%",background:l.cor}}/><span style={{...serif,fontSize:isMobile?24:28}}>{l.nome}</span></div>
+                    <span style={{...serif,fontSize:isMobile?22:26}}>{l.nivel}<small style={{opacity:.45}}> → {l.alvo}</small></span>
+                  </div>
+                  <div style={{display:"flex",gap:4,marginTop:14}}>{NIVEIS.map((n,i)=><div key={n} style={{flex:1}}><div style={{height:9,borderRadius:99,background:i<=iN?l.cor:"rgba(42,30,20,.1)",boxShadow:i===iA?"0 0 0 2px "+IDI_PAPER+", 0 0 0 3.5px "+IDI_INK:"none"}}/><div style={{...lab,fontSize:9,marginTop:6,textAlign:"center",color:i===iN?IDI_INK:undefined,fontWeight:i===iN?700:400}}>{n}</div></div>)}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginTop:14}}>
+                    <div style={{flex:1,height:6,borderRadius:99,background:"rgba(42,30,20,.1)",overflow:"hidden"}}><div style={{width:Math.min(100,l.metaSem>0?mSem/l.metaSem*100:0)+"%",height:"100%",background:l.cor,borderRadius:99}}/></div>
+                    <span style={{...lab,fontSize:10}}>{mSem.toFixed(1).replace(".0","")}/{l.metaSem}h semana</span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginTop:14,flexWrap:"wrap"}}>
+                    {iN<NIVEIS.length-1&&<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>subirNivel(l)}>Subi para {NIVEIS[iN+1]}</button>}
+                    <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>abrirEdit(l)}>Editar metas</button>
+                    {dp!==null&&dp>=0&&<span style={{...lab,marginLeft:"auto",color:IDI_INK,fontWeight:700}}>prova em {dp} {dp===1?"dia":"dias"}</span>}
+                  </div>
+                </div>);})}
+          </Card>
+          <Card>
+            <Titulo k="Memória" t="Palavras de hoje" dir={due.length>0?<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>{setSub("palavras");iniciarRev();}}>Revisar</button>:null}/>
+            {due.length===0
+              ? <div style={{display:"flex",alignItems:"center",gap:16}}><div style={{width:84,height:84,borderRadius:22,overflow:"hidden",flexShrink:0}}><Motif s="manteiga" z={1.55} x={0} y={36}/></div><Vazio>{vocSel.length===0?"Nenhuma palavra ainda. Cadastre em Palavras e elas voltam na hora certa.":"Nada para revisar hoje. Volte amanhã ou adicione palavras novas."}</Vazio></div>
+              : due.slice(0,6).map(v=>(
+                <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(42,30,20,.08)"}}>
+                  <i style={{width:10,height:10,borderRadius:"50%",background:L(v.lang).cor,flexShrink:0}}/>
+                  <span style={{flex:1,fontSize:14.5,fontWeight:600,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.termo}</span>
+                  <span style={{...lab,fontSize:9.5}}>{L(v.lang).cod}</span>
+                </div>))}
+            {due.length>6&&<div style={{...lab,marginTop:10}}>+ {due.length-6} palavras</div>}
+          </Card>
+        </div>
+        <Card>
+          <Titulo k="Semana" t="Ritmo de prática" dir={<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setSub("pratica")}>+ registrar</button>}/>
+          <div style={{display:"flex",gap:isMobile?6:14,justifyContent:"space-between"}}>
+            {semana.map((d,i)=>(
+              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+                <i style={{width:"100%",maxWidth:56,aspectRatio:"1",borderRadius:"50%",background:d.ativo?IDI_INK:d.ds>hoje?"#EADFC8":"#DDD0B6",boxShadow:d.ehHoje?"0 0 0 3px "+IDI_GOLD:"none",display:"flex",alignItems:"center",justifyContent:"center",color:IDI_CREAM,fontSize:isMobile?10:12,fontStyle:"normal",fontWeight:600}}>{d.min>0?Math.round(d.min/60*10)/10+"h":""}</i>
+                <span style={{...lab,fontSize:9.5,color:d.ehHoje?IDI_INK:undefined,fontWeight:d.ehHoje?700:400}}>{d.lbl}</span>
+              </div>))}
+          </div>
+        </Card>
+        <Card>
+          <Titulo k="Recentes" t="Últimas práticas"/>
+          {logSel.length===0?<Vazio>Nada registrado ainda. Use “Praticar” para lançar seu primeiro estudo.</Vazio>:<Hist lista={logSel.slice(0,5)}/>}
+        </Card>
+      </>)}
+
+      {/* ═ PRATICAR ═ */}
+      {sub==="pratica"&&(<>
+        <Card>
+          <Titulo k="Registro" t="O que você estudou"/>
+          <div style={{...lab,marginBottom:8}}>Idioma</div>
+          <Pick val={fp.lang||defLang} set={v=>setFp({...fp,lang:v})} opts={langOpts}/>
+          <div style={{...lab,margin:"18px 0 8px"}}>Atividade</div>
+          <Pick val={fp.tipo} set={v=>setFp({...fp,tipo:v})} opts={IDI_TIPOS.map(([i,n])=>[i,n])}/>
+          <div style={{...lab,margin:"18px 0 8px"}}>Minutos</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+            {[15,30,45,60,90].map(n=><button key={n} onClick={()=>setFp({...fp,min:String(n)})} style={{...btnS,padding:"8px 14px",background:+fp.min===n?IDI_INK:"transparent",color:+fp.min===n?IDI_CREAM:IDI_INK}}>{n}</button>)}
+            <input style={{...inp,width:100}} type="number" min="1" value={fp.min} onChange={e=>setFp({...fp,min:e.target.value})} placeholder="outro"/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"2fr 1fr",gap:12,marginTop:18}}>
+            <div><div style={{...lab,marginBottom:6}}>Anotação (opcional)</div><input style={inp} value={fp.nota} onChange={e=>setFp({...fp,nota:e.target.value})} placeholder="Ex: Netzwerk neu cap. 5, podcast, aula…"/></div>
+            <div><div style={{...lab,marginBottom:6}}>Data</div><input style={inp} type="date" value={fp.data||hoje} onChange={e=>setFp({...fp,data:e.target.value})}/></div>
+          </div>
+          <div style={{marginTop:18}}><button style={btnP} onClick={addPratica}>Salvar registro</button></div>
+        </Card>
+        <Card>
+          <Titulo k="Histórico" t="Registros recentes"/>
+          {logSel.length===0?<Vazio>Nenhum registro ainda.</Vazio>:<Hist lista={logSel.slice(0,12)}/>}
+        </Card>
+      </>)}
+
+      {/* ═ PALAVRAS ═ */}
+      {sub==="palavras"&&(<>
+        {rs&&(
+          <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"36px 28px"}}>
+            {rs.fim?(<>
+              <div style={lab}>Revisão concluída</div>
+              <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{rs.ok}<small style={{fontSize:"45%",opacity:.45}}> / {rs.ok+rs.er}</small></div>
+              <Vazio>acertos nesta sessão. As palavras voltam em intervalos crescentes.</Vazio>
+              <div style={{marginTop:20}}><button style={btnP} onClick={()=>setRs(null)}>Fechar</button></div>
+            </>):cur?(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <span style={{...lab,display:"inline-flex",alignItems:"center",gap:7}}><i style={{width:8,height:8,borderRadius:"50%",background:L(cur.lang).cor}}/>{L(cur.lang).nome}</span>
+                <span style={lab}>{Math.min(rs.i+1,rs.fila.length)} / {rs.fila.length}</span>
+              </div>
+              <div style={{height:4,borderRadius:99,background:"rgba(42,30,20,.1)",overflow:"hidden",marginBottom:28}}><div style={{width:(rs.i/rs.fila.length*100)+"%",height:"100%",background:IDI_INK,transition:"width .3s"}}/></div>
+              <div style={{...serif,fontSize:isMobile?42:56,lineHeight:1.1,minHeight:isMobile?60:76,wordBreak:"break-word"}}>{cur.termo}</div>
+              {rs.show?(<>
+                <div style={{fontSize:isMobile?20:24,marginTop:18,fontWeight:500}}>{cur.trad}</div>
+                {cur.ex&&<div style={{fontSize:14,marginTop:10,fontStyle:"italic",opacity:.65,lineHeight:1.5}}>{cur.ex}</div>}
+                <div style={{display:"flex",justifyContent:"center",gap:12,marginTop:28}}>
+                  <button style={{...btnS,minWidth:130,borderColor:IDI_RED,color:IDI_RED}} onClick={()=>responder(false)}>Errei</button>
+                  <button style={{...btnP,minWidth:130}} onClick={()=>responder(true)}>Acertei</button>
+                </div>
+              </>):(
+                <div style={{marginTop:36}}><button style={btnP} onClick={()=>setRs({...rs,show:true})}>Mostrar tradução</button></div>)}
+            </>):null}
+            {!rs.fim&&<div style={{marginTop:22}}><button onClick={()=>setRs(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(42,30,20,.55)"}}>sair da revisão</button></div>}
+          </Card>)}
+        {!rs&&(
+          <Card>
+            <Titulo k="Repetição espaçada" t="Revisar" dir={<div style={{textAlign:"right"}}><div style={lab}>acerto</div><div style={{...serif,fontSize:isMobile?30:38,marginTop:4,color:IDI_RED}}>{acertoV===null?"—":acertoV+"%"}</div></div>}/>
+            <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
+              <button style={{...btnP,opacity:due.length?1:.4}} disabled={!due.length} onClick={iniciarRev}>{due.length?`Revisar ${due.length} ${due.length===1?"palavra":"palavras"}`:"Nada para hoje"}</button>
+              <span style={{...lab}}>{vocSel.length} no total · {dominadas} dominadas</span>
+            </div>
+          </Card>)}
+        <Card>
+          <Titulo k="Nova" t="Adicionar palavra"/>
+          <Pick val={fw.lang||defLang} set={v=>setFw({...fw,lang:v})} opts={langOpts}/>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginTop:14}}>
+            <div><div style={{...lab,marginBottom:6}}>Palavra</div><input style={inp} value={fw.termo} onChange={e=>setFw({...fw,termo:e.target.value})} placeholder={(fw.lang||defLang)==="de"?"der Schlüssel":"la clé"}/></div>
+            <div><div style={{...lab,marginBottom:6}}>Tradução</div><input style={inp} value={fw.trad} onChange={e=>setFw({...fw,trad:e.target.value})} placeholder="a chave"/></div>
+          </div>
+          <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Exemplo (opcional)</div><input style={inp} value={fw.ex} onChange={e=>setFw({...fw,ex:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addPalavra();}} placeholder="Frase onde apareceu"/></div>
+          <div style={{marginTop:16}}><button style={btnP} onClick={addPalavra}>Adicionar</button></div>
+        </Card>
+        <Card>
+          <Titulo k="Vocabulário" t="Suas palavras"/>
+          <input style={{...inp,marginBottom:8}} value={busca} onChange={e=>setBusca(e.target.value)} placeholder="Buscar…"/>
+          {palavrasLista.length===0?<Vazio>{vocSel.length===0?"Nenhuma palavra cadastrada.":"Nada encontrado."}</Vazio>:(verTodas?palavrasLista:palavrasLista.slice(0,30)).map(v=>(
+            <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(42,30,20,.08)"}}>
+              <i style={{width:10,height:10,borderRadius:"50%",background:L(v.lang).cor,flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}>{v.termo}</div><div style={{fontSize:13,opacity:.6,marginTop:2}}>{v.trad}</div></div>
+              <div style={{display:"flex",gap:3}} title={"nível "+(v.box||0)+" de 5"}>{[0,1,2,3,4].map(i=><i key={i} style={{width:6,height:6,borderRadius:"50%",background:i<(v.box||0)?IDI_INK:"rgba(42,30,20,.15)"}}/>)}</div>
+              <button onClick={()=>setVocab(vocab.filter(x=>x.id!==v.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(42,30,20,.35)"}}>×</button>
+            </div>))}
+          {!verTodas&&palavrasLista.length>30&&<button style={{...btnS,marginTop:12}} onClick={()=>setVerTodas(true)}>Ver todas ({palavrasLista.length})</button>}
+        </Card>
+      </>)}
+
+      {/* ═ EVOLUÇÃO ═ */}
+      {sub==="evol"&&(<>
+        <Card>
+          <Titulo k="Últimas 8 semanas" t="Horas por semana"/>
+          <div style={{display:"flex",alignItems:"flex-end",gap:isMobile?6:14,height:150}}>
+            {semanas.map((w,i)=>{const tot=w.por.reduce((a,x)=>a+x.min,0);return (
+              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:"100%",gap:6}}>
+                <span style={{...lab,fontSize:9,color:IDI_INK}}>{tot>0?(tot/60).toFixed(1).replace(".0","")+"h":""}</span>
+                <div style={{width:"100%",maxWidth:44,display:"flex",flexDirection:"column-reverse",gap:2,height:(tot/maxSem*100)+"px",minHeight:tot>0?3:0}}>
+                  {w.por.map(x=>x.min>0&&<div key={x.l.id} style={{flex:x.min,background:x.l.cor,borderRadius:4,minHeight:2}}/>)}
+                </div>
+              </div>);})}
+          </div>
+          <div style={{display:"flex",gap:isMobile?6:14,marginTop:8}}>{semanas.map((w,i)=><div key={i} style={{flex:1,textAlign:"center",...lab,fontSize:8.5}}>{fd(w.ini)}</div>)}</div>
+          <div style={{display:"flex",gap:16,marginTop:14,flexWrap:"wrap"}}>{ativas.map(l=><span key={l.id} style={{...lab,display:"inline-flex",alignItems:"center",gap:7}}><i style={{width:8,height:8,borderRadius:"50%",background:l.cor}}/>{l.nome}</span>)}</div>
+        </Card>
+        <div className="idi-grid2">
+          <Card>
+            <Titulo k="Vocabulário" t="Palavras acumuladas" dir={<div style={{textAlign:"right"}}><div style={lab}>total</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:4}}>{vocSel.length}</div></div>}/>
+            <svg viewBox="0 0 300 110" width="100%" style={{display:"block",overflow:"visible"}}>
+              {[0,1,2,3].map(i=><line key={i} x1="0" x2="300" y1={10+i*30} y2={10+i*30} stroke="rgba(42,30,20,.08)"/>)}
+              {serieV.map(s=>{const pts=s.pts.map((v,i)=>[i*(300/7),100-(v/maxV)*90]);return (
+                <g key={s.l.id}>
+                  <polyline fill="none" stroke={s.l.cor} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" points={pts.map(p=>p.join(",")).join(" ")}/>
+                  {pts.map((p,i)=><circle key={i} cx={p[0]} cy={p[1]} r={i===7?4:2.2} fill={s.l.cor}/>)}
+                </g>);})}
+            </svg>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:10,flexWrap:"wrap",gap:8}}>
+              <span style={lab}>{dominadas} dominadas</span>
+              <span style={lab}>acerto nas revisões: {acertoV===null?"—":acertoV+"%"}</span>
+            </div>
+          </Card>
+          <Card>
+            <Titulo k="Últimos 30 dias" t="Onde o tempo vai"/>
+            {porTipo.every(t=>t.min===0)?<Vazio>Registre práticas para ver a distribuição por habilidade.</Vazio>:porTipo.map(t=>(
+              <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,padding:"6px 0"}}>
+                <span style={{...lab,width:78,flexShrink:0,color:IDI_INK}}>{t.n}</span>
+                <div style={{flex:1,height:8,borderRadius:99,background:"rgba(42,30,20,.08)",overflow:"hidden"}}><div style={{width:(t.min/maxTipo*100)+"%",height:"100%",background:IDI_INK,borderRadius:99}}/></div>
+                <span style={{...lab,width:46,textAlign:"right"}}>{t.min>=60?(t.min/60).toFixed(1).replace(".0","")+"h":t.min+"m"}</span>
+              </div>))}
+          </Card>
+        </div>
+        <Card>
+          <Titulo k="Habilidades" t="Autoavaliação"/>
+          {cfg.length>1&&sel==="all"&&<div style={{marginBottom:16}}><Pick val={avLangAtual} set={trocaAvLang} opts={langOpts}/></div>}
+          {HAB.map(([id,n])=>{const u=avUlt?avUlt[id]:null, a=avAnt?avAnt[id]:null, dl=u!=null&&a!=null?u-a:0;const cor=L(avLangAtual).cor;return (
+            <div key={id} style={{display:"grid",gridTemplateColumns:isMobile?"88px 1fr 52px":"110px 1fr 70px",alignItems:"center",gap:12,padding:"9px 0"}}>
+              <span style={{...lab,color:IDI_INK}}>{n}</span>
+              <div style={{display:"flex",gap:4}}>{[1,2,3,4,5].map(i=><i key={i} style={{flex:1,height:9,borderRadius:99,background:u!=null&&i<=u?cor:"rgba(42,30,20,.1)"}}/>)}</div>
+              <span style={{...lab,textAlign:"right",color:dl>0?"#4C7A3A":dl<0?IDI_RED:undefined,fontWeight:dl?700:400}}>{u==null?"—":dl>0?"▲ +"+dl:dl<0?"▼ "+dl:"= "+u}</span>
+            </div>);})}
+          <div style={{height:1,background:"rgba(42,30,20,.1)",margin:"14px 0"}}/>
+          <div style={{...lab,marginBottom:10}}>Nova avaliação · {L(avLangAtual).nome}{avs.length?` · ${avs.length} registrada${avs.length>1?"s":""}`:""}</div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:"10px 28px"}}>
+            {HAB.map(([id,n])=>(
+              <div key={id} style={{display:"grid",gridTemplateColumns:"88px 1fr 18px",alignItems:"center",gap:10}}>
+                <span style={{fontSize:13}}>{n}</span>
+                <input type="range" min="1" max="5" step="1" value={avN[id]} onChange={e=>setAvN({...avN,[id]:+e.target.value})}/>
+                <span style={{fontWeight:700,fontSize:13}}>{avN[id]}</span>
+              </div>))}
+          </div>
+          <div style={{marginTop:16}}><button style={btnP} onClick={salvarAval}>Salvar avaliação</button></div>
+        </Card>
+        <Card>
+          <Titulo k="Trajetória" t="Marcos"/>
+          {marcosSel.length===0?<Vazio>Mudanças de nível entram aqui automaticamente. Adicione provas, certificados e viagens.</Vazio>:marcosSel.map(m=>(
+            <div key={m.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(42,30,20,.08)"}}>
+              <i style={{width:12,height:12,borderRadius:m.tipo==="nivel"?"3px":"50%",background:L(m.lang).cor,flexShrink:0,transform:m.tipo==="nivel"?"rotate(45deg)":"none"}}/>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}>{m.titulo}</div><div style={{...lab,fontSize:9.5,marginTop:3}}>{L(m.lang).nome} · {fdFull(m.data)}</div></div>
+              <button onClick={()=>setMarcos(marcos.filter(x=>x.id!==m.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(42,30,20,.35)"}}>×</button>
+            </div>))}
+          <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
+            {cfg.length>1&&sel==="all"&&<select style={{...inp,width:"auto"}} value={fm.lang||defLang} onChange={e=>setFm({...fm,lang:e.target.value})}>{cfg.map(l=><option key={l.id} value={l.id}>{l.nome}</option>)}</select>}
+            <input style={{...inp,flex:"1 1 180px",width:"auto"}} value={fm.titulo} onChange={e=>setFm({...fm,titulo:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addMarco();}} placeholder="Ex: Prova Goethe B1, primeira conversa…"/>
+            <button style={btnP} onClick={addMarco}>Adicionar</button>
+          </div>
         </Card>
       </>)}
 
@@ -3807,14 +4241,15 @@ function AppMain({user, onLogout}) {
     {id:"previsao",icon:"◈",label:"Previsão"},
     {id:"categorias",icon:"☰",label:"Categorias"},
     {id:"estudos",icon:"✦",label:"Estudos"},
+    {id:"idiomas",icon:"✎",label:"Idiomas"},
   ];
   const navTo=id=>{setTab(id);setSideOpen(false);};
   const [trocando,setTrocando]=useState(null);
   const trocarApp=dest=>{
-    const atualApp=tab==="estudos"?"est":"fin";
+    const atualApp=tab==="estudos"?"est":tab==="idiomas"?"idi":"fin";
     if(dest===atualApp||trocando)return;
     setTrocando(dest);
-    setTimeout(()=>{navTo(dest==="est"?"estudos":"dashboard");try{window.scrollTo(0,0);}catch{}},300);
+    setTimeout(()=>{navTo(dest==="est"?"estudos":dest==="idi"?"idiomas":"dashboard");try{window.scrollTo(0,0);}catch{}},300);
     setTimeout(()=>setTrocando(null),900);
   };
   const showCard=id=>dashCards[id]!==false;
@@ -3834,7 +4269,7 @@ function AppMain({user, onLogout}) {
   const TMUT="rgba(26,18,9,0.45)";
 
   return (
-    <div className={"vl"+(isMobile?" mobile":"")+(tab==="estudos"?" est-on":"")} style={{...((p)=>({"--m1":p.m1,"--m2":p.m2,"--m3":p.m3,"--m4":p.m4,"--base":p.base,"--h1":p.h1,"--h2":p.h2,"--h3":p.h3,"--hb":p.hb,"--acc":p.acc}))(BG_PALETTES[bgId]||BG_PALETTES.tartan),minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
+    <div className={"vl"+(isMobile?" mobile":"")+(tab==="estudos"||tab==="idiomas"?" est-on":"")+(tab==="idiomas"?" idi-on":"")} style={{...((p)=>({"--m1":p.m1,"--m2":p.m2,"--m3":p.m3,"--m4":p.m4,"--base":p.base,"--h1":p.h1,"--h2":p.h2,"--h3":p.h3,"--hb":p.hb,"--acc":p.acc}))(BG_PALETTES[bgId]||BG_PALETTES.tartan),minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
       <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap');
@@ -3903,6 +4338,7 @@ function AppMain({user, onLogout}) {
         @keyframes swc{0%{transform:translateY(16px) scale(.94)}35%{transform:none}70%{transform:none}100%{transform:translateY(-10px) scale(.98)}}
         .vl.est-on .m-hero,.vl.est-on .sheet,.vl.est-on .wallpaper-bg{display:none!important}
         .vl.est-on,body:has(.vl.est-on){background:#15251E}
+        .vl.idi-on,body:has(.vl.idi-on){background:#2A1E14}
         .vl .sheet{background:var(--base);border-radius:30px 30px 0 0;margin-top:-26px;position:relative;z-index:1;min-height:70vh}
         .mobile .sheet{margin-top:-24px}
         .mobile .main-wrap{padding:24px 14px 96px!important}
@@ -4097,7 +4533,7 @@ function AppMain({user, onLogout}) {
               <div style={{width:10,height:1.5,background:"#fff",borderRadius:1,alignSelf:"flex-start",marginLeft:12}}/>
             </button>
             <AppSwitch atual="fin" onTrocar={trocarApp}/>
-            <button onClick={()=>setEditSaldoMes(String(saldoMensal[selMes]!==undefined?saldoMensal[selMes]:+saldoFimDoMes(shiftMonth(selMes,-1)).toFixed(2)))} style={{background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:99,padding:"0 12px",height:40,minHeight:40,fontSize:11,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>ajustar</button>
+            <button onClick={()=>setEditSaldoMes(String(saldoMensal[selMes]!==undefined?saldoMensal[selMes]:+saldoFimDoMes(shiftMonth(selMes,-1)).toFixed(2)))} style={{background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:99,padding:"0 12px",height:40,minHeight:40,fontSize:11,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>{typeof window!=="undefined"&&window.innerWidth<400?<Settings size={14} strokeWidth={2}/>:"ajustar"}</button>
           </div>
           <div className="m-hero-l">
           <div className="mono" style={{fontSize:10,letterSpacing:".18em",textTransform:"uppercase",opacity:.75,marginBottom:6}}>Saldo · {monthLabel(selMes)}</div>
@@ -4165,11 +4601,12 @@ function AppMain({user, onLogout}) {
         </div>
       </div>
 
-      {trocando&&(()=>{const est=trocando==="est";const sty=est?"noite":palBg.hero.s;return (
+      {trocando&&(()=>{const est=trocando==="est",idi=trocando==="idi";const sty=est?"noite":idi?"manteiga":palBg.hero.s;return (
         <div className="app-swap" style={{background:STY[sty].paper}}>
           <Motif s={sty} z={1.1} x={est?40:30} y={est?10:20} style={{position:"absolute",inset:0}}/>
-          <div className="app-swap-card"><div className="mono" style={{fontSize:10,letterSpacing:".24em",textTransform:"uppercase",opacity:.6,marginBottom:8}}>Velara</div><div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,fontSize:46,letterSpacing:"-.03em",lineHeight:1}}>{est?"Estudos":"Finanças"}</div></div>
+          <div className="app-swap-card"><div className="mono" style={{fontSize:10,letterSpacing:".24em",textTransform:"uppercase",opacity:.6,marginBottom:8}}>Velara</div><div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,fontSize:46,letterSpacing:"-.03em",lineHeight:1}}>{est?"Estudos":idi?"Idiomas":"Finanças"}</div></div>
         </div>);})()}
+      {tab==="idiomas"&&<IdiomasApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
       {tab==="estudos"&&<EstudosApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
       <div className="sheet">
       <div className="main-wrap" style={{maxWidth:1100,margin:"0 auto",padding:"14px 24px 80px",position:"relative",zIndex:1}}>
@@ -4213,6 +4650,23 @@ function AppMain({user, onLogout}) {
                     {dE!==null&&dE>=0&&<div style={{textAlign:"right",lineHeight:1}}><div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,fontSize:isMobile?44:60,letterSpacing:"-.04em"}}>{dE}</div><div className="mono" style={{fontSize:9.5,letterSpacing:".14em",textTransform:"uppercase",opacity:.7,marginTop:4}}>dias</div></div>}
                     <span style={{width:40,height:40,borderRadius:"50%",background:"#F4EBD9",color:"#15251E",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>↗</span>
                   </div>
+                </button>);
+            })()}
+            {!dashEditMode&&(()=>{
+              let lg=[],vc=[],lo=[];
+              try{lg=JSON.parse(localStorage.getItem(userId+"_v5_idi_cfg")||"null")||IDI_LANGS;vc=JSON.parse(localStorage.getItem(userId+"_v5_idi_voc")||"[]")||[];lo=JSON.parse(localStorage.getItem(userId+"_v5_idi_log")||"[]")||[];}catch{lg=IDI_LANGS;}
+              const hj=today();
+              const dueI=vc.filter(v=>v.prox<=hj).length;
+              return (
+                <button onClick={()=>trocarApp("idi")} style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",border:"none",cursor:"pointer",borderRadius:28,padding:isMobile?"20px 20px":"24px 30px",marginBottom:14,background:"#2A1E14",color:"#F6EBD3",fontFamily:"inherit"}}>
+                  <Motif s="manteiga" z={1.2} x={60} y={20} style={{position:"absolute",inset:0,opacity:.95}}/>
+                  <div style={{position:"absolute",inset:0,background:"linear-gradient(95deg,rgba(32,21,12,.96) 0%,rgba(32,21,12,.78) 50%,rgba(32,21,12,.25) 100%)"}}/>
+                  <div style={{position:"relative",minWidth:0}}>
+                    <div className="mono" style={{fontSize:10,letterSpacing:".22em",textTransform:"uppercase",opacity:.7,marginBottom:8}}>Plataforma · Idiomas</div>
+                    <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,fontSize:isMobile?26:32,letterSpacing:"-.03em",lineHeight:1.05}}>{lg.map(l=>l.nome).join(" & ")}</div>
+                    <div style={{fontSize:12.5,opacity:.8,marginTop:8}}>{dueI>0?`${dueI} ${dueI===1?"palavra":"palavras"} para revisar hoje`:vc.length===0&&lo.length===0?"Registre estudos e palavras":"Sem revisões pendentes hoje"}</div>
+                  </div>
+                  <span style={{position:"relative",width:40,height:40,borderRadius:"50%",background:"#F6EBD3",color:"#2A1E14",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>↗</span>
                 </button>);
             })()}
 
