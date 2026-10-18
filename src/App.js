@@ -3383,12 +3383,14 @@ function AppMain({user, onLogout}) {
   const totalPatrimonio=totalInvestido+totalFundoDivida;
   const totalDividas=dividas.reduce((s,d)=>s+(+d.total-+d.pago),0);
   const parcelasDividaMes=dividas.filter(d=>d.tipo==="cartao_desconto").reduce((s,d)=>s+(d.parcelasStatus||[]).filter(p=>!p.pago&&monthKey(p.dataVencimento)===selMes).length*(+d.valorComDesconto||0),0);
+  // Saídas exibidas = saídas lançadas + parcelas de dívida do mês ainda não pagas (as pagas já viram lançamento)
+  const saidasTotal=saidas+parcelasDividaMes;
   const totalPendPlant=plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)).reduce((s,p)=>s+p.valorTotal,0);
   const palBg=BG_PALETTES[bgId]||BG_PALETTES.tartan;
   const serie6=fn=>Array.from({length:6},(_,i)=>fn(shiftMonth(selMes,i-5)));
-  const gastosSerie=serie6(m=>movs.filter(x=>x.tipo==="saida"&&monthKey(x.data)===m).reduce((s,x)=>s+(+x.valor||0),0));
+  const gastosSerie=serie6(m=>movs.filter(x=>x.tipo==="saida"&&monthKey(x.data)===m).reduce((s,x)=>s+(+x.valor||0),0)).map((v,i)=>i===5?v+parcelasDividaMes:v);
   const gastosAnt=gastosSerie[4]||0;
-  const gastosVar=gastosAnt>0?Math.round((saidas-gastosAnt)/gastosAnt*100):null;
+  const gastosVar=gastosAnt>0?Math.round((saidasTotal-gastosAnt)/gastosAnt*100):null;
   const receberSerie=Array.from({length:6},(_,i)=>{const m=shiftMonth(selMes,i);return plantoesEfetivos.filter(p=>["pendente","atrasado"].includes(p.se)&&mesDoPlantao(p)===m).reduce((s,p)=>s+(+p.valorTotal||0),0);});
   const aporteSerie=serie6(m=>movs.filter(x=>x.tipo==="transferencia"&&monthKey(x.data)<=m).reduce((s,x)=>s+(x.subtipo==="resgate"?-1:1)*(+x.valor||0),0));
   const dividaTotalBruto=dividas.reduce((s,d)=>s+(+d.total||0),0);
@@ -3445,9 +3447,9 @@ function AppMain({user, onLogout}) {
   const forecast=useMemo(()=>months8().map(ym=>({
     ym,
     entradas:movs.filter(m=>m.tipo==="entrada"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)+plantoes.filter(p=>p.status!=="recebido"&&p.status!=="cancelado"&&monthKey(p.previsao)===ym).reduce((s,p)=>s+p.valorTotal,0),
-    saidas:movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0),
+    saidas:movs.filter(m=>m.tipo==="saida"&&monthKey(m.data)===ym).reduce((s,m)=>s+m.valor,0)+dividas.filter(d=>d.tipo==="cartao_desconto").reduce((s,d)=>s+(d.parcelasStatus||[]).filter(p=>!p.pago&&monthKey(p.dataVencimento)===ym).length*(+d.valorComDesconto||0),0),
     rendimentos:invests.reduce((s,i)=>s+(i.aporte*taxaEfetiva(i)/100/12),0),
-  })).map(f=>({...f,saldo:f.entradas-f.saidas+f.rendimentos})),[movs,plantoes,invests]);
+  })).map(f=>({...f,saldo:f.entradas-f.saidas+f.rendimentos})),[movs,plantoes,invests,dividas]);
   const maxFc=Math.max(...forecast.map(f=>Math.max(f.entradas,f.saidas,1)));
 
   const statusDiv=d=>{if(!d.prazo)return{label:"Em aberto",color:"rgba(26,18,9,0.5)",bg:"rgba(0,0,0,0.06)"};if(isPast(d.prazo)&&d.pago<d.total)return{label:"Atrasada",color:C.red,bg:C.redGlass};if(daysUntil(d.prazo)<=30)return{label:"Vence em breve",color:C.gold,bg:C.goldGlass};return{label:"Em dia",color:C.green,bg:C.greenGlass};};
@@ -3761,7 +3763,7 @@ function AppMain({user, onLogout}) {
           </div>
           <div className="m-stats">
             <div><div className="l">Entradas</div><div className="v">{R(entradas)}</div></div>
-            <div><div className="l">Saídas</div><div className="v">{R(saidas)}</div></div>
+            <div title={parcelasDividaMes>0?`Inclui ${R(parcelasDividaMes)} em parcelas de dívida a pagar neste mês`:undefined}><div className="l">Saídas</div><div className="v">{R(saidasTotal)}</div>{parcelasDividaMes>0&&<div style={{fontSize:9.5,opacity:.7,marginTop:2,whiteSpace:"nowrap"}}>{isMobile?"inclui parcelas":`inclui ${R(parcelasDividaMes)} em parcelas`}</div>}</div>
             <div><div className="l">A receber</div><div className="v">{R(aReceberMes)}</div></div>
           </div>
           </div>
@@ -3789,7 +3791,7 @@ function AppMain({user, onLogout}) {
             </div>
             <div style={{textAlign:"right"}}>
               <div style={{fontSize:12,color:"#2D6E20",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▲ {R(entradas)}</div>
-              <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidas)}</div>
+              <div style={{fontSize:12,color:"#B22222",fontFamily:"'DM Sans',sans-serif",fontWeight:700}}>▼ {R(saidasTotal)}</div>
               {totalPendPlant>0&&<div style={{fontSize:10,color:"#8B6914",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600,display:"flex",alignItems:"center",gap:3}}><Hourglass size={10} strokeWidth={2.2}/>{R(totalPendPlant)}</div>}
               {totalPatrimonio>0&&<div style={{fontSize:10,color:"#5B7C94",fontFamily:"'DM Sans',sans-serif",marginTop:1,fontWeight:600}}><TrendingUp size={10} strokeWidth={2.2} style={{marginRight:3,verticalAlign:"-2px"}}/>{R(totalPatrimonio)} patrimônio</div>}
             </div>
@@ -3903,7 +3905,7 @@ function AppMain({user, onLogout}) {
                   {[
                     {ic:<TrendingUp size={15} strokeWidth={1.6}/>,l1:"Patrimônio",l2:invests.length+" investimentos",v:totalPatrimonio,sp:aporteSerie,c:"#6F9560"},
                     {ic:<Hourglass size={15} strokeWidth={1.6}/>,l1:"A receber",l2:"próx. 6 meses",v:totalPendPlant,sp:receberSerie,c:"#B8944F"},
-                    {ic:<Wallet size={15} strokeWidth={1.6}/>,l1:"Gastos",l2:gastosVar===null?"no mês":(gastosVar>0?"+":"")+gastosVar+"% vs mês ant.",v:saidas,sp:gastosSerie,c:"#B91D55"},
+                    {ic:<Wallet size={15} strokeWidth={1.6}/>,l1:"Gastos",l2:gastosVar===null?"no mês":(gastosVar>0?"+":"")+gastosVar+"% vs mês ant.",v:saidasTotal,sp:gastosSerie,c:"#B91D55"},
                     {ic:<CreditCard size={15} strokeWidth={1.6}/>,l1:"Dívidas",l2:dividaPct+"% quitado",v:totalDividas,sp:null,c:"#B5473F"},
                   ].map((t,ti)=>{
                     const tp=palBg.tiles[ti]; 
@@ -4284,7 +4286,7 @@ function AppMain({user, onLogout}) {
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
                 <div style={{display:"flex",gap:8}}>
                   <div style={{background:"rgba(255,255,255,0.9)",borderRadius:12,padding:"9px 15px",textAlign:"center",border:"1px solid rgba(45,90,16,0.35)"}}><div style={{fontSize:9.5,color:"#215010",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>ENTRADAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#215010"}}>{R(entradas)}</div></div>
-                  <div style={{background:"rgba(255,255,255,0.9)",borderRadius:12,padding:"9px 15px",textAlign:"center",border:"1px solid rgba(196,24,90,0.35)"}}><div style={{fontSize:9.5,color:"#8B1A1A",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>SAÍDAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#8B1A1A"}}>{R(saidas)}</div></div>
+                  <div style={{background:"rgba(255,255,255,0.9)",borderRadius:12,padding:"9px 15px",textAlign:"center",border:"1px solid rgba(196,24,90,0.35)"}}><div style={{fontSize:9.5,color:"#8B1A1A",fontWeight:700,letterSpacing:".06em",fontFamily:"'DM Sans',sans-serif"}}>SAÍDAS</div><div className="num" style={{fontSize:15,fontWeight:700,color:"#8B1A1A"}}>{R(saidasTotal)}</div></div>
                 </div>
                 <div style={{display:"flex",gap:7}}>
                   <button onClick={()=>setImportOpen(true)} style={{background:"rgba(0,0,0,0.06)",border:"1px solid rgba(0,0,0,0.12)",borderRadius:12,padding:"9px 14px",fontSize:12,fontWeight:700,color:"#1A1209",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"flex",alignItems:"center",gap:6}}><Glyph e="📥" size={14}/>Importar</button>
@@ -5597,96 +5599,86 @@ function AppMain({user, onLogout}) {
               })}
             </div>
 
-            {/* Horas trabalhadas por semana */}
-            <div className={CARD} style={{marginBottom:14,padding:"16px 18px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-                <div style={{width:26,height:26,borderRadius:8,background:"rgba(45,90,16,0.12)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>⏱</div>
-                <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Horas trabalhadas por semana</span>
-              </div>
-
-              <div style={{display:"flex",gap:10,marginBottom:16}}>
-                <div style={{flex:1,background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-                  <div style={{fontSize:9.5,fontWeight:500,color:"#215010",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>Essa semana</div>
-                  <div className="num" style={{fontSize:24,fontWeight:700,color:"#215010"}}>{horasPorSemana.semanaAtual?.horas||0}h</div>
+            {/* ── Horas por semana: colunas de bolinhas ── */}
+            {(()=>{
+              const sems=horasPorSemana.semanas;
+              const maxH=Math.max(...sems.map(x=>x.horas),1);
+              const POR=6, maxDots=Math.max(4,Math.ceil(maxH/POR));
+              const idxAtual=sems.findIndex(x=>x.ehAtual);
+              const selI=hoveredWeek??idxAtual;
+              const sw=sems[selI]||sems[idxAtual];
+              const dotSz=isMobile?15:22;
+              return (
+            <div className={CARD} style={{marginBottom:16,padding:isMobile?"22px 18px":"28px 30px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:22}}>
+                <div>
+                  <div style={mono}>Horas por semana</div>
+                  <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?26:32,fontWeight:800,letterSpacing:"-.03em",marginTop:6,lineHeight:1}}>Ritmo de trabalho</div>
                 </div>
-                <div style={{flex:1,background:"rgba(0,0,0,0.04)",border:"1px solid rgba(0,0,0,0.08)",borderRadius:12,padding:"12px 14px",textAlign:"center"}}>
-                  <div style={{fontSize:9.5,fontWeight:500,color:"rgba(26,18,9,0.55)",letterSpacing:".05em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:4}}>Média (8 semanas)</div>
-                  <div className="num" style={{fontSize:24,fontWeight:700,color:"#1A1209"}}>{horasPorSemana.mediaHoras.toFixed(0)}h</div>
+                <div style={{display:"flex",gap:isMobile?18:34,textAlign:"right"}}>
+                  <div><div style={{...mono,whiteSpace:"nowrap"}}>Essa semana</div><div style={{fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?28:36,letterSpacing:"-.04em",marginTop:6,color:accA,fontWeight:700}}>{hSem}<small style={{fontSize:"45%",opacity:.6,marginLeft:2}}>h</small></div></div>
+                  <div><div style={{...mono,whiteSpace:"nowrap"}}>Média</div><div style={{fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?28:36,letterSpacing:"-.04em",marginTop:6}}>{media.toFixed(0)}<small style={{fontSize:"45%",opacity:.5,marginLeft:2}}>h</small></div></div>
                 </div>
               </div>
-
-              <div style={{display:"flex",alignItems:"flex-end",gap:6,height:90,marginBottom:8}}>
-                {horasPorSemana.semanas.map((sem,idx)=>{
-                  const maxH=Math.max(...horasPorSemana.semanas.map(s=>s.horas),1);
-                  const alturaPct=(sem.horas/maxH)*100;
-                  const isHovered=hoveredWeek===idx;
+              <div style={{display:"flex",gap:isMobile?4:10,alignItems:"flex-end"}}>
+                {sems.map((sem,idx)=>{
+                  const n=Math.floor(sem.horas/POR), rem=sem.horas/POR-n, ativo=idx===selI;
+                  const cor=sem.ehAtual?accA:sem.ehFutura?"transparent":"#1D1A1C";
+                  const borda=sem.ehFutura?`1.5px solid ${accA}`:"none";
                   return (
-                    <div key={idx} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:4,position:"relative"}}>
-                      {isHovered&&(
-                        <div className="chartTooltip" style={{position:"absolute",bottom:"100%",left:"50%",transform:"translateX(-50%)",marginBottom:8,background:"#1A1209",color:"#fff",borderRadius:9,padding:"7px 11px",fontSize:11,fontWeight:600,fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap",boxShadow:"0 4px 14px rgba(0,0,0,0.25)",zIndex:10,pointerEvents:"none"}}>
-                          <div style={{fontWeight:700}}>{sem.horas}h {sem.ehFutura?"agendadas":"trabalhadas"}</div>
-                          <div style={{fontSize:9.5,opacity:0.75,marginTop:1}}>{fd(sem.inicio)} – {fd(sem.fim)}</div>
-                          <div style={{position:"absolute",top:"100%",left:"50%",transform:"translateX(-50%)",width:0,height:0,borderLeft:"5px solid transparent",borderRight:"5px solid transparent",borderTop:"5px solid #1A1209"}}/>
-                        </div>
-                      )}
-                      <div onMouseEnter={()=>setHoveredWeek(idx)} onMouseLeave={()=>setHoveredWeek(null)} onClick={()=>setHoveredWeek(isHovered?null:idx)}
-                        style={{width:"100%",display:"flex",alignItems:"flex-end",height:70,cursor:"pointer"}}>
-                        <div
-                          style={{width:"100%",height:`${Math.max(alturaPct,3)}%`,
-                            background:sem.ehAtual?"linear-gradient(180deg,#4ABE2A,#215010)":sem.ehFutura?"rgba(91,163,212,0.3)":"linear-gradient(180deg,#6F956099,#21501099)",
-                            border:sem.ehFutura?"1.5px dashed #5B7C94":"none",
-                            outline:isHovered?"2px solid rgba(232,32,95,0.5)":"none",outlineOffset:1,
-                            borderRadius:"5px 5px 2px 2px",transition:"height .5s"}}/>
+                    <div key={idx} onMouseEnter={()=>setHoveredWeek(idx)} onMouseLeave={()=>setHoveredWeek(null)} onClick={()=>setHoveredWeek(hoveredWeek===idx?null:idx)}
+                      style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:isMobile?4:5,cursor:"pointer",minWidth:0}}>
+                      <div style={{display:"flex",flexDirection:"column-reverse",gap:isMobile?4:5,height:maxDots*(dotSz+(isMobile?4:5)),justifyContent:"flex-start",alignItems:"center",width:"100%"}}>
+                        {Array.from({length:n}).map((_,k)=><i key={k} style={{width:dotSz,height:dotSz,borderRadius:"50%",background:cor,border:borda,display:"block",flexShrink:0,opacity:ativo||selI===idxAtual||hoveredWeek===null?1:.55}}/>)}
+                        {rem>.12&&<i style={{width:dotSz,height:dotSz,borderRadius:"50%",background:cor,border:borda,display:"block",flexShrink:0,opacity:.35+.4*rem}}/>}
+                        {sem.horas===0&&<i style={{width:dotSz,height:dotSz,borderRadius:"50%",background:"#DDD5C6",display:"block",flexShrink:0}}/>}
                       </div>
-                      <div style={{fontSize:8,color:sem.ehAtual?"#1A1209":sem.ehFutura?"#1A4A6E":"rgba(26,18,9,0.4)",fontFamily:"'DM Sans',sans-serif",fontWeight:sem.ehAtual?700:600}}>{fd(sem.inicio).split(" ")[0]}</div>
-                    </div>
-                  );
+                      <span style={{...mono,fontSize:isMobile?8:9,letterSpacing:".04em",marginTop:6,color:ativo?"#1D1A1C":undefined,fontWeight:ativo?700:400}}>{fd(sem.inicio).split(" ")[0]}</span>
+                    </div>);
                 })}
               </div>
-              <div style={{display:"flex",gap:14,justifyContent:"center",fontSize:10,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>
-                <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:2,background:"#6F9560"}}/>Já trabalhado</span>
-                <span style={{display:"flex",alignItems:"center",gap:4}}><span style={{width:9,height:9,borderRadius:2,background:"rgba(91,163,212,0.3)",border:"1px dashed #5B7C94"}}/>Agendado (futuro)</span>
+              <div style={{marginTop:20,paddingTop:16,borderTop:"1px solid rgba(29,26,28,.1)",display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:12,flexWrap:"wrap"}}>
+                <span style={{fontFamily:"'DM Sans',sans-serif",fontSize:15,fontWeight:600}}>{fd(sw?.inicio)} – {fd(sw?.fim)}</span>
+                <span style={mono}>{sw?.horas||0}h {sw?.ehFutura?"agendadas":"trabalhadas"} · {sw?.qtdPlantoes||0} {sw?.qtdPlantoes===1?"plantão":"plantões"}</span>
               </div>
-            </div>
+              <div style={{display:"flex",gap:16,flexWrap:"wrap",marginTop:14,...mono,fontSize:9.5}}>
+                <span style={{display:"flex",alignItems:"center",gap:6}}><i style={{width:9,height:9,borderRadius:99,background:"#1D1A1C",display:"inline-block"}}/>Trabalhado</span>
+                <span style={{display:"flex",alignItems:"center",gap:6}}><i style={{width:9,height:9,borderRadius:99,background:accA,display:"inline-block"}}/>Semana atual</span>
+                <span style={{display:"flex",alignItems:"center",gap:6}}><i style={{width:9,height:9,borderRadius:99,border:`1.5px solid ${accA}`,display:"inline-block"}}/>Agendado</span>
+                <span style={{marginLeft:"auto"}}>1 bolinha = {POR}h</span>
+              </div>
+            </div>);
+            })()}
 
-            {/* Períodos livres */}
-            <div className={CARD} style={{padding:"16px 18px"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12}}>
-                <div style={{width:26,height:26,borderRadius:8,background:"rgba(91,163,212,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"#1A4A6E"}}><Sparkles size={13} strokeWidth={2.2}/></div>
-                <span style={{fontSize:12,fontWeight:500,color:"#1A1209",letterSpacing:".04em",textTransform:"uppercase",fontFamily:"'DM Mono',ui-monospace,monospace"}}>Meus períodos livres</span>
+            {/* ── Períodos livres ── */}
+            <div className={CARD} style={{padding:isMobile?"22px 18px":"28px 30px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:14,marginBottom:20}}>
+                <div>
+                  <div style={mono}>Meus períodos livres</div>
+                  <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?26:32,fontWeight:800,letterSpacing:"-.03em",marginTop:6,lineHeight:1}}>Pra pegar mais plantão</div>
+                </div>
+                <div style={{width:isMobile?64:84,height:isMobile?64:84,borderRadius:22,overflow:"hidden",flexShrink:0}}><Motif s={palBg.tiles[1].s} z={1.6} x={palBg.tiles[1].x} y={palBg.tiles[1].y}/></div>
               </div>
               {agendaDias.map(dia=>{
-                if(dia.plantoesSemHorario.length>0){
-                  return (
-                    <div key={dia.data} style={{display:"flex",justifyContent:"space-between",padding:"8px 4px",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
-                      <span style={{fontSize:12.5,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:600,textTransform:"capitalize"}}>{["dom","seg","ter","qua","qui","sex","sáb"][dia.diaSemana]}, {fd(dia.data)}</span>
-                      <span style={{fontSize:11,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>tem plantão sem horário definido</span>
-                    </div>
-                  );
-                }
-                if(dia.plantoes.length===0&&dia.livres.length===1&&dia.livres[0].fim-dia.livres[0].ini>=1439){
-                  return (
-                    <div key={dia.data} style={{display:"flex",justifyContent:"space-between",padding:"8px 4px",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
-                      <span style={{fontSize:12.5,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:600,textTransform:"capitalize"}}>{["dom","seg","ter","qua","qui","sex","sáb"][dia.diaSemana]}, {fd(dia.data)}</span>
-                      <span style={{fontSize:12,color:"#1A4A6E",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>livre o dia todo</span>
-                    </div>
-                  );
-                }
-                if(dia.livres.length===0)return null;
+                const nome=DS[dia.diaSemana];
+                const head=(
+                  <div style={{display:"flex",alignItems:"baseline",gap:6,minWidth:isMobile?58:78,flexShrink:0}}>
+                    <b style={{fontFamily:"'DM Sans',sans-serif",fontSize:isMobile?20:24,fontWeight:800,letterSpacing:"-.04em",color:dia.data===hojeS?accA:"#1D1A1C"}}>{dia.diaNum}</b>
+                    <span style={{...mono,fontSize:9.5,color:dia.data===hojeS?accA:undefined}}>{nome}</span>
+                  </div>);
+                const chip={fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:11.5,letterSpacing:".04em",border:"1px solid rgba(29,26,28,.2)",borderRadius:999,padding:"5px 12px",color:"#1D1A1C",background:"transparent"};
+                let corpo;
+                if(dia.plantoesSemHorario.length>0) corpo=<span style={{...chip,borderStyle:"dashed",color:"rgba(29,26,28,.55)"}}>plantão sem horário definido</span>;
+                else if(dia.plantoes.length===0&&dia.livres.length===1&&dia.livres[0].fim-dia.livres[0].ini>=1439) corpo=<span style={{...chip,background:mixHex(accA,PANEL,.88),borderColor:"transparent",color:accA,fontWeight:600}}>livre o dia todo</span>;
+                else if(dia.livres.length===0) corpo=<span style={{...mono,fontSize:10.5}}>sem folga</span>;
+                else corpo=dia.livres.map((l,li)=><span key={li} style={chip}>{String(Math.floor(l.ini/60)).padStart(2,"0")}h – {l.fim>=1440?"24h":String(Math.floor(l.fim/60)).padStart(2,"0")+"h"}</span>);
                 return (
-                  <div key={dia.data} style={{padding:"8px 4px",borderBottom:"1px solid rgba(0,0,0,0.05)"}}>
-                    <div style={{fontSize:12.5,color:"#1A1209",fontFamily:"'DM Sans',sans-serif",fontWeight:600,marginBottom:3,textTransform:"capitalize"}}>{["dom","seg","ter","qua","qui","sex","sáb"][dia.diaSemana]}, {fd(dia.data)}</div>
-                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-                      {dia.livres.map((l,li)=>(
-                        <span key={li} style={{fontSize:11,color:"#1A4A6E",background:"rgba(91,163,212,0.1)",border:"1px solid rgba(91,163,212,0.25)",borderRadius:7,padding:"3px 8px",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}>
-                          {String(Math.floor(l.ini/60)).padStart(2,"0")}h – {l.fim>=1440?"24h":String(Math.floor(l.fim/60)).padStart(2,"0")+"h"}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                );
+                  <div key={dia.data} style={{display:"flex",alignItems:"center",gap:isMobile?10:18,padding:"11px 0",borderTop:"1px solid rgba(29,26,28,.08)"}}>
+                    {head}
+                    <div style={{display:"flex",gap:7,flexWrap:"wrap",alignItems:"center"}}>{corpo}</div>
+                  </div>);
               })}
-              <div style={{marginTop:10,paddingTop:10,borderTop:"1px solid rgba(0,0,0,0.06)",fontSize:10.5,color:"rgba(26,18,9,0.5)",fontFamily:"'DM Sans',sans-serif"}}>
+              <div style={{marginTop:6,paddingTop:14,borderTop:"1px solid rgba(29,26,28,.08)",...mono,fontSize:9.5,letterSpacing:".06em",textTransform:"none"}}>
                 Só considera plantões com horário de início e fim preenchidos.
               </div>
             </div>
