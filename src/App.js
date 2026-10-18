@@ -964,6 +964,344 @@ function OrcamentoTab({movs, plantoes, cats, orcamento, setOrcamento, selMes}) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// ESTUDOS — mini-plataforma de residência dentro do Velara
+// ═══════════════════════════════════════════════════════════════════
+const EST_INK="#15251E", EST_FOREST="#1E3A2F", EST_CREAM="#F4EBD9", EST_PAPER="#FBF6EA", EST_CORAL="#E4623F";
+const EST_CORES=["#E4623F","#D9A441","#6F7B3C","#7B8FD8","#B8643A","#8E2A3A"];
+const REV_DIAS=[1,7,30];
+const EST_SEED=[
+  ["Clínica Médica",["Cardiologia","Pneumologia","Endocrinologia","Infectologia","Nefrologia","Gastroenterologia","Hematologia","Reumatologia","Neurologia"]],
+  ["Cirurgia",["Trauma","Abdome agudo","Cirurgia vascular","Urologia","Ortopedia"]],
+  ["Pediatria",["Neonatologia","Imunizações","Infectologia pediátrica","Crescimento e desenvolvimento"]],
+  ["Ginecologia e Obstetrícia",["Pré-natal","Parto","Ginecologia endócrina","Oncologia ginecológica"]],
+  ["Medicina Preventiva",["Epidemiologia","Bioestatística","SUS e políticas de saúde","Vigilância em saúde"]],
+  ["Cardiologia intervencionista e Hemodinâmica",["Anatomia coronariana e cateterismo diagnóstico","Síndromes coronarianas agudas","ICP e stents","Acessos vasculares (radial e femoral)","Hemodinâmica invasiva: pressões, débito e shunts","Valvopatias e TAVI","Cardiopatias estruturais","Antiagregação e anticoagulação no procedimento","Complicações do cateterismo","Contraste e nefropatia","Radioproteção","Choque cardiogênico e suporte mecânico"]],
+].map(([nome,tops],i)=>({id:"m"+i,nome,cor:EST_CORES[i%EST_CORES.length],topicos:tops.map((t,j)=>({id:`t${i}_${j}`,nome:t,estudado:false,dataEstudo:"",revs:[]}))}));
+
+// ── Alternador entre mini-apps (Finanças ⇄ Estudos) ──
+function AppSwitch({atual,onTrocar}){
+  const itens=[["fin","Finanças","◐"],["est","Estudos","✦"]];
+  const idx=itens.findIndex(i=>i[0]===atual);
+  return (
+    <div role="tablist" aria-label="Trocar de aplicativo" style={{position:"relative",display:"inline-grid",gridTemplateColumns:"1fr 1fr",background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.3)",borderRadius:999,padding:3,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+      <i style={{position:"absolute",top:3,bottom:3,left:3,width:"calc(50% - 3px)",borderRadius:999,background:"#FBF4E2",boxShadow:"0 6px 18px -8px rgba(0,0,0,.55)",transform:`translateX(${idx*100}%)`,transition:"transform .45s cubic-bezier(.5,0,.15,1)"}}/>
+      {itens.map(([id,l,ic])=>(
+        <button key={id} role="tab" aria-selected={id===atual} onClick={()=>onTrocar(id)} style={{position:"relative",zIndex:1,height:34,minHeight:34,padding:"0 14px",border:"none",background:"transparent",cursor:"pointer",borderRadius:999,fontFamily:"'DM Sans',sans-serif",fontSize:12.5,fontWeight:id===atual?700:500,color:id===atual?"#15251E":"rgba(255,255,255,.88)",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,transition:"color .3s",whiteSpace:"nowrap"}}>
+          <span style={{width:6,height:6,borderRadius:"50%",background:id===atual?(id==="est"?"#3E5C8A":"#8B2B3A"):"rgba(255,255,255,.55)",transition:"background .3s"}}/>{l}
+        </button>))}
+    </div>);
+}
+
+function EstudosApp({userId,isMobile,onMenu,onTrocar}){
+  const [cfg,setCfg]=useLS("v5_est_cfg",{nome:"Residência médica",prova:"",metaSem:20},userId);
+  const [mats,setMats]=useLS("v5_est_mat",EST_SEED,userId);
+  const [sess,setSess]=useLS("v5_est_sess",[],userId);
+  const [sub,setSub]=useState("hoje");
+  const [editCfg,setEditCfg]=useState(false);
+  const [fCfg,setFCfg]=useState(null);
+  const [aberta,setAberta]=useState(null);
+  const [novoTop,setNovoTop]=useState("");
+  const [novaMat,setNovaMat]=useState("");
+  const [fq,setFq]=useState({matId:"",q:"",ac:""});
+  const [matFoco,setMatFoco]=useState("");
+  const [durMin,setDurMin]=useState(25);
+  const [seg,setSeg]=useState(25*60);
+  const [rodando,setRodando]=useState(false);
+  const [decorrido,setDecorrido]=useState(0);
+  const [manual,setManual]=useState("");
+  useEffect(()=>{
+    if(!rodando)return;
+    const t=setInterval(()=>{setSeg(s=>s>0?s-1:0);setDecorrido(d=>d+1);},1000);
+    return()=>clearInterval(t);
+  },[rodando]);
+  useEffect(()=>{if(rodando&&seg===0)setRodando(false);},[rodando,seg]);
+
+  const hoje=today();
+  const dias=cfg.prova?Math.ceil((new Date(cfg.prova+"T12:00:00")-new Date(hoje+"T12:00:00"))/86400000):null;
+  const iniSemD=new Date(hoje+"T12:00:00"); iniSemD.setDate(iniSemD.getDate()-iniSemD.getDay());
+  const iniSem=iniSemD.toISOString().slice(0,10);
+  const minSem=sess.filter(s=>s.tipo==="estudo"&&s.data>=iniSem).reduce((a,s)=>a+(+s.min||0),0);
+  const hSem=minSem/60;
+  const todasRevs=mats.flatMap(m=>m.topicos.flatMap(t=>(t.revs||[]).map((r,ri)=>({...r,ri,matId:m.id,matNome:m.nome,cor:m.cor,topId:t.id,topNome:t.nome}))));
+  const revsPend=todasRevs.filter(r=>!r.feita).sort((a,b)=>a.d.localeCompare(b.d));
+  const revsHoje=revsPend.filter(r=>r.d<=hoje);
+  const revsProx=revsPend.filter(r=>r.d>hoje&&r.d<=addDays(hoje,14));
+  const totQ=sess.filter(s=>s.tipo==="questoes").reduce((a,s)=>a+(+s.q||0),0);
+  const totAc=sess.filter(s=>s.tipo==="questoes").reduce((a,s)=>a+(+s.ac||0),0);
+  const acerto=totQ>0?Math.round(totAc/totQ*100):null;
+  const ativos=new Set([...sess.map(s=>s.data),...mats.flatMap(m=>m.topicos.map(t=>t.dataEstudo).filter(Boolean)),...todasRevs.filter(r=>r.feita&&r.dataFeita).map(r=>r.dataFeita)]);
+  let streak=0, dd=hoje; if(!ativos.has(dd))dd=addDays(dd,-1); while(ativos.has(dd)){streak++;dd=addDays(dd,-1);}
+  const totTop=mats.reduce((a,m)=>a+m.topicos.length,0), estTop=mats.reduce((a,m)=>a+m.topicos.filter(t=>t.estudado).length,0);
+  const pctGeral=totTop>0?Math.round(estTop/totTop*100):0;
+  const semana=Array.from({length:7},(_,i)=>{const ds=addDays(iniSem,i);const min=sess.filter(s=>s.data===ds).reduce((a,s)=>a+(+s.min||0),0);return {ds,min,ativo:ativos.has(ds),ehHoje:ds===hoje,lbl:["D","S","T","Q","Q","S","S"][i]};});
+  const sugestoes=[...mats].map(m=>({m,pct:m.topicos.length?m.topicos.filter(t=>t.estudado).length/m.topicos.length:1,prox:m.topicos.find(t=>!t.estudado)})).filter(x=>x.prox).sort((a,b)=>a.pct-b.pct).slice(0,4);
+
+  const marcarTopico=(mid,tid)=>setMats(mats.map(m=>m.id!==mid?m:{...m,topicos:m.topicos.map(t=>{
+    if(t.id!==tid)return t;
+    if(t.estudado)return {...t,estudado:false,dataEstudo:"",revs:[]};
+    return {...t,estudado:true,dataEstudo:hoje,revs:REV_DIAS.map(n=>({d:addDays(hoje,n),n,feita:false}))};
+  })}));
+  const feitaRev=(mid,tid,ri)=>setMats(mats.map(m=>m.id!==mid?m:{...m,topicos:m.topicos.map(t=>t.id!==tid?t:{...t,revs:t.revs.map((r,i)=>i===ri?{...r,feita:!r.feita,dataFeita:!r.feita?hoje:""}:r)})}));
+  const addTopico=mid=>{const n=novoTop.trim();if(!n)return;setMats(mats.map(m=>m.id!==mid?m:{...m,topicos:[...m.topicos,{id:uid(),nome:n,estudado:false,dataEstudo:"",revs:[]}]}));setNovoTop("");};
+  const delTopico=(mid,tid)=>setMats(mats.map(m=>m.id!==mid?m:{...m,topicos:m.topicos.filter(t=>t.id!==tid)}));
+  const addMateria=()=>{const n=novaMat.trim();if(!n)return;setMats([...mats,{id:uid(),nome:n,cor:EST_CORES[mats.length%EST_CORES.length],topicos:[]}]);setNovaMat("");};
+  const delMateria=mid=>{if(window.confirm("Remover esta matéria e todos os tópicos?"))setMats(mats.filter(m=>m.id!==mid));};
+  const addQuestoes=()=>{const q=+fq.q,ac=+fq.ac;const mid=fq.matId||mats[0]?.id;if(!(q>0)||ac<0||ac>q||!mid)return;setSess([{id:uid(),data:hoje,matId:mid,tipo:"questoes",q,ac,min:0},...sess]);setFq({...fq,q:"",ac:""});};
+  const salvarFoco=()=>{const min=Math.max(1,Math.round(decorrido/60));setSess([{id:uid(),data:hoje,matId:matFoco||mats[0]?.id,tipo:"estudo",min},...sess]);setRodando(false);setDecorrido(0);setSeg(durMin*60);};
+  const addManual=()=>{const min=+manual;if(!(min>0))return;setSess([{id:uid(),data:hoje,matId:matFoco||mats[0]?.id,tipo:"estudo",min},...sess]);setManual("");};
+  const matDe=id=>mats.find(m=>m.id===id);
+  const fmt=s=>String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+
+  const lab={fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10,letterSpacing:".12em",textTransform:"uppercase",color:"rgba(21,37,30,.6)"};
+  const serif={fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,letterSpacing:"-.03em"};
+  const chipBtn=ativo=>({background:ativo?EST_CREAM:"rgba(244,235,217,.1)",color:ativo?EST_INK:"rgba(244,235,217,.85)",border:"1px solid "+(ativo?EST_CREAM:"rgba(244,235,217,.28)"),borderRadius:999,padding:"0 16px",height:36,fontSize:12.5,fontWeight:ativo?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'DM Sans',sans-serif"});
+  const inp={background:"#fff",border:"1px solid rgba(21,37,30,.18)",borderRadius:12,padding:"11px 14px",fontSize:14,fontFamily:"'DM Sans',sans-serif",color:EST_INK,width:"100%",minWidth:0,outline:"none"};
+  const btnP={background:EST_INK,color:EST_CREAM,border:"none",borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
+  const btnS={background:"transparent",color:EST_INK,border:"1px solid rgba(21,37,30,.25)",borderRadius:999,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
+  const Check=({on,cor,onClick})=><button onClick={onClick} aria-label="marcar" style={{width:26,height:26,borderRadius:"50%",border:"1.5px solid "+(on?cor:"rgba(21,37,30,.3)"),background:on?cor:"transparent",color:"#fff",cursor:"pointer",flexShrink:0,fontSize:13,lineHeight:1,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:0}}>{on?"✓":""}</button>;
+  const Card=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(21,37,30,.1)",borderRadius:24,padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  const Titulo=({k,t,dir})=><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,marginBottom:18}}><div><div style={lab}>{k}</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:6,lineHeight:1,color:EST_INK}}>{t}</div></div>{dir}</div>;
+  const RevRow=({r})=>(
+    <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderTop:"1px solid rgba(21,37,30,.08)"}}>
+      <Check on={r.feita} cor={r.cor} onClick={()=>feitaRev(r.matId,r.topId,r.ri)}/>
+      <div style={{flex:1,minWidth:0}}>
+        <div style={{fontSize:14.5,fontWeight:600,color:EST_INK}}>{r.topNome}</div>
+        <div style={{...lab,marginTop:3,fontSize:9.5}}>{r.matNome} · revisão D{r.n}</div>
+      </div>
+      <span style={{...lab,fontSize:10,color:r.d<hoje?EST_CORAL:undefined,fontWeight:r.d<hoje?700:400}}>{r.d<hoje?"atrasada":r.d===hoje?"hoje":fd(r.d)}</span>
+    </div>);
+  const tiles=[
+    {l:"Revisões hoje",v:String(revsHoje.length),u:revsHoje.length===1?"pendente":"pendentes",s:"tulipa",z:1.5,x:20,y:30,to:"rev"},
+    {l:"Horas na semana",v:hSem.toFixed(1).replace(".0",""),u:"h de "+(cfg.metaSem||0)+"h",s:"manteiga",z:1.4,x:40,y:20,to:"foco"},
+    {l:"Taxa de acerto",v:acerto===null?"—":acerto+"%",u:totQ+" questões",s:"noite",z:1.5,x:10,y:50,to:"q"},
+    {l:"Sequência",v:String(streak),u:streak===1?"dia seguido":"dias seguidos",s:"veludo",z:1.4,x:30,y:20,to:"hoje"},
+  ];
+  const subs=[["hoje","Hoje"],["mat","Matérias"],["rev","Revisões"+(revsHoje.length?" · "+revsHoje.length:"")],["q","Questões"],["foco","Foco"]];
+
+  return (
+    <div className="est" style={{minHeight:"100vh",background:EST_INK,position:"relative",zIndex:1,color:EST_INK,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
+      <style>{`
+        .est .est-hero{position:relative;overflow:hidden;background:${EST_INK};color:${EST_CREAM}}
+        .est .est-scrim{position:absolute;inset:0;background:linear-gradient(95deg,rgba(15,24,18,.96) 0%,rgba(15,24,18,.78) 42%,rgba(15,24,18,.25) 100%)}
+        .est .est-in{position:relative;max-width:1100px;margin:0 auto;padding:${isMobile?"18px 18px 54px":"26px 28px 62px"}}
+        .est .est-sheet{position:relative;background:${EST_CREAM};border-radius:30px 30px 0 0;margin-top:-28px;min-height:70vh;padding:${isMobile?"26px 14px 110px":"34px 28px 110px"}}
+        .est .est-wrap{max-width:1100px;margin:0 auto}
+        .est .est-grid4{display:grid;grid-template-columns:repeat(${isMobile?2:4},1fr);gap:14px;margin-bottom:16px}
+        .est .est-grid2{display:grid;grid-template-columns:${isMobile?"1fr":"1fr 1fr"};gap:16px}
+        .est .est-pills{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin-top:22px;padding-bottom:2px}
+        .est .est-pills::-webkit-scrollbar{display:none}
+        .est input:focus,.est select:focus{border-color:${EST_FOREST}!important}
+        .est button:active{transform:scale(.98)}
+      `}</style>
+      <div className="est-hero">
+        <Motif s="noite" z={1.1} x={40} y={10} style={{position:"absolute",inset:0,opacity:.95}}/>
+        <div className="est-scrim"/>
+        <div className="est-in">
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:isMobile?22:30}}>
+            <button onClick={onMenu} aria-label="Abrir menu" style={{background:"rgba(244,235,217,.12)",border:"1px solid rgba(244,235,217,.3)",borderRadius:99,width:40,height:40,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5}}>{[0,1,2].map(i=><i key={i} style={{width:16,height:1.5,background:EST_CREAM,display:"block"}}/>)}</button>
+            <AppSwitch atual="est" onTrocar={onTrocar}/>
+            <span style={{width:40,height:40}}/>
+          </div>
+          <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".18em",textTransform:"uppercase",opacity:.7,marginBottom:6}}>{cfg.nome||"Prova"}{cfg.prova?" · "+fdFull(cfg.prova):""}</div>
+          {dias===null
+            ? <div style={{...serif,fontSize:isMobile?44:64,lineHeight:1,color:EST_CREAM}}>Defina a data<br/>da sua prova</div>
+            : dias>=0
+              ? <div style={{display:"flex",alignItems:"baseline",gap:14,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?104:150,lineHeight:.85,color:EST_CREAM}}>{dias}</span><span style={{...serif,fontSize:isMobile?22:30,opacity:.85}}>{dias===1?"dia":"dias"}<br/>para a prova</span></div>
+              : <div style={{...serif,fontSize:isMobile?40:56,lineHeight:1}}>Prova realizada</div>}
+          <div style={{display:"flex",alignItems:"center",gap:14,marginTop:20,flexWrap:"wrap"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:isMobile?150:200,height:6,borderRadius:99,background:"rgba(244,235,217,.2)",overflow:"hidden"}}><div style={{width:pctGeral+"%",height:"100%",background:EST_CORAL,borderRadius:99,transition:"width .5s"}}/></div>
+              <span style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".1em",opacity:.85}}>{pctGeral}% DO CONTEÚDO · {estTop}/{totTop}</span>
+            </div>
+            <button onClick={()=>{setFCfg({...cfg});setEditCfg(true);setSub("hoje");}} style={{background:"transparent",border:"none",color:EST_CREAM,opacity:.7,fontSize:12,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:4}}>editar prova</button>
+          </div>
+          <div className="est-pills">{subs.map(([id,l])=><button key={id} onClick={()=>setSub(id)} style={chipBtn(sub===id)}>{l}</button>)}</div>
+        </div>
+      </div>
+
+      <div className="est-sheet"><div className="est-wrap">
+
+      {editCfg&&fCfg&&(
+        <Card>
+          <Titulo k="Configuração" t="Sua prova"/>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"2fr 1fr 1fr",gap:12,marginBottom:16}}>
+            <div><div style={{...lab,marginBottom:6}}>Nome</div><input style={inp} value={fCfg.nome} onChange={e=>setFCfg({...fCfg,nome:e.target.value})} placeholder="Ex: Residência — Cardiologia"/></div>
+            <div><div style={{...lab,marginBottom:6}}>Data da prova</div><input style={inp} type="date" value={fCfg.prova} onChange={e=>setFCfg({...fCfg,prova:e.target.value})}/></div>
+            <div><div style={{...lab,marginBottom:6}}>Meta (h/semana)</div><input style={inp} type="number" min="0" value={fCfg.metaSem} onChange={e=>setFCfg({...fCfg,metaSem:e.target.value})}/></div>
+          </div>
+          <div style={{display:"flex",gap:10}}><button style={btnP} onClick={()=>{setCfg({...fCfg,metaSem:+fCfg.metaSem||0});setEditCfg(false);}}>Salvar</button><button style={btnS} onClick={()=>setEditCfg(false)}>Cancelar</button></div>
+        </Card>)}
+
+      {/* ═ HOJE ═ */}
+      {sub==="hoje"&&(<>
+        <div className="est-grid4">
+          {tiles.map(t=>(
+            <div key={t.l} className="bento-tile" onClick={()=>setSub(t.to)} style={{background:STY[t.s].paper,cursor:"pointer",minHeight:isMobile?172:200}}>
+              <Motif s={t.s} z={t.z} x={t.x} y={t.y} style={{position:"absolute",inset:0,zIndex:0,pointerEvents:"none"}}/>
+              <div className="tile-panel" style={{marginTop:"auto"}}>
+                <div style={{...lab,fontSize:9.5,color:"rgba(42,30,20,.65)"}}>{t.l}</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:6,marginTop:6,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?34:42,lineHeight:1,color:"#2A1E14"}}>{t.v}</span><span style={{fontSize:11.5,opacity:.6}}>{t.u}</span></div>
+              </div>
+            </div>))}
+        </div>
+        <div className="est-grid2">
+          <Card>
+            <Titulo k="Memória" t="Revisões de hoje" dir={<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setSub("rev")}>ver todas</button>}/>
+            {revsHoje.length===0
+              ? <div style={{display:"flex",alignItems:"center",gap:16}}><div style={{width:84,height:84,borderRadius:22,overflow:"hidden",flexShrink:0}}><Motif s="tulipa" z={1.55} x={0} y={36}/></div><div style={{fontSize:14,lineHeight:1.45,color:"rgba(21,37,30,.65)"}}>Nenhuma revisão pendente.<br/>Marque tópicos como estudados para agendar D1, D7 e D30.</div></div>
+              : revsHoje.slice(0,6).map(r=><RevRow key={r.topId+r.ri} r={r}/>)}
+          </Card>
+          <Card>
+            <Titulo k="Próximos passos" t="O que estudar"/>
+            {sugestoes.length===0
+              ? <div style={{fontSize:14,color:"rgba(21,37,30,.65)"}}>Você concluiu todos os tópicos cadastrados. Adicione mais em Matérias.</div>
+              : sugestoes.map(({m,prox,pct})=>(
+                <div key={m.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderTop:"1px solid rgba(21,37,30,.08)"}}>
+                  <Check on={false} cor={m.cor} onClick={()=>marcarTopico(m.id,prox.id)}/>
+                  <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}>{prox.nome}</div><div style={{...lab,marginTop:3,fontSize:9.5}}>{m.nome} · {Math.round(pct*100)}% feito</div></div>
+                </div>))}
+          </Card>
+        </div>
+        <Card>
+          <Titulo k="Semana" t="Ritmo de estudo" dir={<div style={{textAlign:"right"}}><div style={lab}>meta</div><div style={{...serif,fontSize:isMobile?24:30,marginTop:4}}>{hSem.toFixed(1).replace(".0","")}<small style={{fontSize:"50%",opacity:.55}}> / {cfg.metaSem||0}h</small></div></div>}/>
+          <div style={{display:"flex",gap:isMobile?6:14,justifyContent:"space-between"}}>
+            {semana.map((d,i)=>(
+              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:8}}>
+                <i style={{width:"100%",maxWidth:56,aspectRatio:"1",borderRadius:"50%",background:d.ativo?EST_INK:d.ds>hoje?"#E6DFD0":"#D9D1C3",boxShadow:d.ehHoje?"0 0 0 3px "+EST_CORAL:"none",display:"flex",alignItems:"center",justifyContent:"center",color:EST_CREAM,fontSize:isMobile?10:12,fontStyle:"normal",fontWeight:600}}>{d.min>0?Math.round(d.min/60*10)/10+"h":""}</i>
+                <span style={{...lab,fontSize:9.5,color:d.ehHoje?EST_CORAL:undefined,fontWeight:d.ehHoje?700:400}}>{d.lbl}</span>
+              </div>))}
+          </div>
+        </Card>
+      </>)}
+
+      {/* ═ MATÉRIAS ═ */}
+      {sub==="mat"&&(<>
+        {mats.map(m=>{
+          const est=m.topicos.filter(t=>t.estudado).length, tot=m.topicos.length, pct=tot?Math.round(est/tot*100):0, op=aberta===m.id;
+          return (
+            <Card key={m.id} style={{padding:isMobile?"18px":"22px 26px"}}>
+              <div onClick={()=>{setAberta(op?null:m.id);setNovoTop("");}} style={{display:"flex",alignItems:"center",gap:14,cursor:"pointer"}}>
+                <i style={{width:14,height:14,borderRadius:"50%",background:m.cor,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{...serif,fontSize:isMobile?22:26,lineHeight:1.1}}>{m.nome}</div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
+                    <div style={{flex:1,height:6,borderRadius:99,background:"rgba(21,37,30,.1)",overflow:"hidden"}}><div style={{width:pct+"%",height:"100%",background:m.cor,borderRadius:99,transition:"width .4s"}}/></div>
+                    <span style={{...lab,fontSize:10}}>{est}/{tot} · {pct}%</span>
+                  </div>
+                </div>
+                <span style={{fontSize:18,opacity:.5,transform:op?"rotate(90deg)":"none",transition:"transform .2s"}}>›</span>
+              </div>
+              {op&&(
+                <div style={{marginTop:16}}>
+                  {m.topicos.map(t=>(
+                    <div key={t.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderTop:"1px solid rgba(21,37,30,.08)"}}>
+                      <Check on={t.estudado} cor={m.cor} onClick={()=>marcarTopico(m.id,t.id)}/>
+                      <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:500,textDecoration:t.estudado?"none":"none",opacity:t.estudado?.6:1}}>{t.nome}</div>{t.estudado&&<div style={{...lab,fontSize:9.5,marginTop:2}}>estudado em {fd(t.dataEstudo)}</div>}</div>
+                      <button onClick={()=>delTopico(m.id,t.id)} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(21,37,30,.35)",padding:"0 4px"}}>×</button>
+                    </div>))}
+                  <div style={{display:"flex",gap:10,marginTop:12}}>
+                    <input style={inp} value={novoTop} onChange={e=>setNovoTop(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addTopico(m.id);}} placeholder="Novo tópico…"/>
+                    <button style={btnP} onClick={()=>addTopico(m.id)}>+</button>
+                  </div>
+                  <button onClick={()=>delMateria(m.id)} style={{marginTop:14,background:"none",border:"none",color:"rgba(21,37,30,.5)",fontSize:12,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3}}>remover matéria</button>
+                </div>)}
+            </Card>);
+        })}
+        <Card>
+          <Titulo k="Nova" t="Adicionar matéria"/>
+          <div style={{display:"flex",gap:10}}><input style={inp} value={novaMat} onChange={e=>setNovaMat(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addMateria();}} placeholder="Ex: Cardiologia intervencionista"/><button style={btnP} onClick={addMateria}>Adicionar</button></div>
+        </Card>
+      </>)}
+
+      {/* ═ REVISÕES ═ */}
+      {sub==="rev"&&(<>
+        <Card>
+          <Titulo k="Repetição espaçada" t="Para hoje"/>
+          {revsHoje.length===0?<div style={{fontSize:14,color:"rgba(21,37,30,.65)"}}>Tudo em dia por aqui.</div>:revsHoje.map(r=><RevRow key={r.topId+r.ri} r={r}/>)}
+        </Card>
+        <Card>
+          <Titulo k="Próximos 14 dias" t="Agendadas"/>
+          {revsProx.length===0?<div style={{fontSize:14,color:"rgba(21,37,30,.65)"}}>Nada agendado. Cada tópico estudado gera revisões em D1, D7 e D30.</div>:revsProx.map(r=><RevRow key={r.topId+r.ri} r={r}/>)}
+        </Card>
+      </>)}
+
+      {/* ═ QUESTÕES ═ */}
+      {sub==="q"&&(<>
+        <Card>
+          <Titulo k="Desempenho" t="Registrar questões" dir={<div style={{textAlign:"right"}}><div style={lab}>acerto geral</div><div style={{...serif,fontSize:isMobile?30:38,marginTop:4,color:EST_CORAL}}>{acerto===null?"—":acerto+"%"}</div></div>}/>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"2fr 1fr 1fr auto",gap:12,alignItems:"end"}}>
+            <div style={{gridColumn:isMobile?"1 / 3":"auto"}}><div style={{...lab,marginBottom:6}}>Matéria</div><select style={inp} value={fq.matId||mats[0]?.id||""} onChange={e=>setFq({...fq,matId:e.target.value})}>{mats.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
+            <div><div style={{...lab,marginBottom:6}}>Questões</div><input style={inp} type="number" min="1" value={fq.q} onChange={e=>setFq({...fq,q:e.target.value})} placeholder="20"/></div>
+            <div><div style={{...lab,marginBottom:6}}>Acertos</div><input style={inp} type="number" min="0" value={fq.ac} onChange={e=>setFq({...fq,ac:e.target.value})} placeholder="15"/></div>
+            <button style={{...btnP,gridColumn:isMobile?"1 / 3":"auto"}} onClick={addQuestoes}>Salvar</button>
+          </div>
+        </Card>
+        <Card>
+          <Titulo k="Por matéria" t="Taxa de acerto"/>
+          {mats.map(m=>{const ss=sess.filter(s=>s.tipo==="questoes"&&s.matId===m.id);const q=ss.reduce((a,s)=>a+(+s.q||0),0),ac=ss.reduce((a,s)=>a+(+s.ac||0),0);const p=q?Math.round(ac/q*100):0;return (
+            <div key={m.id} style={{padding:"11px 0",borderTop:"1px solid rgba(21,37,30,.08)"}}>
+              <div style={{display:"flex",justifyContent:"space-between",gap:10,marginBottom:8}}><span style={{fontSize:14.5,fontWeight:600}}>{m.nome}</span><span style={{...lab,fontSize:10}}>{q?`${ac}/${q} · ${p}%`:"sem registros"}</span></div>
+              <div style={{height:8,borderRadius:99,background:"rgba(21,37,30,.1)",overflow:"hidden"}}><div style={{width:p+"%",height:"100%",background:m.cor,borderRadius:99,transition:"width .4s"}}/></div>
+            </div>);})}
+        </Card>
+        <Card>
+          <Titulo k="Histórico" t="Últimos registros"/>
+          {sess.filter(s=>s.tipo==="questoes").length===0?<div style={{fontSize:14,color:"rgba(21,37,30,.65)"}}>Nenhuma sessão de questões ainda.</div>:sess.filter(s=>s.tipo==="questoes").slice(0,8).map(s=>{const m=matDe(s.matId);return (
+            <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(21,37,30,.08)"}}>
+              <i style={{width:10,height:10,borderRadius:"50%",background:m?.cor||"#999",flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}>{m?.nome||"—"}</div><div style={{...lab,fontSize:9.5,marginTop:3}}>{fd(s.data)}</div></div>
+              <span style={{...serif,fontSize:22}}>{s.ac}/{s.q}</span>
+              <button onClick={()=>setSess(sess.filter(x=>x.id!==s.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(21,37,30,.35)"}}>×</button>
+            </div>);})}
+        </Card>
+      </>)}
+
+      {/* ═ FOCO ═ */}
+      {sub==="foco"&&(<>
+        <Card style={{textAlign:"center"}}>
+          <div style={lab}>Sessão de foco</div>
+          <div style={{position:"relative",width:isMobile?250:300,height:isMobile?250:300,margin:"18px auto"}}>
+            <svg viewBox="0 0 100 100" width="100%" height="100%" style={{transform:"rotate(-90deg)"}}>
+              <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(21,37,30,.1)" strokeWidth="2.5"/>
+              <circle cx="50" cy="50" r="46" fill="none" stroke={EST_CORAL} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={2*Math.PI*46} strokeDashoffset={2*Math.PI*46*(durMin*60>0?seg/(durMin*60):0)} style={{transition:"stroke-dashoffset 1s linear"}}/>
+            </svg>
+            <div style={{position:"absolute",inset:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
+              <div style={{...serif,fontSize:isMobile?60:72,lineHeight:1}}>{fmt(seg)}</div>
+              <div style={{...lab,marginTop:8}}>{seg===0?"concluído":rodando?"focando":"pronto"}</div>
+            </div>
+          </div>
+          <div style={{display:"flex",justifyContent:"center",gap:8,marginBottom:16,flexWrap:"wrap"}}>
+            {[25,50,90].map(n=><button key={n} disabled={rodando} onClick={()=>{setDurMin(n);setSeg(n*60);setDecorrido(0);}} style={{...btnS,padding:"8px 16px",background:durMin===n?EST_INK:"transparent",color:durMin===n?EST_CREAM:EST_INK,opacity:rodando?.5:1}}>{n} min</button>)}
+          </div>
+          <div style={{maxWidth:360,margin:"0 auto 18px"}}><select style={inp} value={matFoco||mats[0]?.id||""} onChange={e=>setMatFoco(e.target.value)}>{mats.map(m=><option key={m.id} value={m.id}>{m.nome}</option>)}</select></div>
+          <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+            <button style={btnP} onClick={()=>{if(seg===0){setSeg(durMin*60);setDecorrido(0);}setRodando(!rodando);}}>{rodando?"Pausar":seg===0?"Reiniciar":decorrido>0?"Continuar":"Iniciar"}</button>
+            {decorrido>=60&&<button style={{...btnP,background:EST_CORAL}} onClick={salvarFoco}>Salvar {Math.round(decorrido/60)} min</button>}
+            {(decorrido>0||seg!==durMin*60)&&<button style={btnS} onClick={()=>{setRodando(false);setDecorrido(0);setSeg(durMin*60);}}>Zerar</button>}
+          </div>
+        </Card>
+        <Card>
+          <Titulo k="Sem cronômetro" t="Registrar tempo"/>
+          <div style={{display:"flex",gap:10}}><input style={inp} type="number" min="1" value={manual} onChange={e=>setManual(e.target.value)} placeholder="Minutos estudados (matéria selecionada acima)"/><button style={btnP} onClick={addManual}>Salvar</button></div>
+        </Card>
+        <Card>
+          <Titulo k="Histórico" t="Sessões de estudo"/>
+          {sess.filter(s=>s.tipo==="estudo").length===0?<div style={{fontSize:14,color:"rgba(21,37,30,.65)"}}>Nenhuma sessão registrada.</div>:sess.filter(s=>s.tipo==="estudo").slice(0,8).map(s=>{const m=matDe(s.matId);return (
+            <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(21,37,30,.08)"}}>
+              <i style={{width:10,height:10,borderRadius:"50%",background:m?.cor||"#999",flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}>{m?.nome||"—"}</div><div style={{...lab,fontSize:9.5,marginTop:3}}>{fd(s.data)}</div></div>
+              <span style={{...serif,fontSize:22}}>{s.min}<small style={{fontSize:"55%",opacity:.55}}> min</small></span>
+              <button onClick={()=>setSess(sess.filter(x=>x.id!==s.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(21,37,30,.35)"}}>×</button>
+            </div>);})}
+        </Card>
+      </>)}
+
+      </div></div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // MÓDULO 3 — BALANÇO MENSAL COM GRÁFICOS
 // ═══════════════════════════════════════════════════════════════════
 
@@ -3468,8 +3806,17 @@ function AppMain({user, onLogout}) {
     {id:"cartoes",icon:"▭",label:"Cartões"},
     {id:"previsao",icon:"◈",label:"Previsão"},
     {id:"categorias",icon:"☰",label:"Categorias"},
+    {id:"estudos",icon:"✦",label:"Estudos"},
   ];
   const navTo=id=>{setTab(id);setSideOpen(false);};
+  const [trocando,setTrocando]=useState(null);
+  const trocarApp=dest=>{
+    const atualApp=tab==="estudos"?"est":"fin";
+    if(dest===atualApp||trocando)return;
+    setTrocando(dest);
+    setTimeout(()=>{navTo(dest==="est"?"estudos":"dashboard");try{window.scrollTo(0,0);}catch{}},300);
+    setTimeout(()=>setTrocando(null),900);
+  };
   const showCard=id=>dashCards[id]!==false;
   const visibleDashIds=DASH_CARDS.filter(dc=>showCard(dc.id)&&!(dc.id==="cartoes"&&cartoes.length===0)).map(dc=>dc.id);
   const dashLayoutsResolved={};
@@ -3487,7 +3834,7 @@ function AppMain({user, onLogout}) {
   const TMUT="rgba(26,18,9,0.45)";
 
   return (
-    <div className={"vl"+(isMobile?" mobile":"")} style={{...((p)=>({"--m1":p.m1,"--m2":p.m2,"--m3":p.m3,"--m4":p.m4,"--base":p.base,"--h1":p.h1,"--h2":p.h2,"--h3":p.h3,"--hb":p.hb,"--acc":p.acc}))(BG_PALETTES[bgId]||BG_PALETTES.tartan),minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
+    <div className={"vl"+(isMobile?" mobile":"")+(tab==="estudos"?" est-on":"")} style={{...((p)=>({"--m1":p.m1,"--m2":p.m2,"--m3":p.m3,"--m4":p.m4,"--base":p.base,"--h1":p.h1,"--h2":p.h2,"--h3":p.h3,"--hb":p.hb,"--acc":p.acc}))(BG_PALETTES[bgId]||BG_PALETTES.tartan),minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
       <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap');
@@ -3550,6 +3897,12 @@ function AppMain({user, onLogout}) {
         .vl .wallpaper-bg{display:none}
         .vl,body:has(.vl){background:#7A0E3A}
         .vl .topbar{display:none!important}
+        .app-swap{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;animation:swp .9s cubic-bezier(.4,0,.2,1) both;pointer-events:all}
+        .app-swap-card{position:relative;background:#FBF4E2;color:#2A1E14;border-radius:28px;padding:26px 40px;text-align:center;box-shadow:0 30px 70px -24px rgba(0,0,0,.6);animation:swc .9s cubic-bezier(.4,0,.2,1) both}
+        @keyframes swp{0%{opacity:0}33%{opacity:1}67%{opacity:1}100%{opacity:0}}
+        @keyframes swc{0%{transform:translateY(16px) scale(.94)}35%{transform:none}70%{transform:none}100%{transform:translateY(-10px) scale(.98)}}
+        .vl.est-on .m-hero,.vl.est-on .sheet,.vl.est-on .wallpaper-bg{display:none!important}
+        .vl.est-on,body:has(.vl.est-on){background:#15251E}
         .vl .sheet{background:var(--base);border-radius:30px 30px 0 0;margin-top:-26px;position:relative;z-index:1;min-height:70vh}
         .mobile .sheet{margin-top:-24px}
         .mobile .main-wrap{padding:24px 14px 96px!important}
@@ -3743,7 +4096,7 @@ function AppMain({user, onLogout}) {
               <div style={{width:16,height:1.5,background:"#fff",borderRadius:1}}/>
               <div style={{width:10,height:1.5,background:"#fff",borderRadius:1,alignSelf:"flex-start",marginLeft:12}}/>
             </button>
-            <div className="mono" style={{fontSize:10,letterSpacing:".18em",textTransform:"uppercase",opacity:.85}}>{TABS.find(t=>t.id===tab)?.label||"Velara"}</div>
+            <AppSwitch atual="fin" onTrocar={trocarApp}/>
             <button onClick={()=>setEditSaldoMes(String(saldoMensal[selMes]!==undefined?saldoMensal[selMes]:+saldoFimDoMes(shiftMonth(selMes,-1)).toFixed(2)))} style={{background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:99,padding:"0 12px",height:40,minHeight:40,fontSize:11,color:"#fff",cursor:"pointer",fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>ajustar</button>
           </div>
           <div className="m-hero-l">
@@ -3812,6 +4165,12 @@ function AppMain({user, onLogout}) {
         </div>
       </div>
 
+      {trocando&&(()=>{const est=trocando==="est";const sty=est?"noite":palBg.hero.s;return (
+        <div className="app-swap" style={{background:STY[sty].paper}}>
+          <Motif s={sty} z={1.1} x={est?40:30} y={est?10:20} style={{position:"absolute",inset:0}}/>
+          <div className="app-swap-card"><div className="mono" style={{fontSize:10,letterSpacing:".24em",textTransform:"uppercase",opacity:.6,marginBottom:8}}>Velara</div><div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,fontSize:46,letterSpacing:"-.03em",lineHeight:1}}>{est?"Estudos":"Finanças"}</div></div>
+        </div>);})()}
+      {tab==="estudos"&&<EstudosApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
       <div className="sheet">
       <div className="main-wrap" style={{maxWidth:1100,margin:"0 auto",padding:"14px 24px 80px",position:"relative",zIndex:1}}>
 
@@ -3834,6 +4193,28 @@ function AppMain({user, onLogout}) {
                 Arraste pelo <GripVertical size={11} strokeWidth={2.2} style={{display:"inline-block",verticalAlign:"-2px",margin:"0 2px"}}/> pra mover, e puxe o canto inferior direito de cada card pra redimensionar.
               </div>
             )}
+
+            {!dashEditMode&&(()=>{
+              let cfgE={},matsE=[];
+              try{cfgE=JSON.parse(localStorage.getItem(userId+"_v5_est_cfg")||"{}")||{};matsE=JSON.parse(localStorage.getItem(userId+"_v5_est_mat")||"[]")||[];}catch{}
+              const hj=today();
+              const dE=cfgE.prova?Math.ceil((new Date(cfgE.prova+"T12:00:00")-new Date(hj+"T12:00:00"))/86400000):null;
+              const revE=matsE.flatMap(m=>(m.topicos||[]).flatMap(t=>t.revs||[])).filter(r=>!r.feita&&r.d<=hj).length;
+              return (
+                <button onClick={()=>trocarApp("est")} style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",border:"none",cursor:"pointer",borderRadius:28,padding:isMobile?"20px 20px":"24px 30px",marginBottom:14,background:"#15251E",color:"#F4EBD9",fontFamily:"inherit"}}>
+                  <Motif s="noite" z={1.1} x={60} y={20} style={{position:"absolute",inset:0,opacity:.95}}/>
+                  <div style={{position:"absolute",inset:0,background:"linear-gradient(95deg,rgba(15,24,18,.96) 0%,rgba(15,24,18,.75) 50%,rgba(15,24,18,.2) 100%)"}}/>
+                  <div style={{position:"relative",minWidth:0}}>
+                    <div className="mono" style={{fontSize:10,letterSpacing:".22em",textTransform:"uppercase",opacity:.7,marginBottom:8}}>Plataforma · Estudos</div>
+                    <div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,fontSize:isMobile?26:32,letterSpacing:"-.03em",lineHeight:1.05}}>{cfgE.nome||"Residência médica"}</div>
+                    <div style={{fontSize:12.5,opacity:.8,marginTop:8}}>{revE>0?`${revE} ${revE===1?"revisão":"revisões"} para hoje`:dE===null?"Defina a data da prova e comece":"Sem revisões pendentes hoje"}</div>
+                  </div>
+                  <div style={{position:"relative",display:"flex",alignItems:"center",gap:14,flexShrink:0}}>
+                    {dE!==null&&dE>=0&&<div style={{textAlign:"right",lineHeight:1}}><div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,fontSize:isMobile?44:60,letterSpacing:"-.04em"}}>{dE}</div><div className="mono" style={{fontSize:9.5,letterSpacing:".14em",textTransform:"uppercase",opacity:.7,marginTop:4}}>dias</div></div>}
+                    <span style={{width:40,height:40,borderRadius:"50%",background:"#F4EBD9",color:"#15251E",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:17,flexShrink:0}}>↗</span>
+                  </div>
+                </button>);
+            })()}
 
             {(()=>{
               const dc={};
