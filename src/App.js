@@ -1315,6 +1315,212 @@ const IDI_LANGS=[
   {id:"fr",nome:"Francês",cod:"FR",cor:IDI_BLUE,nivel:"A2",alvo:"B1",prova:"",metaSem:3},
 ];
 
+// ── Substantivos alemães: cores por artigo, regras de terminação e banco básico ──
+const ART_COR={der:"#3F6FB5",die:"#C4503A",das:"#4E8A3E"};
+const ART_BG={der:"#DCE7F6",die:"#F6DDD6",das:"#DDEBD6"};
+const SUF_REGRAS=[
+  ["chen","das","sempre"],["lein","das","sempre"],["ung","die","sempre"],["heit","die","sempre"],["keit","die","sempre"],["schaft","die","sempre"],["ion","die","sempre"],["tät","die","sempre"],["ismus","der","sempre"],["ling","der","sempre"],
+  ["ment","das","quase sempre"],["nis","das","quase sempre"],["tum","das","quase sempre"],["ik","die","quase sempre"],["ur","die","quase sempre"],["ei","die","quase sempre"],["ie","die","quase sempre"],["ig","der","quase sempre"],["ist","der","quase sempre"],["or","der","quase sempre"],["um","das","quase sempre"],["ma","das","quase sempre"],
+  ["ge-","das","geralmente"],["er","der","geralmente"],["e","die","geralmente"],
+];
+const sugerirArt=raw=>{
+  const t=(raw||"").trim().replace(/^(der|die|das)\s+/i,""); if(t.length<3)return null;
+  const w=t.toLowerCase();
+  for(const [suf,art,conf] of SUF_REGRAS){
+    if(suf==="ge-"){ if(w.startsWith("ge")&&w.length>5)return {suf:"Ge-",art,conf}; continue; }
+    if(w.length>suf.length+1&&w.endsWith(suf)){ if(suf==="e"&&w.endsWith("ee"))continue; return {suf:"-"+suf,art,conf}; }
+  }
+  return null;
+};
+const REGRAS_ART={
+  der:[["-ling, -ismus, -ist, -ig, -or","der Frühling, der Optimismus, der König (quase sempre)"],["-er (pessoas e instrumentos)","der Lehrer, der Computer — mas die Mutter, das Fenster"],["Dias, meses, estações, pontos cardeais","der Montag, der Juli, der Winter, der Norden"],["Chuva, neve e vento","der Regen, der Schnee, der Wind"],["Bebidas alcoólicas (exceto das Bier)","der Wein, der Wodka"],["Marcas de carro","der BMW, der Mercedes"]],
+  die:[["-ung, -heit, -keit, -schaft","die Zeitung, die Freiheit, die Möglichkeit, die Freundschaft (sempre)"],["-ion, -tät, -ik, -ur, -ei, -ie","die Nation, die Universität, die Musik, die Kultur (quase sempre)"],["-in (profissões femininas)","die Lehrerin, die Ärztin"],["Maioria das palavras em -e (≈90%)","die Blume, die Schule — mas der Name, der Käse, das Ende"],["Números como substantivo","die Eins, die Zehn"]],
+  das:[["-chen, -lein (diminutivos)","das Mädchen, das Brötchen (sempre)"],["-ment, -um, -ma, -nis, -tum","das Medikament, das Museum, das Thema, das Ergebnis (quase sempre)"],["Prefixo Ge-","das Gebäude, das Gespräch, das Geschenk (geralmente)"],["Verbos viram substantivos","das Essen, das Lernen"],["Cores, línguas e metais","das Blau, das Deutsch, das Gold"],["Cidades e a maioria dos países","das Berlin — mas die Schweiz, die Türkei"]],
+};
+const BANCO=`der|Tisch|Tische|mesa
+der|Stuhl|Stühle|cadeira
+der|Schrank|Schränke|armário
+der|Schlüssel|Schlüssel|chave
+der|Koffer|Koffer|mala
+der|Stift|Stifte|caneta, lápis
+der|Computer|Computer|computador
+der|Rucksack|Rucksäcke|mochila
+der|Spiegel|Spiegel|espelho
+der|Teller|Teller|prato
+der|Löffel|Löffel|colher
+der|Garten|Gärten|jardim
+der|Baum|Bäume|árvore
+der|Fisch|Fische|peixe
+der|Vogel|Vögel|pássaro
+der|Hund|Hunde|cachorro
+der|Apfel|Äpfel|maçã
+der|Kuchen|Kuchen|bolo
+der|Käse|Käse|queijo|Termina em -e mas é der: exceção clássica
+der|Kaffee|Kaffees|café (bebida)
+der|Wein|Weine|vinho|Álcool costuma ser der
+der|Honig||mel|-ig → der
+der|Mond|Monde|lua|Invertido em relação ao português: a lua é masculina
+der|Mann|Männer|homem
+der|Vater|Väter|pai
+der|Bruder|Brüder|irmão
+der|Sohn|Söhne|filho
+der|Freund|Freunde|amigo
+der|Lehrer|Lehrer|professor
+der|Schüler|Schüler|aluno
+der|Arzt|Ärzte|médico
+der|Chef|Chefs|chefe
+der|Student|Studenten|estudante universitário
+der|König|Könige|rei|-ig → der
+der|Name|Namen|nome|Termina em -e mas é der
+der|Junge|Jungen|menino|Termina em -e mas é der (masculino)
+der|Tag|Tage|dia
+der|Monat|Monate|mês
+der|Morgen|Morgen|manhã
+der|Abend|Abende|noite (começo)
+der|Montag|Montage|segunda-feira|Dias, meses e estações: sempre der
+der|Winter|Winter|inverno|Estações: sempre der
+der|Sommer|Sommer|verão|Estações: sempre der
+der|Herbst|Herbste|outono|Estações: sempre der
+der|Frühling|Frühlinge|primavera|-ling → der
+der|Lehrling|Lehrlinge|aprendiz|-ling → der
+der|Optimismus||otimismo|-ismus → der
+der|Regen||chuva|Chuva e neve: der
+der|Schnee||neve|Chuva e neve: der
+der|Zug|Züge|trem
+der|Bahnhof|Bahnhöfe|estação de trem
+der|Flughafen|Flughäfen|aeroporto
+der|Platz|Plätze|praça, lugar
+der|Weg|Wege|caminho
+der|Fluss|Flüsse|rio
+der|Berg|Berge|montanha
+der|See|Seen|lago|der See = lago; die See = mar
+der|Urlaub|Urlaube|férias
+der|Beruf|Berufe|profissão
+der|Preis|Preise|preço
+der|Termin|Termine|compromisso, consulta
+der|Himmel|Himmel|céu
+der|Motor|Motoren|motor|-or → der
+der|Pullover|Pullover|suéter
+die|Frau|Frauen|mulher
+die|Mutter|Mütter|mãe|Termina em -er mas é die: exceção
+die|Schwester|Schwestern|irmã|Exceção ao -er
+die|Tochter|Töchter|filha|Exceção ao -er
+die|Lehrerin|Lehrerinnen|professora|-in → die
+die|Ärztin|Ärztinnen|médica|-in → die
+die|Familie|Familien|família|-ie → die
+die|Katze|Katzen|gato(a)
+die|Maus|Mäuse|rato
+die|Woche|Wochen|semana
+die|Nacht|Nächte|noite
+die|Stunde|Stunden|hora
+die|Minute|Minuten|minuto
+die|Uhr|Uhren|relógio, hora
+die|Zeit|Zeiten|tempo
+die|Stadt|Städte|cidade
+die|Straße|Straßen|rua
+die|Wohnung|Wohnungen|apartamento|-ung → die
+die|Küche|Küchen|cozinha
+die|Tür|Türen|porta
+die|Wand|Wände|parede
+die|Tasche|Taschen|bolsa
+die|Lampe|Lampen|lâmpada
+die|Blume|Blumen|flor
+die|Sonne|Sonnen|sol|Invertido em relação ao português: o sol é feminino
+die|See||mar|die See = mar; der See = lago
+die|Milch||leite
+die|Butter||manteiga|Termina em -er mas é die: exceção
+die|Suppe|Suppen|sopa
+die|Tomate|Tomaten|tomate
+die|Banane|Bananen|banana
+die|Gabel|Gabeln|garfo|Talheres: der Löffel, die Gabel, das Messer
+die|Brille|Brillen|óculos
+die|Zeitung|Zeitungen|jornal|-ung → die
+die|Hausaufgabe|Hausaufgaben|dever de casa
+die|Übung|Übungen|exercício|-ung → die
+die|Prüfung|Prüfungen|prova|-ung → die
+die|Erfahrung|Erfahrungen|experiência|-ung → die
+die|Freiheit|Freiheiten|liberdade|-heit → die
+die|Gesundheit||saúde|-heit → die
+die|Möglichkeit|Möglichkeiten|possibilidade|-keit → die
+die|Schwierigkeit|Schwierigkeiten|dificuldade|-keit → die
+die|Freundschaft|Freundschaften|amizade|-schaft → die
+die|Gesellschaft|Gesellschaften|sociedade|-schaft → die
+die|Nation|Nationen|nação|-ion → die
+die|Information|Informationen|informação|-ion → die
+die|Universität|Universitäten|universidade|-tät → die
+die|Qualität|Qualitäten|qualidade|-tät → die
+die|Musik||música|-ik → die
+die|Natur||natureza|-ur → die
+die|Kultur|Kulturen|cultura|-ur → die
+die|Bäckerei|Bäckereien|padaria|-ei → die
+die|Reise|Reisen|viagem
+die|Arbeit|Arbeiten|trabalho
+die|Hand|Hände|mão
+die|Nase|Nasen|nariz
+die|Zahl|Zahlen|número
+die|Frage|Fragen|pergunta
+die|Antwort|Antworten|resposta
+die|Sprache|Sprachen|língua
+die|Schule|Schulen|escola
+die|Kirche|Kirchen|igreja
+die|Bank|Banken|banco (financeiro)
+die|Brücke|Brücken|ponte
+das|Kind|Kinder|criança
+das|Mädchen|Mädchen|menina|-chen → sempre das, mesmo sendo uma menina
+das|Brötchen|Brötchen|pãozinho|-chen → das
+das|Häuschen|Häuschen|casinha|-chen → das
+das|Haus|Häuser|casa
+das|Auto|Autos|carro
+das|Buch|Bücher|livro
+das|Wasser||água|Termina em -er mas é das: exceção
+das|Brot|Brote|pão
+das|Bier|Biere|cerveja|Álcool costuma ser der (der Wein), mas das Bier
+das|Fenster|Fenster|janela|Termina em -er mas é das: exceção
+das|Zimmer|Zimmer|quarto|Termina em -er mas é das: exceção
+das|Messer|Messer|faca|Talheres: der Löffel, die Gabel, das Messer
+das|Gewitter|Gewitter|tempestade|Prefixo Ge- → das
+das|Gebäude|Gebäude|prédio|Prefixo Ge- → das
+das|Gespräch|Gespräche|conversa|Prefixo Ge- → das
+das|Geschenk|Geschenke|presente|Prefixo Ge- → das
+das|Gemüse||legumes|Prefixo Ge- → das
+das|Datum|Daten|data|-um → das
+das|Museum|Museen|museu|-um → das
+das|Zentrum|Zentren|centro|-um → das
+das|Medikament|Medikamente|medicamento|-ment → das
+das|Instrument|Instrumente|instrumento|-ment → das
+das|Dokument|Dokumente|documento|-ment → das
+das|Ergebnis|Ergebnisse|resultado|-nis → das
+das|Geheimnis|Geheimnisse|segredo|-nis → das
+das|Thema|Themen|tema|-ma → das
+das|Problem|Probleme|problema
+das|System|Systeme|sistema
+das|Wetter||tempo (clima)|Termina em -er mas é das: exceção
+das|Jahr|Jahre|ano
+das|Telefon|Telefone|telefone
+das|Handy|Handys|celular
+das|Bett|Betten|cama
+das|Bild|Bilder|imagem
+das|Geld||dinheiro
+das|Ei|Eier|ovo
+das|Obst||frutas
+das|Fleisch||carne
+das|Glas|Gläser|copo, vidro
+das|Spiel|Spiele|jogo
+das|Lied|Lieder|canção
+das|Land|Länder|país
+das|Dorf|Dörfer|vilarejo
+das|Ohr|Ohren|orelha
+das|Auge|Augen|olho|Termina em -e mas é das: exceção
+das|Herz|Herzen|coração
+das|Wort|Wörter|palavra
+das|Café|Cafés|café (lugar)
+das|Hotel|Hotels|hotel
+das|Fahrrad|Fahrräder|bicicleta
+das|Krankenhaus|Krankenhäuser|hospital
+das|Ende|Enden|fim|Termina em -e mas é das: exceção
+das|Essen||comida, refeição|Verbo vira substantivo → sempre das
+das|Lernen||o aprender|Verbo vira substantivo → sempre das`.split("\n").map(l=>{const [art,termo,plural,trad,dica]=l.split("|");return {k:`de:${art}:${termo.toLowerCase()}`,art,termo,plural:plural||"",trad,dica:dica||"",bank:true};});
+
 function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [cfg,setCfg]=useLS("v5_idi_cfg",IDI_LANGS,userId);
   const [log,setLog]=useLS("v5_idi_log",[],userId);
@@ -1322,12 +1528,18 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [rv,setRv]=useLS("v5_idi_rv",{},userId);
   const [aval,setAval]=useLS("v5_idi_aval",[],userId);
   const [marcos,setMarcos]=useLS("v5_idi_marcos",[],userId);
+  const [sbst,setSbst]=useLS("v5_idi_sub",{},userId);
+  const [ds,setDs]=useState(null);
+  const [dicaEd,setDicaEd]=useState(null);
+  const [dicaTxt,setDicaTxt]=useState("");
+  const [bancoBusca,setBancoBusca]=useState("");
+  const [verBanco,setVerBanco]=useState(false);
   const [sel,setSel]=useState("all");
   const [sub,setSub]=useState("hoje");
   const [editL,setEditL]=useState(null);
   const [fL,setFL]=useState(null);
   const [fp,setFp]=useState({lang:"",tipo:"ouvir",min:"",nota:"",data:""});
-  const [fw,setFw]=useState({lang:"",termo:"",trad:"",ex:""});
+  const [fw,setFw]=useState({lang:"",termo:"",trad:"",ex:"",art:"",plural:""});
   const [busca,setBusca]=useState("");
   const [verTodas,setVerTodas]=useState(false);
   const [rs,setRs]=useState(null);
@@ -1366,11 +1578,65 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setFp({...fp,min:"",nota:""});
   };
   const addPalavra=()=>{
-    const lang=fw.lang||defLang; const termo=fw.termo.trim(); const trad=fw.trad.trim();
+    const lang=fw.lang||defLang; let termo=fw.termo.trim(); const trad=fw.trad.trim();
     if(!termo||!trad||!lang)return;
-    setVocab([{id:uid(),lang,termo,trad,ex:fw.ex.trim(),criada:hoje,box:0,prox:hoje,ok:0,er:0},...vocab]);
-    setFw({...fw,termo:"",trad:"",ex:""});
+    let art=fw.art||"";
+    const m=termo.match(/^(der|die|das)\s+(.+)$/i);
+    if(m&&lang==="de"){art=m[1].toLowerCase();termo=m[2];}
+    const pl=(fw.plural||"").trim().replace(/^die\s+/i,"");
+    setVocab([{id:uid(),lang,termo,trad,ex:fw.ex.trim(),criada:hoje,box:0,prox:hoje,ok:0,er:0,...(lang==="de"&&art?{art,plural:pl}:{})},...vocab]);
+    setFw({...fw,termo:"",trad:"",ex:"",art:"",plural:""});
   };
+  // ── Substantivos (artigos e plurais) ──
+  const meusN=vocab.filter(v=>v.lang==="de"&&v.art).map(v=>({k:`de:${v.art}:${v.termo.toLowerCase()}`,art:v.art,termo:v.termo,plural:v.plural||"",trad:v.trad,dica:"",bank:false}));
+  const chavesMeus=new Set(meusN.map(n=>n.k));
+  const poolAll=[...meusN,...BANCO.filter(n=>!chavesMeus.has(n.k))];
+  const mapN=new Map(poolAll.map(n=>[n.k,n]));
+  const dicaDe=n=>(sbst[n.k]&&sbst[n.k].dica)||n.dica||"";
+  const iniciarDrill=modo=>{
+    const pool=modo==="plural"?poolAll.filter(n=>n.plural):poolAll;
+    const pr=n=>{const x=sbst[modo==="plural"?n.k+"|p":n.k]||{ok:0,er:0};return x.er*2-x.ok*0.6+Math.random()*2.5;};
+    const fila=[...pool].sort((a,b)=>pr(b)-pr(a)).slice(0,10);
+    if(!fila.length)return;
+    setDicaEd(null);
+    setDs({modo,fila,i:0,resp:null,ok:0,er:0,rep:{},fim:false,pin:""});
+  };
+  const gravarStat=(n,ok,modo)=>{
+    const key=modo==="plural"?n.k+"|p":n.k;
+    const x=sbst[key]||{ok:0,er:0};
+    setSbst({...sbst,[key]:{...x,ok:x.ok+(ok?1:0),er:x.er+(ok?0:1),ult:hoje}});
+    const dia=rv[hoje]||{}; const c=dia.de||{ok:0,er:0};
+    setRv({...rv,[hoje]:{...dia,de:{ok:c.ok+(ok?1:0),er:c.er+(ok?0:1)}}});
+  };
+  const respArt=a=>{ if(!ds||ds.resp||ds.fim)return; const n=ds.fila[ds.i]; const ok=a===n.art; gravarStat(n,ok,"art"); setDs({...ds,resp:{a,ok}}); };
+  const respPlural=()=>{
+    if(!ds||ds.resp||ds.fim)return; const n=ds.fila[ds.i];
+    const norm=x=>(x||"").trim().toLowerCase().replace(/^die\s+/,"");
+    const ok=norm(ds.pin)===n.plural.toLowerCase();
+    gravarStat(n,ok,"plural"); setDs({...ds,resp:{a:ds.pin,ok}});
+  };
+  const proxDrill=()=>{
+    if(!ds||!ds.resp)return; const n=ds.fila[ds.i]; const r=ds.resp;
+    const fila=(!r.ok&&!ds.rep[n.k])?[...ds.fila,n]:ds.fila; const p=ds.i+1;
+    setDs({...ds,fila,i:p,resp:null,pin:"",ok:ds.ok+(r.ok?1:0),er:ds.er+(r.ok?0:1),rep:r.ok?ds.rep:{...ds.rep,[n.k]:1},fim:p>=fila.length});
+    setDicaEd(null);
+  };
+  const salvarDica=(k,txt)=>{const x=sbst[k]||{ok:0,er:0};setSbst({...sbst,[k]:{...x,dica:txt.trim()}});setDicaEd(null);setDicaTxt("");};
+  const addBanco=n=>{
+    if(chavesMeus.has(n.k))return;
+    setVocab([{id:uid(),lang:"de",termo:n.termo,art:n.art,plural:n.plural,trad:n.trad,ex:"",criada:hoje,box:0,prox:hoje,ok:0,er:0},...vocab]);
+  };
+  const statsArt={der:{ok:0,er:0},die:{ok:0,er:0},das:{ok:0,er:0}};
+  Object.entries(sbst).forEach(([k,x])=>{if(k.endsWith("|p"))return;const n=mapN.get(k);if(!n)return;statsArt[n.art].ok+=x.ok||0;statsArt[n.art].er+=x.er||0;});
+  const totArtOk=statsArt.der.ok+statsArt.die.ok+statsArt.das.ok, totArtEr=statsArt.der.er+statsArt.die.er+statsArt.das.er;
+  const pctArt=a=>{const t=statsArt[a].ok+statsArt[a].er;return t?Math.round(statsArt[a].ok/t*100):null;};
+  const piorArt=["der","die","das"].filter(a=>statsArt[a].ok+statsArt[a].er>=3).sort((a,b)=>pctArt(a)-pctArt(b))[0];
+  const dificeis=Object.entries(sbst).filter(([k,x])=>!k.endsWith("|p")&&(x.er||0)>0&&mapN.get(k)).sort((a,b)=>(b[1].er-a[1].er)||((a[1].ok||0)-(b[1].ok||0))).slice(0,8).map(([k,x])=>({n:mapN.get(k),x}));
+  const dsCur=ds&&!ds.fim?ds.fila[ds.i]:null;
+  const Nome=({v})=>v.art?<><span style={{color:ART_COR[v.art],fontWeight:700}}>{v.art}</span> {v.termo}</>:<>{v.termo}</>;
+  const sugForm=(fw.lang||defLang)==="de"?sugerirArt(fw.termo):null;
+  const bancoFiltrado=poolAll.filter(n=>!bancoBusca||(n.termo+" "+n.trad).toLowerCase().includes(bancoBusca.toLowerCase()));
+
   const iniciarRev=()=>{ if(due.length===0)return; setRs({fila:due.map(v=>v.id),i:0,show:false,ok:0,er:0,rep:{},fim:false}); };
   const responder=ok=>{
     if(!rs||rs.fim)return;
@@ -1432,7 +1698,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     {l:"Vocabulário",v:String(vocSel.length),u:dominadas+" dominadas",s:"noite",z:1.5,x:10,y:50,to:"palavras"},
     {l:"Sequência",v:String(streak),u:streak===1?"dia seguido":"dias seguidos",s:"veludo",z:1.4,x:30,y:20,to:"evol"},
   ];
-  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(due.length?" · "+due.length:"")],["evol","Evolução"]];
+  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(due.length?" · "+due.length:"")],...(sel!=="fr"?[["subst","Substantivos"]]:[]),["evol","Evolução"]];
   const nomeSel=sel==="all"?cfg.map(l=>l.nome+" "+l.nivel).join(" · "):`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
   // Evolução
@@ -1480,7 +1746,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <span style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".1em",opacity:.85}}>{hSem.toFixed(1).replace(".0","")}H DE {metaTot}H NA SEMANA</span>
           </div>
           <div className="idi-row" style={{marginTop:20}}>
-            {[["all","Todos",null],...cfg.map(l=>[l.id,l.nome,l.cor])].map(([id,l,cor])=><button key={id} onClick={()=>{setSel(id);setAvLang("");setRs(null);}} style={{...chipBtn(sel===id),height:32,padding:"0 14px",fontSize:12}}>{cor&&<i style={{width:7,height:7,borderRadius:"50%",background:cor}}/>}{l}</button>)}
+            {[["all","Todos",null],...cfg.map(l=>[l.id,l.nome,l.cor])].map(([id,l,cor])=><button key={id} onClick={()=>{setSel(id);setAvLang("");setRs(null);setDs(null);if(id==="fr"&&sub==="subst")setSub("hoje");}} style={{...chipBtn(sel===id),height:32,padding:"0 14px",fontSize:12}}>{cor&&<i style={{width:7,height:7,borderRadius:"50%",background:cor}}/>}{l}</button>)}
           </div>
           <div className="idi-row" style={{marginTop:12}}>{subs.map(([id,l])=><button key={id} onClick={()=>setSub(id)} style={chipBtn(sub===id)}>{l}</button>)}</div>
         </div>
@@ -1512,6 +1778,15 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               </div>
             </div>))}
         </div>
+        {sel!=="fr"&&(
+          <button onClick={()=>setSub("subst")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",border:"1px solid rgba(42,30,20,.1)",background:"#fff",borderRadius:24,padding:isMobile?"16px 18px":"20px 26px",marginBottom:16,cursor:"pointer",fontFamily:"inherit",color:IDI_INK}}>
+            <div style={{minWidth:0}}>
+              <div style={lab}>Alemão · substantivos</div>
+              <div style={{...serif,fontSize:isMobile?22:26,marginTop:6,lineHeight:1.1}}>Treino de artigos</div>
+              <div style={{fontSize:12.5,opacity:.65,marginTop:6}}>{totArtOk+totArtEr>0?`${Math.round(totArtOk/(totArtOk+totArtEr)*100)}% de acerto${piorArt?` · mais difícil: ${piorArt}`:""}`:"10 substantivos por rodada, com regras e ganchos"}</div>
+            </div>
+            <div style={{display:"flex",gap:6,flexShrink:0}}>{["der","die","das"].map(a=><span key={a} style={{background:ART_BG[a],color:ART_COR[a],fontWeight:700,fontSize:isMobile?12:13,padding:"7px 11px",borderRadius:999}}>{a}</span>)}</div>
+          </button>)}
         <div className="idi-grid2">
           <Card>
             <Titulo k="Níveis" t="Onde você está"/>
@@ -1544,7 +1819,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               : due.slice(0,6).map(v=>(
                 <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(42,30,20,.08)"}}>
                   <i style={{width:10,height:10,borderRadius:"50%",background:L(v.lang).cor,flexShrink:0}}/>
-                  <span style={{flex:1,fontSize:14.5,fontWeight:600,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{v.termo}</span>
+                  <span style={{flex:1,fontSize:14.5,fontWeight:600,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}><Nome v={v}/></span>
                   <span style={{...lab,fontSize:9.5}}>{L(v.lang).cod}</span>
                 </div>))}
             {due.length>6&&<div style={{...lab,marginTop:10}}>+ {due.length-6} palavras</div>}
@@ -1606,9 +1881,10 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 <span style={lab}>{Math.min(rs.i+1,rs.fila.length)} / {rs.fila.length}</span>
               </div>
               <div style={{height:4,borderRadius:99,background:"rgba(42,30,20,.1)",overflow:"hidden",marginBottom:28}}><div style={{width:(rs.i/rs.fila.length*100)+"%",height:"100%",background:IDI_INK,transition:"width .3s"}}/></div>
-              <div style={{...serif,fontSize:isMobile?42:56,lineHeight:1.1,minHeight:isMobile?60:76,wordBreak:"break-word"}}>{cur.termo}</div>
+              <div style={{...serif,fontSize:isMobile?42:56,lineHeight:1.1,minHeight:isMobile?60:76,wordBreak:"break-word"}}><Nome v={cur}/></div>
               {rs.show?(<>
                 <div style={{fontSize:isMobile?20:24,marginTop:18,fontWeight:500}}>{cur.trad}</div>
+                {cur.plural&&<div style={{fontSize:14,marginTop:8,opacity:.65}}>plural: die {cur.plural}</div>}
                 {cur.ex&&<div style={{fontSize:14,marginTop:10,fontStyle:"italic",opacity:.65,lineHeight:1.5}}>{cur.ex}</div>}
                 <div style={{display:"flex",justifyContent:"center",gap:12,marginTop:28}}>
                   <button style={{...btnS,minWidth:130,borderColor:IDI_RED,color:IDI_RED}} onClick={()=>responder(false)}>Errei</button>
@@ -1630,10 +1906,17 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         <Card>
           <Titulo k="Nova" t="Adicionar palavra"/>
           <Pick val={fw.lang||defLang} set={v=>setFw({...fw,lang:v})} opts={langOpts}/>
+          {(fw.lang||defLang)==="de"&&(
+            <div style={{marginTop:14}}>
+              <div style={{...lab,marginBottom:8}}>Artigo (se for substantivo)</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{["der","die","das"].map(a=>{const on=fw.art===a;return <button key={a} onClick={()=>setFw({...fw,art:on?"":a})} style={{height:36,minWidth:64,padding:"0 16px",borderRadius:999,border:"1px solid "+ART_COR[a],background:on?ART_COR[a]:ART_BG[a],color:on?"#fff":ART_COR[a],fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{a}</button>;})}</div>
+              {sugForm&&!fw.art&&!/^(der|die|das)\s/i.test(fw.termo.trim())&&<div style={{fontSize:12.5,marginTop:10,lineHeight:1.5,color:"rgba(42,30,20,.75)"}}>Terminação <b>{sugForm.suf}</b> costuma ser <b style={{color:ART_COR[sugForm.art]}}>{sugForm.art}</b> ({sugForm.conf}). <button onClick={()=>setFw({...fw,art:sugForm.art})} style={{background:"none",border:"none",padding:0,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3,fontSize:12.5,color:IDI_INK}}>usar {sugForm.art}</button></div>}
+            </div>)}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginTop:14}}>
             <div><div style={{...lab,marginBottom:6}}>Palavra</div><input style={inp} value={fw.termo} onChange={e=>setFw({...fw,termo:e.target.value})} placeholder={(fw.lang||defLang)==="de"?"der Schlüssel":"la clé"}/></div>
             <div><div style={{...lab,marginBottom:6}}>Tradução</div><input style={inp} value={fw.trad} onChange={e=>setFw({...fw,trad:e.target.value})} placeholder="a chave"/></div>
           </div>
+          {(fw.lang||defLang)==="de"&&<div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Plural (opcional)</div><input style={inp} value={fw.plural} onChange={e=>setFw({...fw,plural:e.target.value})} placeholder="Schlüssel"/></div>}
           <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Exemplo (opcional)</div><input style={inp} value={fw.ex} onChange={e=>setFw({...fw,ex:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addPalavra();}} placeholder="Frase onde apareceu"/></div>
           <div style={{marginTop:16}}><button style={btnP} onClick={addPalavra}>Adicionar</button></div>
         </Card>
@@ -1643,11 +1926,133 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           {palavrasLista.length===0?<Vazio>{vocSel.length===0?"Nenhuma palavra cadastrada.":"Nada encontrado."}</Vazio>:(verTodas?palavrasLista:palavrasLista.slice(0,30)).map(v=>(
             <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(42,30,20,.08)"}}>
               <i style={{width:10,height:10,borderRadius:"50%",background:L(v.lang).cor,flexShrink:0}}/>
-              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}>{v.termo}</div><div style={{fontSize:13,opacity:.6,marginTop:2}}>{v.trad}</div></div>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}><Nome v={v}/>{v.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {v.plural}</span>}</div><div style={{fontSize:13,opacity:.6,marginTop:2}}>{v.trad}</div></div>
               <div style={{display:"flex",gap:3}} title={"nível "+(v.box||0)+" de 5"}>{[0,1,2,3,4].map(i=><i key={i} style={{width:6,height:6,borderRadius:"50%",background:i<(v.box||0)?IDI_INK:"rgba(42,30,20,.15)"}}/>)}</div>
               <button onClick={()=>setVocab(vocab.filter(x=>x.id!==v.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(42,30,20,.35)"}}>×</button>
             </div>))}
           {!verTodas&&palavrasLista.length>30&&<button style={{...btnS,marginTop:12}} onClick={()=>setVerTodas(true)}>Ver todas ({palavrasLista.length})</button>}
+        </Card>
+      </>)}
+
+      {/* ═ SUBSTANTIVOS ═ */}
+      {sub==="subst"&&(<>
+        <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"34px 28px"}}>
+          {!ds&&(<>
+            <div style={lab}>Treino</div>
+            <div style={{...serif,fontSize:isMobile?34:44,margin:"10px 0 8px",lineHeight:1.05}}>Fixe o artigo<br/>de cada substantivo</div>
+            <div style={{display:"flex",justifyContent:"center",gap:8,margin:"14px 0 20px"}}>{["der","die","das"].map(a=><span key={a} style={{background:ART_BG[a],color:ART_COR[a],fontWeight:700,fontSize:15,padding:"8px 16px",borderRadius:999}}>{a}</span>)}</div>
+            <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
+              <button style={btnP} onClick={()=>iniciarDrill("art")}>Treinar artigos</button>
+              <button style={btnS} onClick={()=>iniciarDrill("plural")}>Treinar plurais</button>
+            </div>
+            <div style={{...lab,marginTop:18}}>{poolAll.length} substantivos · {meusN.length} seus · o que você erra volta mais vezes</div>
+          </>)}
+          {ds&&ds.fim&&(<>
+            <div style={lab}>Rodada concluída</div>
+            <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{ds.ok}<small style={{fontSize:"45%",opacity:.45}}> / {ds.ok+ds.er}</small></div>
+            <Vazio>acertos. Os erros voltaram na mesma rodada e entram com prioridade na próxima.</Vazio>
+            <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:20,flexWrap:"wrap"}}><button style={btnP} onClick={()=>iniciarDrill(ds.modo)}>Nova rodada</button><button style={btnS} onClick={()=>setDs(null)}>Fechar</button></div>
+          </>)}
+          {dsCur&&(<>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <span style={lab}>{ds.modo==="plural"?"Plural":"Artigo"}</span>
+              <span style={lab}>{Math.min(ds.i+1,ds.fila.length)} / {ds.fila.length}</span>
+            </div>
+            <div style={{height:4,borderRadius:99,background:"rgba(42,30,20,.1)",overflow:"hidden",marginBottom:26}}><div style={{width:(ds.i/ds.fila.length*100)+"%",height:"100%",background:IDI_INK,transition:"width .3s"}}/></div>
+            {ds.modo==="art"?(<>
+              <div style={{...serif,fontSize:isMobile?50:64,lineHeight:1.05,wordBreak:"break-word",color:ds.resp?ART_COR[dsCur.art]:IDI_INK}}>{ds.resp&&<span style={{fontWeight:600}}>{dsCur.art} </span>}{dsCur.termo}</div>
+              <div style={{fontSize:14,opacity:.6,marginTop:8}}>{dsCur.trad}</div>
+              {!ds.resp&&<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginTop:30,maxWidth:460,marginLeft:"auto",marginRight:"auto"}}>
+                {["der","die","das"].map(a=><button key={a} onClick={()=>respArt(a)} style={{height:isMobile?64:72,borderRadius:20,border:"1.5px solid "+ART_COR[a],background:ART_BG[a],color:ART_COR[a],fontSize:isMobile?22:26,fontWeight:700,cursor:"pointer",fontFamily:"'Fraunces',Georgia,serif"}}>{a}</button>)}
+              </div>}
+            </>):(<>
+              <div style={{...serif,fontSize:isMobile?46:60,lineHeight:1.05,wordBreak:"break-word"}}><span style={{color:ART_COR[dsCur.art],fontWeight:600}}>{dsCur.art}</span> {dsCur.termo}</div>
+              <div style={{fontSize:14,opacity:.6,marginTop:8}}>{dsCur.trad}</div>
+              {!ds.resp&&<div style={{display:"flex",gap:10,marginTop:28,maxWidth:420,marginLeft:"auto",marginRight:"auto",alignItems:"center"}}>
+                <span style={{...serif,fontSize:22,color:ART_COR.die}}>die</span>
+                <input style={inp} autoFocus value={ds.pin||""} onChange={e=>setDs({...ds,pin:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")respPlural();}} placeholder="plural"/>
+                <button style={btnP} onClick={respPlural}>OK</button>
+              </div>}
+            </>)}
+            {ds.resp&&(()=>{const r=ds.resp;const sg=sugerirArt(dsCur.termo);const dc=dicaDe(dsCur);return (
+              <div style={{marginTop:22,textAlign:"left",maxWidth:520,marginLeft:"auto",marginRight:"auto"}}>
+                <div style={{padding:"14px 16px",borderRadius:18,background:r.ok?"#E3EFDB":"#F8E0D9",marginBottom:12}}>
+                  <div style={{fontWeight:700,fontSize:15,color:r.ok?"#3C7030":"#B23F2A"}}>{r.ok?"✓ Certo":ds.modo==="art"?`✗ Era ${dsCur.art}`:`✗ Era: die ${dsCur.plural}`}</div>
+                  <div style={{fontSize:14,marginTop:6,lineHeight:1.5}}><span style={{color:ART_COR[dsCur.art],fontWeight:700}}>{dsCur.art}</span> {dsCur.termo}{dsCur.plural&&<> · <span style={{color:ART_COR.die,fontWeight:700}}>die</span> {dsCur.plural}</>}</div>
+                </div>
+                <div style={{fontSize:13,lineHeight:1.5,color:"rgba(42,30,20,.75)"}}>
+                  {sg?(sg.art===dsCur.art?<>Terminação <b>{sg.suf}</b> → <b style={{color:ART_COR[sg.art]}}>{sg.art}</b> ({sg.conf}).</>:<><b>Exceção!</b> A terminação <b>{sg.suf}</b> sugere <b style={{color:ART_COR[sg.art]}}>{sg.art}</b>, mas esta palavra é <b style={{color:ART_COR[dsCur.art]}}>{dsCur.art}</b>.</>):"Sem regra de terminação confiável: use cor e gancho."}
+                </div>
+                {dc&&dicaEd!==dsCur.k&&<div style={{fontSize:13,marginTop:8,padding:"10px 14px",borderRadius:14,background:"#FBF1D8",lineHeight:1.5}}>💡 {dc}</div>}
+                {dicaEd===dsCur.k?(
+                  <div style={{display:"flex",gap:8,marginTop:10}}><input style={inp} autoFocus value={dicaTxt} onChange={e=>setDicaTxt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")salvarDica(dsCur.k,dicaTxt);}} placeholder="Ex: imagine a chave dentro de uma lata (die)"/><button style={btnP} onClick={()=>salvarDica(dsCur.k,dicaTxt)}>Salvar</button></div>
+                ):(
+                  <button onClick={()=>{setDicaEd(dsCur.k);setDicaTxt((sbst[dsCur.k]&&sbst[dsCur.k].dica)||"");}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12.5,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(42,30,20,.65)",padding:"10px 0 0"}}>{dc?"editar gancho":"criar gancho de memória"}</button>)}
+                <div style={{textAlign:"center",marginTop:18}}><button style={btnP} onClick={proxDrill}>{ds.i+1>=ds.fila.length?"Finalizar":"Próxima"}</button></div>
+              </div>);})()}
+            <div style={{marginTop:18}}><button onClick={()=>setDs(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(42,30,20,.55)"}}>sair do treino</button></div>
+          </>)}
+        </Card>
+
+        <div className="idi-grid2">
+          <Card>
+            <Titulo k="Desempenho" t="Acerto por artigo" dir={<div style={{textAlign:"right"}}><div style={lab}>geral</div><div style={{...serif,fontSize:isMobile?28:34,marginTop:4,color:IDI_RED}}>{totArtOk+totArtEr>0?Math.round(totArtOk/(totArtOk+totArtEr)*100)+"%":"—"}</div></div>}/>
+            {["der","die","das"].map(a=>{const p=pctArt(a);return (
+              <div key={a} style={{display:"grid",gridTemplateColumns:"46px 1fr 78px",alignItems:"center",gap:12,padding:"8px 0"}}>
+                <span style={{fontWeight:700,color:ART_COR[a],fontSize:15}}>{a}</span>
+                <div style={{height:10,borderRadius:99,background:ART_BG[a],overflow:"hidden"}}><div style={{width:(p||0)+"%",height:"100%",background:ART_COR[a],borderRadius:99,transition:"width .4s"}}/></div>
+                <span style={{...lab,textAlign:"right",fontSize:9.5}}>{p===null?"sem dados":`${p}% · ${statsArt[a].ok+statsArt[a].er}`}</span>
+              </div>);})}
+            {piorArt&&<div style={{fontSize:13,marginTop:10,lineHeight:1.5,color:"rgba(42,30,20,.75)"}}>Onde você mais erra: <b style={{color:ART_COR[piorArt]}}>{piorArt}</b>.</div>}
+          </Card>
+          <Card>
+            <Titulo k="Revisar primeiro" t="Mais difíceis"/>
+            {dificeis.length===0?<Vazio>Os substantivos que você errar aparecem aqui, com seu gancho de memória.</Vazio>:dificeis.map(({n,x})=>(
+              <div key={n.k} style={{padding:"10px 0",borderTop:"1px solid rgba(42,30,20,.08)"}}>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <div style={{flex:1,minWidth:0,fontSize:14.5,fontWeight:600}}><span style={{color:ART_COR[n.art],fontWeight:700}}>{n.art}</span> {n.termo}{n.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {n.plural}</span>}</div>
+                  <span style={{...lab,fontSize:9.5,color:IDI_RED}}>{x.er} {x.er===1?"erro":"erros"}</span>
+                  <button onClick={()=>{setDicaEd("h:"+n.k);setDicaTxt(x.dica||"");}} style={{background:"none",border:"none",cursor:"pointer",fontSize:15}} aria-label="gancho">💡</button>
+                </div>
+                {dicaEd==="h:"+n.k?(
+                  <div style={{display:"flex",gap:8,marginTop:8}}><input style={inp} autoFocus value={dicaTxt} onChange={e=>setDicaTxt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")salvarDica(n.k,dicaTxt);}} placeholder="Seu gancho de memória"/><button style={btnP} onClick={()=>salvarDica(n.k,dicaTxt)}>OK</button></div>
+                ):dicaDe(n)&&<div style={{fontSize:12.5,marginTop:6,opacity:.7,lineHeight:1.4}}>💡 {dicaDe(n)}</div>}
+              </div>))}
+          </Card>
+        </div>
+
+        <Card>
+          <Titulo k="Atalhos que funcionam" t="Regras de terminação"/>
+          <div style={{fontSize:13.5,lineHeight:1.55,color:"rgba(42,30,20,.75)",marginBottom:14}}>Regra de ouro: nunca decore o substantivo sozinho. Aprenda sempre <b>artigo + palavra + plural</b>, e associe uma cor: <b style={{color:ART_COR.der}}>der azul</b>, <b style={{color:ART_COR.die}}>die vermelho</b>, <b style={{color:ART_COR.das}}>das verde</b>.</div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:14}}>
+            {["der","die","das"].map(a=>(
+              <div key={a} style={{background:ART_BG[a],borderRadius:18,padding:"16px 16px 6px"}}>
+                <div style={{...serif,fontSize:30,color:ART_COR[a],fontWeight:400,marginBottom:6}}>{a}</div>
+                {REGRAS_ART[a].map(([t,ex])=>(
+                  <div key={t} style={{padding:"10px 0",borderTop:"1px solid "+ART_COR[a]+"33"}}>
+                    <div style={{fontWeight:700,fontSize:13.5}}>{t}</div>
+                    <div style={{fontSize:12.5,marginTop:3,opacity:.75,lineHeight:1.45}}>{ex}</div>
+                  </div>))}
+              </div>))}
+          </div>
+        </Card>
+
+        <Card>
+          <Titulo k="Banco básico" t="Explorar e adicionar" dir={<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setVerBanco(!verBanco)}>{verBanco?"fechar":"abrir"}</button>}/>
+          {!verBanco?<Vazio>{BANCO.length} substantivos comuns (A1–B1) com artigo, plural e dicas. Adicione os que quiser às suas palavras para entrar na revisão espaçada.</Vazio>:(<>
+            <input style={{...inp,marginBottom:12}} value={bancoBusca} onChange={e=>setBancoBusca(e.target.value)} placeholder="Buscar palavra ou tradução…"/>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:14}}>
+              {["der","die","das"].map(a=>(
+                <div key={a} style={{background:ART_BG[a],borderRadius:18,padding:"12px 14px",maxHeight:380,overflowY:"auto"}}>
+                  <div style={{fontWeight:700,color:ART_COR[a],fontSize:15,marginBottom:6}}>{a}</div>
+                  {bancoFiltrado.filter(n=>n.art===a).map(n=>(
+                    <div key={n.k} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 0",borderTop:"1px solid "+ART_COR[a]+"26"}}>
+                      <div style={{flex:1,minWidth:0}}><div style={{fontSize:13.5,fontWeight:600}}>{n.termo}{n.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:11.5}}> · {n.plural}</span>}</div><div style={{fontSize:11.5,opacity:.65}}>{n.trad}</div></div>
+                      {chavesMeus.has(n.k)?<span style={{fontSize:13,color:ART_COR[a]}}>✓</span>:<button onClick={()=>addBanco(n)} aria-label="adicionar" style={{width:26,height:26,borderRadius:"50%",border:"1px solid "+ART_COR[a],background:"transparent",color:ART_COR[a],cursor:"pointer",fontSize:15,lineHeight:1,padding:0}}>+</button>}
+                    </div>))}
+                </div>))}
+            </div>
+          </>)}
         </Card>
       </>)}
 
