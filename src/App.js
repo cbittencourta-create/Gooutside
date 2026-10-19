@@ -1886,6 +1886,17 @@ accord|Elle est la ___ de la classe. (bon, superlativo)|meilleure|la|Superlativo
 accord|Ces filles sont ___ (heureux).|heureuses|filles|Feminino plural.|heureux → heureuse → heureuses.
 accord|Il parle ___ que moi. (bien, comparativo)|mieux|parle|Advérbio, não adjetivo.|bien → mieux (advérbio); bon → meilleur (adjetivo).`,
 };
+
+// ── Leitura: palavras funcionais (contam como conhecidas) e textos de exemplo ──
+const FUNC_PAL={
+  de:"der die das den dem des ein eine einen einem einer eines kein keine keinen keinem keiner und oder aber denn doch sondern ist sind war waren sei bin bist seid hat haben hatte hatten habe hast habt wird werden wurde wurden worden kann können konnte konnten muss müssen musste soll sollen will wollen darf dürfen mag mögen ich du er sie es wir ihr mich dich ihn uns euch ihnen ihm ihre ihren ihrem ihrer mein meine meinen meinem meiner dein deine sein seine seinen seinem seiner unser mit von zu zum zur auf in im ins an am aus bei beim nach über unter um für gegen ohne durch bis vor hinter neben zwischen seit während wegen als wie wenn weil dass ob dann da dort hier nicht kein nur auch noch schon sehr mehr viel viele wenig immer nie oft manchmal heute gestern morgen jetzt bald schon wieder so ja nein was wer wo wann warum wie welche welcher welches man etwas nichts alles jeder jede jedes diese dieser dieses diesen diesem".split(" "),
+  fr:"le la les un une des du de d l et ou mais donc or ni car est sont était étaient être été sera serait suis es sommes êtes a ont avait avaient avoir ai as avons avez eu fait fais font faire ne pas plus jamais rien personne je tu il elle nous vous ils elles on me te se lui leur moi toi eux soi que qui quoi dont où quand comment pourquoi si ce cet cette ces c ça cela ceci celui celle ceux mon ma mes ton ta tes son sa ses notre nos votre vos leurs dans en à au aux pour par sur sous avec sans chez vers entre contre pendant depuis avant après y très aussi comme alors puis encore déjà toujours souvent trop peu beaucoup tout tous toute toutes même autre autres j m n s t qu aucun chaque quelque oui non bien mal ici là".split(" "),
+};
+const LEIT_EX={
+  de:"Gestern hatte ich Nachtdienst im Krankenhaus. Um drei Uhr morgens kam ein älterer Mann mit starken Brustschmerzen in die Notaufnahme. Die Ärztin untersuchte ihn sofort und machte ein EKG. Zum Glück war es kein Herzinfarkt, aber der Patient musste trotzdem über Nacht bleiben. Am Morgen war ich müde, doch ich fühlte mich zufrieden, weil ich helfen konnte.",
+  fr:"Hier soir, j'ai travaillé aux urgences. Vers trois heures du matin, un homme âgé est arrivé avec une forte douleur à la poitrine. Le médecin l'a examiné tout de suite et a fait un électrocardiogramme. Heureusement, ce n'était pas un infarctus, mais le patient a dû rester à l'hôpital pendant la nuit. Le matin, j'étais fatiguée, mais j'étais contente parce que j'avais pu aider.",
+};
+const tokenizarLeit=t=>{const re=/\p{L}+(?:-\p{L}+)*/gu;const out=[];let m;while((m=re.exec(t||"")))out.push({w:m[0],i:m.index});return out;};
 const GRAM_ITENS=Object.entries(GRAM_RAW).flatMap(([lang,txt])=>{
   const cnt={};
   return txt.trim().split("\n").filter(Boolean).map(l=>{
@@ -1923,6 +1934,11 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [fcN,setFcN]=useState(null);
   const [gstat,setGstat]=useLS("v5_idi_gram",{areas:{},items:{}},userId);
   const [gm,setGm]=useState(null);
+  const [conh,setConh]=useLS("v5_idi_conh",{},userId);
+  const [leit,setLeit]=useLS("v5_idi_leit",[],userId);
+  const [lts,setLts]=useState({});
+  const [lw,setLw]=useState(null);
+  const [lf,setLf]=useState({trad:"",art:""});
   const [mt,setMt]=useState("");
   const [busca,setBusca]=useState("");
   const [verTodas,setVerTodas]=useState(false);
@@ -2184,6 +2200,45 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       {(hl&&f&&parte.includes(f))?parte.split(f).flatMap((t,j,aa)=>j<aa.length-1?[t,<mark key={"m"+j} style={{background:"rgba(var(--idi-rgb),.14)",color:"inherit",borderBottom:"3px solid "+T.acc,padding:"0 2px",borderRadius:3}}>{f}</mark>]:[t]):parte}
       {i<arr.length-1&&(fill?<b style={{color:T.ink,borderBottom:"2px solid "+T.acc,margin:"0 3px"}}>{fill}</b>:<span style={{display:"inline-block",minWidth:70,borderBottom:"2px solid "+T.ink,margin:"0 4px"}}>&nbsp;</span>)}
     </span>));
+  // ── Leitura ──
+  const lt=lts[sel]||{titulo:"",texto:""};
+  const setLt=v=>setLts({...lts,[sel]:v});
+  const conhL=conh[sel]||[];
+  const vocMapL=new Map();
+  vocSel.forEach(v=>{tokenizarLeit(v.termo).forEach(t=>{const k=t.w.toLowerCase();const forte=(v.box||0)>=2;vocMapL.set(k,(vocMapL.get(k)==="k"||forte)?"k":"a");});});
+  const funcSet=new Set(FUNC_PAL[sel]||[]); const conhSet=new Set(conhL);
+  const stPal=w=>{const k=w.toLowerCase();if(k.length<2||funcSet.has(k)||conhSet.has(k)||vocMapL.get(k)==="k")return "k";if(vocMapL.get(k)==="a")return "a";return "n";};
+  const toks=tokenizarLeit(lt.texto).map(t=>({...t,st:stPal(t.w)}));
+  const nK=toks.filter(t=>t.st==="k").length, nA=toks.filter(t=>t.st==="a").length, nN=toks.filter(t=>t.st==="n").length;
+  const cobPct=toks.length?Math.round(nK/toks.length*100):null;
+  const novasTxt=(()=>{const m=new Map();toks.filter(t=>t.st==="n").forEach(t=>{const k=t.w.toLowerCase();const o=m.get(k)||{w:t.w,i:t.i,n:0};o.n++;m.set(k,o);});return [...m.values()].sort((a,b)=>b.n-a.n||a.w.length-b.w.length);})();
+  const veredito=cobPct===null?"":cobPct>=98?"Muito fácil: ótimo para leitura extensiva e fluência.":cobPct>=95?"Faixa ideal (95 a 98%): você entende e ainda aprende palavras pelo contexto.":cobPct>=90?"Um pouco difícil: serve para estudo intensivo, mas cansa em volume.":"Difícil demais agora: vira decodificação. Escolha um texto mais fácil ou minere as palavras-chave antes.";
+  const fraseLeit=idx=>{
+    const tx=lt.texto; let a=idx; while(a>0&&!/[.!?…\n]/.test(tx[a-1]))a--; let b=idx; while(b<tx.length&&!/[.!?…\n]/.test(tx[b]))b++; if(b<tx.length&&tx[b]!=="\n")b++;
+    while(a<idx&&/\s/.test(tx[a]))a++;
+    return {ini:a,fim:b};
+  };
+  const abrirPal=t=>{const fr=fraseLeit(t.i);setLw({w:t.w,i:t.i,fr,st:t.st});setLf({trad:"",art:""});};
+  const jaCartao=lw?vocSel.find(v=>tokenizarLeit(v.termo).some(x=>x.w.toLowerCase()===lw.w.toLowerCase())):null;
+  const marcarConhecida=()=>{if(!lw)return;const k=lw.w.toLowerCase();if(!conhSet.has(k))setConh({...conh,[sel]:[...conhL,k]});setLw(null);};
+  const desmarcarConhecida=()=>{if(!lw)return;const k=lw.w.toLowerCase();setConh({...conh,[sel]:conhL.filter(x=>x!==k)});setLw(null);};
+  const criarCartaoLeit=()=>{
+    if(!lw||!lf.trad.trim()||jaCartao)return;
+    const tx=lt.texto; const {ini,fim}=lw.fr;
+    const ex=(tx.slice(ini,lw.i)+"[["+lw.w+"]]"+tx.slice(lw.i+lw.w.length,fim)).replace(/\s+/g," ").trim();
+    let termo=lw.w;
+    if(sel==="fr")termo=termo.toLowerCase();
+    else if(lf.art)termo=termo[0].toUpperCase()+termo.slice(1);
+    else if(lw.i===ini)termo=termo.toLowerCase();
+    setVocab([{id:uid(),lang:sel,termo,trad:lf.trad.trim(),ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,fonte:lt.titulo.trim()||"leitura",...(lf.art?{art:lf.art,plural:""}:{})},...vocab]);
+    setToast("Cartão criado com a frase do texto. Entra nas novas.");
+    setLw(null);
+  };
+  const salvarTexto=()=>{
+    if(!lt.texto.trim())return;
+    setLeit([{id:uid(),lang:sel,titulo:lt.titulo.trim()||lt.texto.trim().slice(0,32)+"…",texto:lt.texto,data:hoje},...leit]);
+    setToast("Texto salvo.");
+  };
   const pillD={display:"inline-flex",alignItems:"center",gap:6,border:"1px solid rgba(var(--idi-rgb),.22)",background:"transparent",borderRadius:999,padding:"7px 13px",fontSize:12.5,fontWeight:600,color:T.ink,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"};
   const dsCur=ds&&!ds.fim?ds.fila[ds.i]:null;
   const vogal=t=>/^[aeiouyhàâäéèêëîïôöûùü]/i.test(t||"");
@@ -2282,7 +2337,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     {l:"Vocabulário",v:String(vocSel.length),u:dominadas+" dominadas",s:T.tiles[2],z:1.5,x:10,y:50,to:"palavras"},
     {l:"Sequência",v:String(streak),u:streak===1?"dia seguido":"dias seguidos",s:T.tiles[3],z:1.4,x:30,y:20,to:"evol"},
   ];
-  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["gram","Gramática"],["evol","Evolução"]];
+  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["evol","Evolução"]];
   const nomeSel=`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
   // Evolução
@@ -2725,6 +2780,73 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         </>)}
       </>)}
 
+      {/* ═ LEITURA ═ */}
+      {sub==="ler"&&(<>
+        <Card>
+          <Titulo k="Input compreensível" t="Leitura"/>
+          <div style={{fontSize:13.5,lineHeight:1.6,opacity:.75,marginBottom:14,maxWidth:600}}>Cole um texto (notícia, artigo, caso clínico). O app estima quantas palavras você já conhece. O ideal é <b>95 a 98%</b>. Toque numa palavra para marcar como conhecida ou criar um cartão com a frase original.</div>
+          <input style={{...inp,marginBottom:10}} value={lt.titulo} onChange={e=>setLt({...lt,titulo:e.target.value})} placeholder="Título ou fonte (opcional)"/>
+          <textarea style={{...inp,minHeight:120,resize:"vertical",lineHeight:1.5}} value={lt.texto} onChange={e=>setLt({...lt,texto:e.target.value})} placeholder={"Cole aqui um texto em "+unica.nome.toLowerCase()+"…"}/>
+          <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}>
+            <button style={btnS} onClick={()=>setLt({titulo:"Exemplo: plantão",texto:LEIT_EX[sel]||""})}>Colar exemplo</button>
+            <button style={{...btnS,opacity:lt.texto.trim()?1:.4}} disabled={!lt.texto.trim()} onClick={salvarTexto}>Salvar texto</button>
+            {lt.texto&&<button style={btnS} onClick={()=>{setLt({titulo:"",texto:""});setLw(null);}}>Limpar</button>}
+          </div>
+        </Card>
+        {toks.length>0&&(<>
+          <Card>
+            <Titulo k="Cobertura" t="Palavras que você conhece" dir={<div style={{...serif,fontSize:isMobile?38:48,lineHeight:1,color:cobPct>=95?"#2F7A52":cobPct>=90?T.ink:IDI_RED}}>{cobPct}%</div>}/>
+            <div style={{position:"relative",height:12,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden"}}>
+              <div style={{position:"absolute",left:"95%",width:"3%",top:0,bottom:0,background:"rgba(60,130,90,.35)"}}/>
+              <div style={{width:cobPct+"%",height:"100%",background:cobPct>=95?"#2F7A52":T.ink,borderRadius:99,transition:"width .4s"}}/>
+            </div>
+            <div style={{...lab,marginTop:8,display:"flex",justifyContent:"space-between"}}><span>meta 95 a 98%</span><span>{toks.length} palavras no texto</span></div>
+            <div style={{fontSize:14,lineHeight:1.55,marginTop:12}}>{veredito}</div>
+            <div style={{display:"flex",gap:16,flexWrap:"wrap",marginTop:12,fontSize:12.5}}>
+              <span><b>{nK}</b> conhecidas</span>
+              <span><b>{nA}</b> aprendendo</span>
+              <span style={{color:IDI_RED}}><b>{nN}</b> novas ({novasTxt.length} diferentes)</span>
+            </div>
+            <div style={{fontSize:12,opacity:.6,marginTop:10,lineHeight:1.5}}>Conta como conhecida: palavra funcional comum, palavra que você marcou ou cartão em nível 2 ou mais. Formas flexionadas (ex.: plural, conjugação) contam como palavras diferentes.</div>
+          </Card>
+          <Card>
+            <Titulo k="Texto" t={lt.titulo.trim()||"Toque nas palavras"}/>
+            <div style={{display:"flex",gap:14,flexWrap:"wrap",marginBottom:12,fontSize:11.5,opacity:.8}}>
+              <span>conhecida</span>
+              <span style={{background:"rgba(var(--idi-rgb),.12)",borderRadius:4,padding:"0 5px"}}>aprendendo</span>
+              <span style={{borderBottom:"2px solid "+T.acc,fontWeight:600}}>nova</span>
+            </div>
+            <div style={{fontSize:isMobile?17:18.5,lineHeight:1.85,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>
+              {(()=>{const out=[];let pos=0;toks.forEach((t,n)=>{
+                if(t.i>pos)out.push(<span key={"t"+n}>{lt.texto.slice(pos,t.i)}</span>);
+                const ativo=lw&&lw.i===t.i;
+                out.push(<span key={"w"+n} onClick={()=>abrirPal(t)} style={{cursor:"pointer",borderRadius:4,padding:"0 1px",...(t.st==="a"?{background:"rgba(var(--idi-rgb),.12)"}:{}),...(t.st==="n"?{borderBottom:"2px solid "+T.acc,fontWeight:600}:{}),...(ativo?{background:T.ink,color:T.sheet}:{})}}>{t.w}</span>);
+                pos=t.i+t.w.length;});
+                if(pos<lt.texto.length)out.push(<span key="fim">{lt.texto.slice(pos)}</span>);return out;})()}
+            </div>
+          </Card>
+          {novasTxt.length>0&&(
+            <Card>
+              <Titulo k="Para minerar" t="Palavras novas deste texto"/>
+              <div style={{fontSize:12.5,opacity:.7,lineHeight:1.5,marginBottom:12}}>Toque nas que você <b>não</b> sabe para criar cartões. Depois, marque todo o resto como conhecido de uma vez.</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{novasTxt.slice(0,18).map(o=>(
+                <button key={o.w} style={pillD} onClick={()=>abrirPal({w:o.w,i:o.i,st:"n"})}>{o.w}{o.n>1&&<span style={{opacity:.55}}>×{o.n}</span>}</button>))}</div>
+              {novasTxt.length>18&&<div style={{...lab,marginTop:10}}>+ {novasTxt.length-18} no texto</div>}
+              <div style={{marginTop:14}}><button style={btnS} onClick={()=>{setConh({...conh,[sel]:[...new Set([...conhL,...novasTxt.map(o=>o.w.toLowerCase())])]});setToast("Todas marcadas como conhecidas.");}}>Marcar todas as novas como conhecidas</button></div>
+            </Card>)}
+        </>)}
+        {leit.filter(x=>x.lang===sel).length>0&&(
+          <Card>
+            <Titulo k="Biblioteca" t="Textos salvos"/>
+            {leit.filter(x=>x.lang===sel).map((x,n)=>(
+              <div key={x.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:n===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.titulo}</div><div style={{...lab,fontSize:9.5,marginTop:3}}>{tokenizarLeit(x.texto).length} palavras · {x.data}</div></div>
+                <button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={()=>{setLt({titulo:x.titulo,texto:x.texto});setLw(null);window.scrollTo({top:0,behavior:"smooth"});}}>Abrir</button>
+                <button onClick={()=>setLeit(leit.filter(y=>y.id!==x.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
+              </div>))}
+          </Card>)}
+      </>)}
+
       {sub==="subst"&&(<>
         <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"34px 28px"}}>
           {!ds&&(<>
@@ -2946,6 +3068,27 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <svg width="13" height="13" viewBox="0 0 13 13"><rect x="1" y="1" width="11" height="11" rx="2" fill="currentColor"/></svg>
           </button>
         </div>)}
+      {sub==="ler"&&lw&&(
+        <div style={{position:"fixed",left:0,right:0,bottom:0,zIndex:62,display:"flex",justifyContent:"center",pointerEvents:"none"}}>
+          <div style={{pointerEvents:"auto",width:"min(640px,100%)",background:"#fff",borderRadius:"24px 24px 0 0",boxShadow:"0 -12px 40px rgba(0,0,0,.28)",padding:isMobile?"18px 18px 22px":"22px 26px 26px",maxHeight:"72vh",overflowY:"auto",color:T.ink}}>
+            <div style={{display:"flex",alignItems:"baseline",justifyContent:"space-between",gap:12}}>
+              <div style={{...serif,fontSize:isMobile?30:36,lineHeight:1.1,wordBreak:"break-word"}}>{lw.w}</div>
+              <button onClick={()=>setLw(null)} aria-label="fechar" style={{background:"none",border:"none",cursor:"pointer",fontSize:24,lineHeight:1,color:"rgba(var(--idi-rgb),.5)"}}>×</button>
+            </div>
+            <div style={{...lab,marginTop:4}}>{jaCartao?`já nos seus cartões · nível ${jaCartao.box||0}`:conhSet.has(lw.w.toLowerCase())?"marcada como conhecida":funcSet.has(lw.w.toLowerCase())?"palavra funcional":"nova"}</div>
+            <div style={{fontSize:13.5,lineHeight:1.55,marginTop:12,opacity:.85,fontStyle:"italic"}}>{lt.texto.slice(lw.fr.ini,lw.i)}<b style={{borderBottom:"2px solid "+T.acc}}>{lw.w}</b>{lt.texto.slice(lw.i+lw.w.length,lw.fr.fim)}</div>
+            {!jaCartao&&(<>
+              <input style={{...inp,marginTop:14}} value={lf.trad} onChange={e=>setLf({...lf,trad:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")criarCartaoLeit();}} placeholder="Tradução (obrigatória para criar o cartão)"/>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10,alignItems:"center"}}><span style={lab}>se for substantivo</span>{ARTS.map(a=>{const on=lf.art===a;return <button key={a} onClick={()=>setLf({...lf,art:on?"":a})} style={{height:32,minWidth:54,padding:"0 14px",borderRadius:999,border:"1px solid "+ART_COR[a],background:on?ART_COR[a]:ART_BG[a],color:on?"#fff":ART_COR[a],fontSize:12.5,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{a}</button>;})}</div>
+            </>)}
+            <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
+              {!jaCartao&&<button style={{...btnP,opacity:lf.trad.trim()?1:.4}} disabled={!lf.trad.trim()} onClick={criarCartaoLeit}>Criar cartão</button>}
+              {conhSet.has(lw.w.toLowerCase())?<button style={btnS} onClick={desmarcarConhecida}>Desmarcar conhecida</button>:(!jaCartao&&!funcSet.has(lw.w.toLowerCase())&&<button style={btnS} onClick={marcarConhecida}>Já sei</button>)}
+            </div>
+            {!jaCartao&&<div style={{fontSize:12,opacity:.6,marginTop:10}}>O cartão guarda a frase do texto com a palavra como lacuna, e entra no limite diário de novas.</div>}
+          </div>
+        </div>)}
+
       {toast&&<div role="status" style={{position:"fixed",left:"50%",transform:"translateX(-50%)",bottom:cron&&sub!=="pratica"?84:20,zIndex:61,background:T.ink,color:T.sheet,borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:600,boxShadow:"0 14px 34px -12px rgba(0,0,0,.5)",maxWidth:"calc(100% - 28px)",textAlign:"center"}}>{toast}</div>}
     </div>
   );
