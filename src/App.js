@@ -1812,7 +1812,12 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [editL,setEditL]=useState(null);
   const [fL,setFL]=useState(null);
   const [fp,setFp]=useState({lang:"",tipo:"ouvir",min:"",nota:"",data:""});
-  const [fw,setFw]=useState({lang:"",termo:"",trad:"",ex:"",art:"",plural:""});
+  const [fw,setFw]=useState({lang:"",termo:"",trad:"",ex:"",art:"",plural:"",tipo:"palavra",minha:"",tema:"",vars:""});
+  const [plt]=useLS("v4_plt",[],userId);
+  const [ii,setIi]=useLS("v5_idi_ii",{},userId);
+  const [iiEd,setIiEd]=useState(null);
+  const [fcN,setFcN]=useState(null);
+  const [mt,setMt]=useState("");
   const [busca,setBusca]=useState("");
   const [verTodas,setVerTodas]=useState(false);
   const [rs,setRs]=useState(null);
@@ -1846,10 +1851,77 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const hSem=minSem/60;
   const metaTot=ativas.reduce((a,l)=>a+(+l.metaSem||0),0);
   const vocSel=vocab.filter(v=>inSel(v.lang));
-  const due=vocSel.filter(v=>v.prox<=hoje).sort((a,b)=>a.prox.localeCompare(b.prox));
+  const isNova=v=>!v.vista&&!((v.ok||0)+(v.er||0));
+  const due=vocSel.filter(v=>!isNova(v)&&v.prox<=hoje).sort((a,b)=>a.prox.localeCompare(b.prox));
+  const novasTodas=vocSel.filter(isNova).sort((a,b)=>(a.criada||"").localeCompare(b.criada||""));
+  const cfgL=L(sel);
+  const baseNov=(cfgL.novosDia!==undefined&&cfgL.novosDia!==null&&cfgL.novosDia!==""&&Number.isFinite(+cfgL.novosDia))?+cfgL.novosDia:(sel==="de"?10:6);
+  const hhmm=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||"");return m?(+m[1])*60+(+m[2]):null;};
+  const plNoturno=q=>{const a=hhmm(q.horaInicio),b=hhmm(q.horaFim);if(a!==null&&b!==null)return b<=a||a>=18*60||(b-a)>=24*60;return (+q.horas||0)>=12;};
+  const posPlantao=plt.some(q=>q.data===addDays(hoje,-1)&&plNoturno(q));
+  const plt4=plt.filter(q=>q.data>=addDays(hoje,-3)&&q.data<=hoje).length;
+  const bloqueioNov=posPlantao?"Pós-plantão: hoje só revisões":(due.length>30?`Dívida alta (${due.length} atrasadas): zere antes de liberar novas`:"");
+  const limiteHoje=bloqueioNov?0:(plt4>=2?Math.floor(baseNov/2):baseNov);
+  const novasFeitas=vocSel.filter(v=>v.vista===hoje).length;
+  const novasLib=(()=>{
+    const q=Math.max(0,limiteHoje-novasFeitas); const cont={};
+    vocSel.filter(v=>v.vista===hoje).forEach(v=>{const t=(v.tema||"").trim().toLowerCase();if(t)cont[t]=(cont[t]||0)+1;});
+    const out=[];
+    for(const v of novasTodas){
+      if(out.length>=q)break;
+      const t=(v.tema||"").trim().toLowerCase();
+      if(t){if((cont[t]||0)>=2)continue;cont[t]=(cont[t]||0)+1;}
+      out.push(v);
+    }
+    return out;
+  })();
+  const totHoje=due.length+novasLib.length;
+  const baseCarga=Array.from({length:7},(_,i)=>vocSel.filter(v=>!isNova(v)&&v.prox===addDays(hoje,i+1)).length);
+  const projNovas=n=>Array.from({length:7},(_,i)=>i===0?n:(i===3?Math.round(n*0.9):0));
+  const nFc=fcN===null?Math.max(limiteHoje,0)||baseNov:fcN;
+  const cargaFc=baseCarga.map((b,i)=>b+projNovas(nFc)[i]);
+  const totFc=cargaFc.reduce((a,b)=>a+b,0), totBase=baseCarga.reduce((a,b)=>a+b,0);
+  const maxFc=Math.max(1,...cargaFc);
+  const semAcento=t=>t.normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  const normR=t=>t.trim().toLowerCase().replace(/\s+/g," ").replace(/[.!?,;]+$/,"");
+  const confTexto=(r,esp,lg)=>{
+    const a=normR(r), b=normR(esp);
+    if(!a)return "er"; if(a===b)return "ok";
+    if(semAcento(a)===semAcento(b))return "quase";
+    if(lg==="de"){const f=t=>semAcento(t.replace(/ß/g,"ss")).replace(/ae/g,"a").replace(/oe/g,"o").replace(/ue/g,"u");if(f(a)===f(b))return "quase";}
+    return "er";
+  };
+  const confNome=(r,w)=>{
+    const m=normR(r).match(/^(der|die|das|le|la|les|l['’])\s*(.+)$/);
+    if(!m)return {r:"er",msg:"Faltou o artigo."};
+    const at=m[1].replace("’","'"); const frOk=w.lang==="fr"&&vogal(w.termo)&&at==="l'";
+    const rr=confTexto(m[2],w.termo,w.lang);
+    if(rr==="er")return {r:"er",msg:""};
+    if(!(at===w.art||frOk))return {r:"er",msg:"Palavra certa, artigo errado."};
+    return {r:rr,msg:rr==="quase"?"Atenção à grafia.":""};
+  };
+  const temCloze=t=>/\[\[[^\]]+\]\]/.test(t||"");
+  const clozeResp=t=>{const m=/\[\[([^\]]+)\]\]/.exec(t||"");return m?m[1]:"";};
+  const clozeVer=(t,rev)=>(t||"").split(/(\[\[[^\]]+\]\])/).map((q,i)=>/^\[\[/.test(q)?(rev?<b key={i} style={{color:T.ink,borderBottom:"2px solid "+T.acc}}>{q.slice(2,-2)}</b>:<span key={i} style={{display:"inline-block",minWidth:64,borderBottom:"2px solid "+T.ink,margin:"0 3px"}}>&nbsp;</span>):<span key={i}>{q}</span>);
+  const modoCard=w=>{
+    if(w.tipo==="chunk")return (w.vars||[]).length?"chunk":"rec";
+    const b=w.box||0;
+    if(temCloze(w.ex)&&b>=1&&(((w.ok||0)+(w.er||0))%2===1))return "cloze";
+    if(b>=2)return "prod";
+    return "rec";
+  };
   const dominadas=vocSel.filter(v=>(v.box||0)>=4).length;
   const ativos=new Set([...logSel.map(s=>s.data),...Object.entries(rv).filter(([d,o])=>ativas.some(l=>o[l.id]&&(o[l.id].ok+o[l.id].er)>0)).map(([d])=>d)]);
-  let streak=0, dd=hoje; if(!ativos.has(dd))dd=addDays(dd,-1); while(ativos.has(dd)){streak++;dd=addDays(dd,-1);}
+  let streak=0, folgaRec=false;
+  {
+    const ativoMin=[...ativos].sort()[0]||hoje; let dd=ativos.has(hoje)?hoje:addDays(hoje,-1), ultFolga=null, guard=0;
+    while(dd>=ativoMin&&guard++<900){
+      if(ativos.has(dd)){streak++;}
+      else if(ultFolga===null||addDays(dd,7)<=ultFolga){ultFolga=dd;if(dd>=addDays(hoje,-6))folgaRec=true;}
+      else break;
+      dd=addDays(dd,-1);
+    }
+  }
   const semana=Array.from({length:7},(_,i)=>{const ds=addDays(iniSem,i);const min=logSel.filter(s=>s.data===ds).reduce((a,s)=>a+(+s.min||0),0);return {ds,min,ativo:ativos.has(ds),ehHoje:ds===hoje,lbl:["D","S","T","Q","Q","S","S"][i]};});
   const diasAte=p=>p?Math.ceil((new Date(p+"T12:00:00")-new Date(hoje+"T12:00:00"))/86400000):null;
   const unica=L(sel);
@@ -1867,12 +1939,26 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const addPalavra=()=>{
     const lang=defLang; let termo=fw.termo.trim(); const trad=fw.trad.trim();
     if(!termo||!trad||!lang)return;
-    let art=fw.art||"";
-    const m=termo.match(GEN[lang].parse);
-    if(m){art=m[1].toLowerCase();termo=m[2];}
-    const pl=(fw.plural||"").trim().replace(new RegExp("^"+GEN[lang].plArt+"\\s+","i"),"");
-    setVocab([{id:uid(),lang,termo,trad,ex:fw.ex.trim(),criada:hoje,box:0,prox:hoje,ok:0,er:0,...(art?{art,plural:pl}:{})},...vocab]);
-    setFw({...fw,termo:"",trad:"",ex:"",art:"",plural:""});
+    const chunk=fw.tipo==="chunk";
+    const extra={};
+    if(fw.tema.trim())extra.tema=fw.tema.trim();
+    if(fw.minha.trim())extra.minha=fw.minha.trim();
+    let ex=fw.ex.trim(), art="", pl="";
+    if(chunk){
+      const vars=fw.vars.split(/[,\n;]/).map(x=>x.trim()).filter(Boolean).map(x=>{const k=x.indexOf("=");return k<0?{d:"",r:x}:{d:x.slice(0,k).trim(),r:x.slice(k+1).trim()};}).filter(x=>x.r);
+      extra.tipo="chunk"; extra.vars=vars;
+    }else{
+      art=fw.art||"";
+      const m=termo.match(GEN[lang].parse);
+      if(m){art=m[1].toLowerCase();termo=m[2];}
+      pl=(fw.plural||"").trim().replace(new RegExp("^"+GEN[lang].plArt+"\\s+","i"),"");
+      if(ex&&!temCloze(ex)){
+        const i=ex.toLowerCase().indexOf(termo.toLowerCase());
+        if(i>=0)ex=ex.slice(0,i)+"[["+ex.slice(i,i+termo.length)+"]]"+ex.slice(i+termo.length);
+      }
+    }
+    setVocab([{id:uid(),lang,termo,trad,ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,...extra,...(art?{art,plural:pl}:{})},...vocab]);
+    setFw({...fw,termo:"",trad:"",ex:"",art:"",plural:"",minha:"",vars:""});
   };
   // ── Substantivos (artigos e plurais) ──
   const G=GEN[sel]||GEN.de;
@@ -1946,23 +2032,31 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const sugForm=G.sug(fw.termo);
   const bancoFiltrado=poolAll.filter(n=>!bancoBusca||(n.termo+" "+n.trad).toLowerCase().includes(bancoBusca.toLowerCase()));
 
-  const iniciarRev=()=>{ if(due.length===0)return; setRs({fila:due.map(v=>v.id),i:0,show:false,ok:0,er:0,rep:{},fim:false}); };
+  const iniciarRev=m5=>{
+    const base=m5===true?due.slice(0,15):due;
+    const novas=m5===true?[]:novasLib;
+    const fila=[...base,...novas].map(v=>v.id);
+    if(!fila.length)return;
+    setRs({fila,i:0,show:false,ok:0,er:0,rep:{},fim:false,resp:"",res:null,m5:m5===true});
+  };
   const responder=ok=>{
     if(!rs||rs.fim)return;
+    setMt("");
     const id=rs.fila[rs.i]; const w=vocab.find(v=>v.id===id);
-    if(!w){setRs({...rs,i:rs.i+1,show:false,fim:rs.i+1>=rs.fila.length});return;}
+    if(!w){setRs({...rs,i:rs.i+1,show:false,resp:"",res:null,fim:rs.i+1>=rs.fila.length});return;}
     const b=w.box||0;
-    setVocab(vocab.map(v=>v.id!==id?v:{...v,box:ok?Math.min(b+1,5):0,prox:ok?addDays(hoje,LEIT[Math.min(b,5)]):addDays(hoje,1),ok:(v.ok||0)+(ok?1:0),er:(v.er||0)+(ok?0:1)}));
+    setVocab(vocab.map(v=>v.id!==id?v:{...v,box:ok?Math.min(b+1,5):0,prox:ok?addDays(hoje,LEIT[Math.min(b,5)]):addDays(hoje,1),vista:v.vista||hoje,ok:(v.ok||0)+(ok?1:0),er:(v.er||0)+(ok?0:1)}));
     const dia=rv[hoje]||{}; const c=dia[w.lang]||{ok:0,er:0};
     setRv({...rv,[hoje]:{...dia,[w.lang]:{ok:c.ok+(ok?1:0),er:c.er+(ok?0:1)}}});
     const fila=(!ok&&!rs.rep[id])?[...rs.fila,id]:rs.fila;
     const prox=rs.i+1;
-    setRs({...rs,fila,i:prox,show:false,ok:rs.ok+(ok?1:0),er:rs.er+(ok?0:1),rep:ok?rs.rep:{...rs.rep,[id]:1},fim:prox>=fila.length});
+    setRs({...rs,fila,i:prox,show:false,resp:"",res:null,ok:rs.ok+(ok?1:0),er:rs.er+(ok?0:1),rep:ok?rs.rep:{...rs.rep,[id]:1},fim:prox>=fila.length});
   };
-  const abrirEdit=l=>{setFL({nivel:l.nivel,alvo:l.alvo,prova:l.prova||"",metaSem:l.metaSem});setEditL(l.id);};
+  const salvarMinha=(id,t)=>{ if(!t.trim())return; setVocab(vocab.map(v=>v.id!==id?v:{...v,minha:t.trim()})); };
+  const abrirEdit=l=>{setFL({nivel:l.nivel,alvo:l.alvo,prova:l.prova||"",metaSem:l.metaSem,novosDia:(l.novosDia===undefined||l.novosDia===null)?"":l.novosDia});setEditL(l.id);};
   const salvarEdit=()=>{
     const l=L(editL);
-    setCfg(cfg.map(x=>x.id!==editL?x:{...x,nivel:fL.nivel,alvo:fL.alvo,prova:fL.prova,metaSem:+fL.metaSem||0}));
+    setCfg(cfg.map(x=>x.id!==editL?x:{...x,nivel:fL.nivel,alvo:fL.alvo,prova:fL.prova,metaSem:+fL.metaSem||0,novosDia:(fL.novosDia===""||fL.novosDia===undefined)?undefined:Math.max(0,+fL.novosDia||0)}));
     if(fL.nivel!==l.nivel)setMarcos([{id:uid(),lang:editL,data:hoje,titulo:"Nível "+fL.nivel,tipo:"nivel"},...marcos]);
     setEditL(null);
   };
@@ -2021,12 +2115,12 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       <button onClick={()=>setLog(log.filter(x=>x.id!==s.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
     </div>));
   const tiles=[
-    {l:"Palavras hoje",v:String(due.length),u:due.length===1?"para revisar":"para revisar",s:T.tiles[0],z:1.5,x:20,y:30,to:"palavras"},
+    {l:"Palavras hoje",v:String(totHoje),u:novasLib.length?`${due.length} rev. + ${novasLib.length} novas`:"para revisar",s:T.tiles[0],z:1.5,x:20,y:30,to:"palavras"},
     {l:"Horas na semana",v:hSem.toFixed(1).replace(".0",""),u:"h de "+metaTot+"h",s:T.tiles[1],z:1.4,x:40,y:20,to:"pratica"},
     {l:"Vocabulário",v:String(vocSel.length),u:dominadas+" dominadas",s:T.tiles[2],z:1.5,x:10,y:50,to:"palavras"},
     {l:"Sequência",v:String(streak),u:streak===1?"dia seguido":"dias seguidos",s:T.tiles[3],z:1.4,x:30,y:20,to:"evol"},
   ];
-  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(due.length?" · "+due.length:"")],["subst","Substantivos"],["evol","Evolução"]];
+  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["evol","Evolução"]];
   const nomeSel=`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
   // Evolução
@@ -2041,6 +2135,23 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const marcosSel=marcos.filter(m=>inSel(m.lang)).sort((a,b)=>b.data.localeCompare(a.data));
   const palavrasLista=vocSel.filter(v=>!busca||(v.termo+" "+v.trad).toLowerCase().includes(busca.toLowerCase()));
   const cur=rs&&!rs.fim?vocab.find(v=>v.id===rs.fila[rs.i]):null;
+  const temaN=fw.tema.trim()?vocSel.filter(v=>(v.tema||"").trim().toLowerCase()===fw.tema.trim().toLowerCase()&&(isNova(v)||(v.criada||"")>=addDays(hoje,-3))).length:0;
+  const modoCur=cur?modoCard(cur):"rec";
+  const chunkV=cur&&modoCur==="chunk"?cur.vars[((cur.ok||0)+(cur.er||0))%cur.vars.length]:null;
+  const espCur=!cur?"":modoCur==="cloze"?clozeResp(cur.ex):modoCur==="chunk"?chunkV.r:cur.termo;
+  const verificar=()=>{
+    if(!rs||!cur||rs.res||!rs.resp.trim())return;
+    const res=(modoCur==="prod"&&cur.art)?confNome(rs.resp,cur):{r:confTexto(rs.resp,espCur,cur.lang),msg:""};
+    setRs({...rs,res});
+  };
+  const caixaMinha=()=>(
+    cur.minha
+      ?<div style={{fontSize:13.5,marginTop:12,lineHeight:1.5,opacity:.85}}><span style={{...lab,marginRight:8}}>minha frase</span>{cur.minha}</div>
+      :<div style={{display:"flex",gap:8,marginTop:14,justifyContent:"center",flexWrap:"wrap"}}>
+        <input style={{...inp,maxWidth:360}} value={mt} onChange={e=>setMt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){salvarMinha(cur.id,mt);setMt("");}}} placeholder="Escreva uma frase sua com esta palavra (opcional)"/>
+        <button style={{...btnS,padding:"9px 16px"}} disabled={!mt.trim()} onClick={()=>{salvarMinha(cur.id,mt);setMt("");}}>Salvar</button>
+      </div>
+  );
 
   return (
     <div className="idi" data-lang={sel} style={{"--idi-rgb":T.rgb,"--idi-hrgb":T.hrgb,minHeight:"100vh",background:T.ink,position:"relative",zIndex:1,color:T.ink,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
@@ -2089,11 +2200,12 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       {editL&&fL&&(
         <Card>
           <Titulo k="Configuração" t={L(editL).nome}/>
-          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:12,marginBottom:16}}>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr 1fr",gap:12,marginBottom:16}}>
             <div><div style={{...lab,marginBottom:6}}>Nível atual</div><select style={inp} value={fL.nivel} onChange={e=>setFL({...fL,nivel:e.target.value})}>{NIVEIS.map(n=><option key={n}>{n}</option>)}</select></div>
             <div><div style={{...lab,marginBottom:6}}>Meta de nível</div><select style={inp} value={fL.alvo} onChange={e=>setFL({...fL,alvo:e.target.value})}>{NIVEIS.map(n=><option key={n}>{n}</option>)}</select></div>
             <div><div style={{...lab,marginBottom:6}}>Data da prova</div><input style={inp} type="date" value={fL.prova} onChange={e=>setFL({...fL,prova:e.target.value})}/></div>
             <div><div style={{...lab,marginBottom:6}}>Meta (h/semana)</div><input style={inp} type="number" min="0" value={fL.metaSem} onChange={e=>setFL({...fL,metaSem:e.target.value})}/></div>
+            <div><div style={{...lab,marginBottom:6}}>Novas por dia</div><input style={inp} type="number" min="0" value={fL.novosDia} placeholder={String(sel===editL&&editL==="de"?10:6)} onChange={e=>setFL({...fL,novosDia:e.target.value})}/></div>
           </div>
           <div style={{display:"flex",gap:10}}><button style={btnP} onClick={salvarEdit}>Salvar</button><button style={btnS} onClick={()=>setEditL(null)}>Cancelar</button></div>
         </Card>)}
@@ -2119,6 +2231,22 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             </div>
             <div style={{display:"flex",gap:6,flexShrink:0}}>{ARTS.map(a=><span key={a} style={{background:ART_BG[a],color:ART_COR[a],fontWeight:700,fontSize:isMobile?12:13,padding:"7px 11px",borderRadius:999}}>{a}</span>)}</div>
           </button>)}
+        {folgaRec&&<div style={{...lab,textAlign:"center",marginBottom:14}}>1 dia de folga perdoado esta semana · a sequência continua</div>}
+        <Card>
+          <Titulo k="Hábito" t="Quando… então…" dir={iiEd?null:<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setIiEd({q:(ii[sel]||{}).q||"",f:(ii[sel]||{}).f||""})}>{ii[sel]&&ii[sel].q?"editar":"definir"}</button>}/>
+          {iiEd?(<>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
+              <div><div style={{...lab,marginBottom:6}}>Quando eu…</div><input style={inp} value={iiEd.q} onChange={e=>setIiEd({...iiEd,q:e.target.value})} placeholder="sentar na ambulância depois de um transporte"/></div>
+              <div><div style={{...lab,marginBottom:6}}>…eu faço</div><input style={inp} value={iiEd.f} onChange={e=>setIiEd({...iiEd,f:e.target.value})} placeholder={"10 cartões de "+unica.nome.toLowerCase()}/></div>
+            </div>
+            <div style={{display:"flex",gap:10,marginTop:14}}><button style={btnP} onClick={()=>{setIi({...ii,[sel]:{q:iiEd.q.trim(),f:iiEd.f.trim()}});setIiEd(null);}}>Salvar</button><button style={btnS} onClick={()=>setIiEd(null)}>Cancelar</button></div>
+          </>):(ii[sel]&&ii[sel].q&&ii[sel].f
+            ?<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,flexWrap:"wrap"}}>
+              <div style={{...serif,fontSize:isMobile?19:22,lineHeight:1.35}}>Quando eu <b style={{fontWeight:600}}>{ii[sel].q}</b>, faço <b style={{fontWeight:600}}>{ii[sel].f}</b>.</div>
+              <button style={btnP} onClick={()=>setSub("palavras")}>Fazer agora</button>
+            </div>
+            :<Vazio>Um gatilho concreto (“quando eu… faço…”) aumenta muito a chance de você cumprir. Defina o seu para {unica.nome}.</Vazio>)}
+        </Card>
         <div className="idi-grid2">
           <Card>
             <Titulo k="Níveis" t="Onde você está"/>
@@ -2145,8 +2273,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 </div>);})}
           </Card>
           <Card>
-            <Titulo k="Memória" t="Palavras de hoje" dir={due.length>0?<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>{setSub("palavras");iniciarRev();}}>Revisar</button>:null}/>
-            {due.length===0
+            <Titulo k="Memória" t="Palavras de hoje" dir={totHoje>0?<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>{setSub("palavras");iniciarRev();}}>Revisar</button>:null}/>
+            {totHoje===0
               ? <div style={{display:"flex",alignItems:"center",gap:16}}><div style={{width:84,height:84,borderRadius:22,overflow:"hidden",flexShrink:0}}><Motif s={T.tiles[1]} z={1.55} x={0} y={36}/></div><Vazio>{vocSel.length===0?"Nenhuma palavra ainda. Cadastre em Palavras e elas voltam na hora certa.":"Nada para revisar hoje. Volte amanhã ou adicione palavras novas."}</Vazio></div>
               : due.slice(0,6).map(v=>(
                 <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)"}}>
@@ -2155,6 +2283,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                   <span style={{...lab,fontSize:9.5}}>{L(v.lang).cod}</span>
                 </div>))}
             {due.length>6&&<div style={{...lab,marginTop:10}}>+ {due.length-6} palavras</div>}
+            {novasLib.length>0&&<div style={{...lab,marginTop:10}}>+ {novasLib.length} {novasLib.length===1?"nova liberada":"novas liberadas"} hoje</div>}
+            {bloqueioNov&&<div style={{fontSize:12.5,marginTop:10,color:IDI_RED}}>{bloqueioNov}</div>}
           </Card>
         </div>
         <Card>
@@ -2236,52 +2366,119 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         {rs&&(
           <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"36px 28px"}}>
             {rs.fim?(<>
-              <div style={lab}>Revisão concluída</div>
+              <div style={lab}>{rs.m5?"Modo 5 min concluído":"Revisão concluída"}</div>
               <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{rs.ok}<small style={{fontSize:"45%",opacity:.45}}> / {rs.ok+rs.er}</small></div>
-              <Vazio>acertos nesta sessão. As palavras voltam em intervalos crescentes.</Vazio>
+              <Vazio>{rs.m5?"acertos. Sessão mínima feita: o hábito continua vivo.":"acertos nesta sessão. As palavras voltam em intervalos crescentes."}</Vazio>
               <div style={{marginTop:20}}><button style={btnP} onClick={()=>setRs(null)}>Fechar</button></div>
             </>):cur?(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                <span style={{...lab,display:"inline-flex",alignItems:"center",gap:7}}><i style={{width:8,height:8,borderRadius:"50%",background:L(cur.lang).cor}}/>{L(cur.lang).nome}</span>
+                <span style={{...lab,display:"inline-flex",alignItems:"center",gap:7}}><i style={{width:8,height:8,borderRadius:"50%",background:L(cur.lang).cor}}/>{L(cur.lang).nome}{rs.m5?" · 5 min":""}</span>
                 <span style={lab}>{Math.min(rs.i+1,rs.fila.length)} / {rs.fila.length}</span>
               </div>
               <div style={{height:4,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden",marginBottom:28}}><div style={{width:(rs.i/rs.fila.length*100)+"%",height:"100%",background:T.ink,transition:"width .3s"}}/></div>
-              <div style={{...serif,fontSize:isMobile?42:56,lineHeight:1.1,minHeight:isMobile?60:76,wordBreak:"break-word"}}><Nome v={cur}/></div>
-              {rs.show?(<>
-                <div style={{fontSize:isMobile?20:24,marginTop:18,fontWeight:500}}>{cur.trad}</div>
-                {cur.plural&&<div style={{fontSize:14,marginTop:8,opacity:.65}}>plural: {(GEN[cur.lang]||G).plArt} {cur.plural}</div>}
-                {cur.ex&&<div style={{fontSize:14,marginTop:10,fontStyle:"italic",opacity:.65,lineHeight:1.5}}>{cur.ex}</div>}
-                <div style={{display:"flex",justifyContent:"center",gap:12,marginTop:28}}>
-                  <button style={{...btnS,minWidth:130,borderColor:IDI_RED,color:IDI_RED}} onClick={()=>responder(false)}>Errei</button>
-                  <button style={{...btnP,minWidth:130}} onClick={()=>responder(true)}>Acertei</button>
+              {modoCur==="rec"?(<>
+                <div style={{...serif,fontSize:isMobile?42:56,lineHeight:1.1,minHeight:isMobile?60:76,wordBreak:"break-word"}}><Nome v={cur}/></div>
+                {rs.show?(<>
+                  <div style={{fontSize:isMobile?20:24,marginTop:18,fontWeight:500}}>{cur.trad}</div>
+                  {cur.plural&&<div style={{fontSize:14,marginTop:8,opacity:.65}}>plural: {(GEN[cur.lang]||G).plArt} {cur.plural}</div>}
+                  {cur.ex&&<div style={{fontSize:14,marginTop:10,fontStyle:"italic",opacity:.75,lineHeight:1.5}}>{clozeVer(cur.ex,true)}</div>}
+                  {caixaMinha()}
+                  <div style={{display:"flex",justifyContent:"center",gap:12,marginTop:28}}>
+                    <button style={{...btnS,minWidth:130,borderColor:IDI_RED,color:IDI_RED}} onClick={()=>responder(false)}>Errei</button>
+                    <button style={{...btnP,minWidth:130}} onClick={()=>responder(true)}>Acertei</button>
+                  </div>
+                </>):(
+                  <div style={{marginTop:36}}><button style={btnP} onClick={()=>setRs({...rs,show:true})}>Mostrar tradução</button></div>)}
+              </>):(<>
+                <div style={{...lab,marginBottom:12}}>{modoCur==="prod"?"Como se diz…?":modoCur==="cloze"?"Complete a frase":"Complete a estrutura"}</div>
+                <div style={{...serif,fontSize:modoCur==="prod"?(isMobile?34:44):(isMobile?24:30),lineHeight:1.25,wordBreak:"break-word"}}>
+                  {modoCur==="prod"?cur.trad:modoCur==="cloze"?clozeVer(cur.ex,false):cur.termo}
                 </div>
-              </>):(
-                <div style={{marginTop:36}}><button style={btnP} onClick={()=>setRs({...rs,show:true})}>Mostrar tradução</button></div>)}
+                <div style={{fontSize:13,opacity:.6,marginTop:10}}>
+                  {modoCur==="prod"?(cur.art?"substantivo: escreva com o artigo":""):modoCur==="cloze"?"dica: "+cur.trad:(chunkV.d?"("+chunkV.d+") · ":"")+cur.trad}
+                </div>
+                {!rs.res?(<>
+                  <div style={{marginTop:22,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+                    <input autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,maxWidth:340,textAlign:"center"}} value={rs.resp} onChange={e=>setRs({...rs,resp:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")verificar();}} placeholder={modoCur==="prod"&&cur.art?G.ph:"sua resposta"}/>
+                    <button style={{...btnP,opacity:rs.resp.trim()?1:.4}} disabled={!rs.resp.trim()} onClick={verificar}>Verificar</button>
+                  </div>
+                  <div style={{marginTop:14}}><button onClick={()=>setRs({...rs,res:{r:"er",msg:"",skip:true}})} style={{background:"none",border:"none",cursor:"pointer",fontSize:12.5,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)"}}>não lembro</button></div>
+                </>):(<>
+                  <div style={{marginTop:22,padding:"14px 16px",borderRadius:16,textAlign:"left",background:rs.res.r==="er"?"rgba(168,50,50,.08)":"rgba(60,130,90,.1)"}}>
+                    <div style={{...lab,color:rs.res.r==="er"?IDI_RED:"#2F7A52"}}>{rs.res.r==="ok"?"Correto":rs.res.r==="quase"?"Quase · "+(rs.res.msg||"atenção à grafia"):rs.res.skip?"Resposta":"Não foi dessa vez"+(rs.res.msg?" · "+rs.res.msg:"")}</div>
+                    <div style={{...serif,fontSize:isMobile?28:36,marginTop:6,lineHeight:1.15,wordBreak:"break-word"}}>{modoCur==="prod"?<Nome v={cur}/>:espCur}</div>
+                    {rs.res.r!=="ok"&&!rs.res.skip&&<div style={{fontSize:13,opacity:.6,marginTop:6}}>você escreveu: {rs.resp}</div>}
+                  </div>
+                  {cur.plural&&<div style={{fontSize:14,marginTop:12,opacity:.65}}>plural: {(GEN[cur.lang]||G).plArt} {cur.plural}</div>}
+                  {cur.ex&&<div style={{fontSize:14,marginTop:10,fontStyle:"italic",opacity:.75,lineHeight:1.5}}>{clozeVer(cur.ex,true)}</div>}
+                  {caixaMinha()}
+                  <div style={{display:"flex",justifyContent:"center",gap:12,marginTop:24,flexWrap:"wrap"}}>
+                    {rs.res.r==="er"&&!rs.res.skip&&<button style={{...btnS,minWidth:130}} onClick={()=>responder(true)}>Contar como acerto</button>}
+                    <button style={{...btnP,minWidth:130}} onClick={()=>responder(rs.res.r!=="er")}>Próxima</button>
+                  </div>
+                </>)}
+              </>)}
             </>):null}
             {!rs.fim&&<div style={{marginTop:22}}><button onClick={()=>setRs(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)"}}>sair da revisão</button></div>}
           </Card>)}
         {!rs&&(
           <Card>
             <Titulo k="Repetição espaçada" t="Revisar" dir={<div style={{textAlign:"right"}}><div style={lab}>acerto</div><div style={{...serif,fontSize:isMobile?30:38,marginTop:4,color:IDI_RED}}>{acertoV===null?"—":acertoV+"%"}</div></div>}/>
-            <div style={{display:"flex",alignItems:"center",gap:14,flexWrap:"wrap"}}>
-              <button style={{...btnP,opacity:due.length?1:.4}} disabled={!due.length} onClick={iniciarRev}>{due.length?`Revisar ${due.length} ${due.length===1?"palavra":"palavras"}`:"Nada para hoje"}</button>
-              <span style={{...lab}}>{vocSel.length} no total · {dominadas} dominadas</span>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              <button style={{...btnP,opacity:totHoje?1:.4}} disabled={!totHoje} onClick={()=>iniciarRev()}>{totHoje?`Revisar ${due.length}${novasLib.length?` + ${novasLib.length} ${novasLib.length===1?"nova":"novas"}`:""}`:"Nada para hoje"}</button>
+              {due.length>0&&<button style={btnS} onClick={()=>iniciarRev(true)}>Modo 5 min</button>}
+            </div>
+            <div style={{marginTop:16,fontSize:12.5,lineHeight:1.6,opacity:.8}}>
+              Novas hoje: <b>{novasFeitas}</b> de {limiteHoje}{novasTodas.length>0?` · ${novasTodas.length} na fila`:""}
+              {bloqueioNov&&<div style={{color:IDI_RED,fontWeight:600}}>{bloqueioNov}</div>}
+              {!bloqueioNov&&plt4>=2&&<div>Semana de plantões: limite de novas reduzido pela metade.</div>}
+              {!bloqueioNov&&novasTodas.length>0&&novasLib.length<Math.max(0,limiteHoje-novasFeitas)&&<div>Algumas novas ficaram para depois: no máximo 2 do mesmo tema por dia.</div>}
+            </div>
+            <div style={{...lab,marginTop:12}}>{vocSel.length} no total · {dominadas} dominadas</div>
+          </Card>)}
+        {!rs&&vocSel.length>0&&(
+          <Card>
+            <Titulo k="Carga" t="Revisões nos próximos 7 dias"/>
+            <div style={{display:"flex",alignItems:"flex-end",gap:8,height:104}}>
+              {cargaFc.map((n,i)=>{const bs=baseCarga[i];const dd2=addDays(hoje,i+1);return (
+                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:"100%",gap:4}}>
+                  <span style={{fontSize:10.5,opacity:.65}}>{n}</span>
+                  <div style={{width:"100%",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+                    <div style={{height:(n-bs)/maxFc*60,background:T.acc,borderRadius:"6px 6px 0 0"}}/>
+                    <div style={{height:Math.max(3,bs/maxFc*60),background:T.ink,opacity:.85,borderRadius:n-bs>0?0:"6px 6px 0 0"}}/>
+                  </div>
+                  <span style={{...lab,fontSize:9.5}}>{["D","S","T","Q","Q","S","S"][new Date(dd2+"T12:00:00").getDay()]}</span>
+                </div>);})}
+            </div>
+            <div style={{marginTop:18}}>
+              <div style={{...lab,marginBottom:6}}>Se eu adicionar <b style={{color:T.ink}}>{nFc}</b> novas hoje</div>
+              <input type="range" min="0" max="40" value={nFc} onChange={e=>setFcN(+e.target.value)}/>
+              <div style={{fontSize:13,marginTop:8,lineHeight:1.55,opacity:.85}}>≈ <b>{totFc}</b> revisões em 7 dias{nFc>0?` (${totBase} sem novas)`:""} · média de {Math.round(totFc/7)} por dia.{totFc/7>40?" Pesado: o controle está nas novas, não nas revisões.":""}</div>
             </div>
           </Card>)}
         <Card>
           <Titulo k="Nova" t="Adicionar palavra"/>
-          {(
+          <div style={{display:"flex",gap:8,marginTop:14}}>{[["palavra","Palavra"],["chunk","Expressão (chunk)"]].map(([k,l])=><button key={k} onClick={()=>setFw({...fw,tipo:k})} style={{height:34,padding:"0 16px",borderRadius:999,border:"1px solid "+T.ink,background:fw.tipo===k?T.ink:"transparent",color:fw.tipo===k?T.sheet:T.ink,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{l}</button>)}</div>
+          {fw.tipo!=="chunk"&&(
             <div style={{marginTop:14}}>
               <div style={{...lab,marginBottom:8}}>Artigo (se for substantivo)</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{ARTS.map(a=>{const on=fw.art===a;return <button key={a} onClick={()=>setFw({...fw,art:on?"":a})} style={{height:36,minWidth:64,padding:"0 16px",borderRadius:999,border:"1px solid "+ART_COR[a],background:on?ART_COR[a]:ART_BG[a],color:on?"#fff":ART_COR[a],fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{a}</button>;})}</div>
               {sugForm&&!fw.art&&!G.parse.test(fw.termo.trim())&&<div style={{fontSize:12.5,marginTop:10,lineHeight:1.5,color:"rgba(var(--idi-rgb),.75)"}}>Terminação <b>{sugForm.suf}</b> costuma ser <b style={{color:ART_COR[sugForm.art]}}>{sugForm.art}</b> ({sugForm.conf}). <button onClick={()=>setFw({...fw,art:sugForm.art})} style={{background:"none",border:"none",padding:0,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3,fontSize:12.5,color:T.ink}}>usar {sugForm.art}</button></div>}
             </div>)}
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginTop:14}}>
-            <div><div style={{...lab,marginBottom:6}}>Palavra</div><input style={inp} value={fw.termo} onChange={e=>setFw({...fw,termo:e.target.value})} placeholder={G.ph}/></div>
+            <div><div style={{...lab,marginBottom:6}}>{fw.tipo==="chunk"?"Estrutura (use ___ no que varia)":"Palavra"}</div><input style={inp} value={fw.termo} onChange={e=>setFw({...fw,termo:e.target.value})} placeholder={fw.tipo==="chunk"?(sel==="fr"?"Il vaut mieux que tu ___":"Es kommt darauf an, ob ___"):G.ph}/></div>
             <div><div style={{...lab,marginBottom:6}}>Tradução</div><input style={inp} value={fw.trad} onChange={e=>setFw({...fw,trad:e.target.value})} placeholder="a chave"/></div>
           </div>
-          <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Plural (opcional)</div><input style={inp} value={fw.plural} onChange={e=>setFw({...fw,plural:e.target.value})} placeholder={G.phS}/></div>
-          <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Exemplo (opcional)</div><input style={inp} value={fw.ex} onChange={e=>setFw({...fw,ex:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addPalavra();}} placeholder="Frase onde apareceu"/></div>
+          {fw.tipo!=="chunk"&&<div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Plural (opcional)</div><input style={inp} value={fw.plural} onChange={e=>setFw({...fw,plural:e.target.value})} placeholder={G.phS}/></div>}
+          {fw.tipo==="chunk"
+            ?<div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Variações (dica = resposta, separadas por vírgula)</div><input style={inp} value={fw.vars} onChange={e=>setFw({...fw,vars:e.target.value})} placeholder={sel==="fr"?"partir = partes, venir = viennes, faire = fasses":"mitkommen = mitkommst, bleiben = bleibst"}/><div style={{fontSize:12,opacity:.6,marginTop:6}}>A cada revisão aparece uma variação diferente.</div></div>
+            :<div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Frase de exemplo (a palavra vira a lacuna)</div><input style={inp} value={fw.ex} onChange={e=>setFw({...fw,ex:e.target.value})} placeholder="Frase real onde a palavra apareceu"/><div style={{fontSize:12,opacity:.6,marginTop:6}}>Dica: marque a lacuna com [[colchetes duplos]] se quiser outro trecho.</div></div>}
+          <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Minha frase (opcional)</div><input style={inp} value={fw.minha} onChange={e=>setFw({...fw,minha:e.target.value})} placeholder={sel==="fr"?"Je suis médecin aux urgences.":"Ich arbeite als Ärztin im Notdienst."}/></div>
+          <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Tema / cena (opcional)</div><input style={inp} list="idi-temas" value={fw.tema} onChange={e=>setFw({...fw,tema:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addPalavra();}} placeholder="no restaurante, consultório, trânsito…"/>
+            <datalist id="idi-temas">{[...new Set(vocSel.map(v=>v.tema).filter(Boolean))].map(t=><option key={t} value={t}/>)}</datalist>
+            {temaN>=4&&<div style={{fontSize:12.5,marginTop:8,color:IDI_RED,lineHeight:1.5}}>Você já tem {temaN} palavras recentes em “{fw.tema.trim()}”. Muitas do mesmo campo semântico juntas se confundem: espalhe ao longo dos dias.</div>}
+            <div style={{fontSize:12,opacity:.6,marginTop:6}}>Agrupe por cena (garçom, conta, gorjeta), não por categoria (todas as cores).</div>
+          </div>
           <div style={{marginTop:16}}><button style={btnP} onClick={addPalavra}>Adicionar</button></div>
         </Card>
         <Card>
@@ -2290,7 +2487,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           {palavrasLista.length===0?<Vazio>{vocSel.length===0?"Nenhuma palavra cadastrada.":"Nada encontrado."}</Vazio>:(verTodas?palavrasLista:palavrasLista.slice(0,30)).map(v=>(
             <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)"}}>
               <i style={{width:10,height:10,borderRadius:"50%",background:L(v.lang).cor,flexShrink:0}}/>
-              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}><Nome v={v}/>{v.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {v.plural}</span>}</div><div style={{fontSize:13,opacity:.6,marginTop:2}}>{v.trad}</div></div>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}><Nome v={v}/>{v.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {v.plural}</span>}</div><div style={{fontSize:13,opacity:.6,marginTop:2}}>{v.trad}{(v.tema||v.tipo==="chunk"||temCloze(v.ex)||isNova(v))&&<span style={{...lab,fontSize:9.5,marginLeft:8}}>{[isNova(v)?"nova":"",v.tipo==="chunk"?"chunk":"",temCloze(v.ex)?"lacuna":"",v.tema||""].filter(Boolean).join(" · ")}</span>}</div></div>
               <div style={{display:"flex",gap:3}} title={"nível "+(v.box||0)+" de 5"}>{[0,1,2,3,4].map(i=><i key={i} style={{width:6,height:6,borderRadius:"50%",background:i<(v.box||0)?T.ink:"rgba(var(--idi-rgb),.15)"}}/>)}</div>
               <button onClick={()=>setVocab(vocab.filter(x=>x.id!==v.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
             </div>))}
@@ -5446,7 +5643,7 @@ function AppMain({user, onLogout}) {
               let lg=[],vc=[],lo=[],cr=null;
               try{lg=JSON.parse(localStorage.getItem(userId+"_v5_idi_cfg")||"null")||IDI_LANGS;vc=JSON.parse(localStorage.getItem(userId+"_v5_idi_voc")||"[]")||[];lo=JSON.parse(localStorage.getItem(userId+"_v5_idi_log")||"[]")||[];cr=JSON.parse(localStorage.getItem(userId+"_v5_idi_cron")||"null");}catch{lg=IDI_LANGS;}
               const hj=today();
-              const dueI=vc.filter(v=>v.prox<=hj).length;
+              const dueI=vc.filter(v=>(v.vista||(v.ok||0)+(v.er||0))&&v.prox<=hj).length;
               return (
                 <button onClick={()=>trocarApp("idi")} style={{position:"relative",overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",border:"none",cursor:"pointer",borderRadius:28,padding:isMobile?"20px 20px":"24px 30px",marginBottom:14,background:"#2A1E14",color:"#F6EBD3",fontFamily:"inherit"}}>
                   <Motif s="manteiga" z={1.2} x={60} y={20} style={{position:"absolute",inset:0,opacity:.95}}/>
