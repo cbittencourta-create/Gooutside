@@ -1790,6 +1790,110 @@ const GEN={
   fr:{arts:["le","la"],plArt:"les",plCor:"#7083BF",banco:BANCO_FR,regras:REGRAS_FR,sug:sugerirArtFr,parse:/^(le|la)\s+(.+)$/i,ph:"la clé",phS:"clés",chars:["é","è","ê","à","ç","î","ô","û","œ"],pl:"Plural: em geral +s. Termina em -s, -x ou -z: não muda (le prix → les prix). -al → -aux (journal → journaux). -eau, -eu → +x (bureau → bureaux, jeu → jeux). Exceções comuns: œil → yeux, ciel → cieux."},
 };
 const ART_NOME={der:"azul",die:"vermelho",das:"verde",le:"azul",la:"vermelho"};
+// ── Gramática: banco de exercícios (anexar ao fim de cada idioma; não reordenar, os ids dependem da ordem) ──
+// formato: área | enunciado (___ = lacuna) | resposta(s) separadas por ~ | trecho a destacar | dica | explicação
+const GRAM_AREAS={
+  de:[["kasus","Casos (Akk/Dat/Gen)"],["prep","Preposições"],["adj","Terminações de adjetivo"],["satz","Posição do verbo"],["perf","Perfekt"],["konj","Konjunktiv II"],["pass","Passiv"]],
+  fr:[["temps","Passé composé × imparfait"],["aux","Auxiliar être/avoir"],["pron","Pronomes (COD, COI, y, en)"],["subj","Subjonctif × indicatif"],["art","Artigos e preposições de lugar"],["accord","Concordância e comparação"]],
+};
+const GRAM_RAW={
+de:`kasus|Ich habe ___ Bruder gestern angerufen. (mein-)|meinen|angerufen|Que caso o verbo "anrufen" pede? E Bruder é masculino.|anrufen + Akkusativ. Masculino no Akkusativ: mein → meinen.
+kasus|Er hilft ___ Frau beim Umzug. (die Frau)|der|hilft|Pense no caso que "helfen" exige. Como o feminino muda nele?|helfen + Dativ. Feminino no Dativ: die → der.
+kasus|Das ist das Auto ___ Nachbarn. (der Nachbar)|des|Nachbarn|Aqui há posse: de quem é o carro?|Posse = Genitiv. Masculino: der → des (e o substantivo ganha -s ou -n).
+kasus|Wir fahren mit ___ Zug. (der Zug)|dem|mit|Essa preposição sempre pede o mesmo caso.|mit + Dativ (sempre). Masculino no Dativ: der → dem.
+kasus|Sie kauft ___ Kind ein Eis. (das Kind)|dem|Kind|Quem recebe o sorvete? Objeto direto ou indireto?|Objeto indireto (quem recebe) = Dativ. Neutro: das → dem.
+kasus|Hast du ___ Mann gesehen? (der Mann)|den|gesehen|Quem é visto? Qual objeto é esse?|Objeto direto = Akkusativ. Masculino: der → den.
+kasus|Wegen ___ Regens bleiben wir zu Hause. (der Regen)|des|Wegen|Essa preposição de causa pede um caso mais formal.|wegen + Genitiv. Masculino: der → des.
+prep|Das Buch liegt auf ___ Tisch. (der Tisch)|dem|liegt|Wo? ou Wohin? O livro já está lá, sem movimento.|Wechselpräposition: Wo? (lugar) = Dativ. der Tisch → dem Tisch.
+prep|Ich lege das Buch auf ___ Tisch. (der Tisch)|den|lege|Wo? ou Wohin? Aqui há movimento.|Wohin? (direção) = Akkusativ. der Tisch → den Tisch.
+prep|Wir warten ___ den Bus.|auf|warten|Verbo com preposição fixa.|warten auf + Akkusativ.
+prep|Sie interessiert sich ___ Medizin.|für|interessiert|Verbo reflexivo com preposição fixa.|sich interessieren für + Akkusativ.
+prep|Ich freue mich ___ das Wochenende. (ainda vai acontecer)|auf|freue|Alegria por algo futuro ou presente?|sich freuen auf = alegria antecipada (futuro); sich freuen über = por algo presente ou passado.
+prep|Ich komme ___ Brasilien.|aus|komme|Origem.|Origem de um país = aus.
+prep|Nach dem Essen gehen wir ___ Arzt. (contraído)|zum~zu dem|Arzt|Ir até uma pessoa ou profissional.|Para pessoas: zu + Dativ. zu + dem = zum.
+adj|Das ist ein ___ Auto. (schnell)|schnelles|ein|Neutro, nominativo, com "ein": o artigo não mostra o gênero.|Após ein- sem terminação (neutro Nom/Akk), o adjetivo mostra o gênero: -es.
+adj|Ich kaufe einen ___ Tisch. (groß)|großen|einen|Masculino, acusativo.|Após einen (Akk masculino): -en.
+adj|Die ___ Frau lacht. (alt)|alte|Die|Artigo definido, feminino, nominativo.|Após artigo definido em Nom/Akk feminino, neutro e plural: -e.
+adj|Mit dem ___ Mann sprach ich. (nett)|netten|dem|Dativ com artigo definido.|Após artigo definido no Dativ (e no Genitiv): sempre -en.
+adj|Ich trinke gern ___ Kaffee. (stark)|starken|Kaffee|Sem artigo: o adjetivo assume o papel do artigo. Masculino, acusativo.|Sem artigo, o adjetivo leva a terminação do artigo: den → -en.
+adj|Das ist die Tasche meiner ___ Schwester. (jung)|jungen|meiner|Genitivo feminino.|Após possessivo no Genitiv: -en.
+adj|Wir haben ein ___ Problem. (groß)|großes|ein|Neutro com "ein".|ein + neutro Nom/Akk: -es.
+satz|Er kommt nicht, ___ (weil / krank / ist / er)|weil er krank ist|weil|Em oração subordinada, onde vai o verbo conjugado?|Após weil, dass, ob, wenn…: verbo conjugado no fim.
+satz|Ich glaube, ___ (dass / sie / recht / hat)|dass sie recht hat|dass|Subordinada com dass.|dass → verbo conjugado no fim.
+satz|Wenn es regnet, ___ (wir / bleiben / zu Hause)|bleiben wir zu Hause|Wenn|A subordinada ocupa a 1ª posição. Onde fica o verbo da principal?|Se a subordinada abre a frase, ela conta como 1ª posição: o verbo da principal vem logo depois.
+satz|Ich frage mich, ___ (er / ob / kommt / morgen)|ob er morgen kommt|ob|Pergunta indireta.|ob → verbo no fim; tempo (morgen) antes do verbo.
+satz|Heute ___ (gehe / ich / ins Kino)|gehe ich ins Kino|Heute|Quando algo que não é o sujeito abre a frase, onde fica o verbo?|Na oração principal o verbo conjugado é sempre o 2º elemento; o sujeito vem depois dele.
+satz|Obwohl ___, ging er zur Arbeit. (er / müde / war)|er müde war|Obwohl|obwohl abre uma subordinada.|obwohl → verbo conjugado no fim da subordinada.
+perf|Ich ___ gestern nach Hause gegangen. (haben / sein)|bin|gegangen|Qual auxiliar os verbos de movimento usam?|Verbos de movimento e mudança de estado → sein.
+perf|Wir ___ einen Film gesehen. (haben / sein)|haben|gesehen|Verbo transitivo, com objeto direto.|Verbos transitivos → haben.
+perf|Er hat das Fenster ___. (aufmachen)|aufgemacht|aufmachen|Verbo separável: onde entra o "ge-"?|Separável: prefixo + ge + radical + t → auf-ge-macht.
+perf|Sie ist früh ___. (aufstehen)|aufgestanden|aufstehen|Verbo forte e separável.|aufstehen → ist aufgestanden (sein: mudança de estado).
+perf|Ich habe dich gestern ___. (anrufen)|angerufen|anrufen|Separável e forte.|anrufen → angerufen (an-ge-rufen).
+perf|Wir sind nach Rio ___. (fahren)|gefahren|fahren|Particípio de verbo forte: ge- + radical + -en.|fahren → gefahren.
+perf|Hast du schon ___? (essen)|gegessen|essen|Verbo forte.|essen → gegessen (irregular).
+konj|Wenn ich mehr Zeit hätte, ___ ich mehr lesen.|würde|hätte|Irreal: o que forma o Konjunktiv II da maioria dos verbos?|würde + infinitivo.
+konj|Ich ___ gern ein Glas Wasser. (mögen, educado)|möchte|gern|Forma educada de "mögen".|möchte = Konjunktiv II de mögen.
+konj|Wenn ich du ___, würde ich das nicht tun. (sein)|wäre|Wenn|Konjunktiv II de sein.|sein → wäre.
+konj|Wenn er Geld ___, würde er ein Haus kaufen. (haben)|hätte|Wenn|Konjunktiv II de haben.|haben → hätte.
+konj|___ Sie mir bitte helfen? (können, educado)|Könnten|bitte|Pedido educado.|können → könnte(n) no Konjunktiv II.
+konj|An deiner Stelle ___ ich zum Arzt gehen.|würde|Stelle|Conselho.|"An deiner Stelle" + würde + infinitivo.
+pass|Das Haus ___ gebaut. (werden, presente)|wird|gebaut|Passiv: qual auxiliar?|Passiv = werden + Partizip II.
+pass|Die Patienten ___ untersucht. (werden, presente)|werden|Patienten|Concorde com o sujeito plural.|werden (plural) + Partizip II.
+pass|Der Brief ___ gestern geschrieben. (werden, Präteritum)|wurde|gestern|Passado simples de werden.|Passiv Präteritum: wurde + Partizip II.
+pass|Das Medikament ___ vom Arzt verschrieben. (werden, presente)|wird|vom Arzt|O agente da passiva vem com von.|Presente: wird + Partizip II; agente = von + Dativ.
+pass|Die Tür ist geöffnet ___. (Perfekt Passiv)|worden|geöffnet|No Perfekt do Passiv, o particípio de werden é especial.|Perfekt Passiv: sein + Partizip II + worden.
+pass|Hier ___ nicht geraucht. (werden, presente)|wird|nicht|Passiv sem sujeito.|Passiv impessoal: wird + Partizip II.`,
+fr:`temps|Hier, j'___ (manger) une pizza.|ai mangé|Hier|Ação concluída e pontual no passado.|Passé composé para ação pontual: avoir + participe.
+temps|Quand j'étais petite, je ___ (jouer) dehors tous les jours.|jouais|tous les jours|Hábito repetido no passado.|Imparfait para hábitos e descrições no passado.
+temps|Il ___ (pleuvoir) quand je suis sorti.|pleuvait|quand|Qual é o pano de fundo e qual é a ação que interrompe?|Imparfait = cenário em curso; passé composé = o evento que interrompe.
+temps|Hier soir, elle ___ (arriver) à huit heures.|est arrivée|Hier soir|Ação pontual. Qual auxiliar? E o participe concorda?|arriver → être; o participe concorda com o sujeito: arrivée.
+temps|Pendant que je ___ (dormir), le téléphone a sonné.|dormais|Pendant que|Ação em curso que foi interrompida.|Imparfait para a ação em curso.
+temps|Nous ___ (finir) le travail à midi hier.|avons fini|hier|Ação concluída.|Passé composé: avoir + fini.
+temps|Autrefois, nous ___ (habiter) à Lyon.|habitions|Autrefois|Situação habitual no passado.|Imparfait: radical de "nous" + -ions.
+aux|Elle ___ allée au marché.|est|allée|Verbo de movimento.|aller usa être; o participe concorda com o sujeito.
+aux|J'___ vu ce film.|ai|vu|Verbo transitivo.|A maioria dos verbos usa avoir.
+aux|Nous ___ partis hier.|sommes|partis|Partir é verbo de movimento.|partir → être.
+aux|Ils ___ mangé au restaurant.|ont|mangé|Verbo comum.|manger → avoir.
+aux|Tu ___ tombé dans l'escalier ?|es|tombé|Verbo de queda e movimento.|tomber → être.
+aux|Je me ___ levée tôt.|suis|me|Verbo pronominal.|Todos os verbos pronominais usam être.
+aux|Vous ___ rentrés tard.|êtes|rentrés|Verbo de movimento.|rentrer → être.
+pron|Tu vois Marie ? Oui, je ___ vois.|la|vois|Objeto direto feminino.|COD feminino singular = la.
+pron|Tu parles à Paul ? Oui, je ___ parle.|lui|à Paul|Complemento introduzido por "à" com pessoa.|COI (à + pessoa) = lui (singular) ou leur (plural).
+pron|Tu as acheté ce livre ? Oui, je ___ ai acheté.|l'~l’|livre|COD masculino diante de vogal.|COD diante de vogal elide: le/la → l'.
+pron|Tu téléphones à tes parents ? Oui, je ___ téléphone.|leur|à tes parents|COI no plural.|COI plural = leur.
+pron|Il aime les fruits ? Oui, il ___ mange tous les jours.|les|fruits|COD no plural.|COD plural = les.
+pron|Tu veux du café ? Oui, j'___ veux.|en|du café|Substitui "du + substantivo" (quantidade).|en substitui de/du/des + nome.
+pron|Tu vas à Paris ? Oui, j'___ vais demain.|y|à Paris|Substitui "à + lugar".|y substitui à/en/dans + lugar.
+subj|Il faut que tu ___ (venir) demain.|viennes|Il faut que|Após "il faut que", qual modo?|il faut que + subjonctif.
+subj|Je veux que vous ___ (être) à l'heure.|soyez|veux que|Vontade com sujeitos diferentes.|vouloir que + subjonctif; être → que vous soyez.
+subj|Il faut que nous ___ (finir) ce travail.|finissions|Il faut que|Subjonctif com "nous".|finir → que nous finissions.
+subj|Je pense qu'il ___ (avoir) raison.|a|pense qu'|Penser no afirmativo expressa certeza.|penser que (afirmativo) + indicatif.
+subj|Il est possible qu'elle ___ (avoir) du retard.|ait|possible qu'|Possibilidade, dúvida.|il est possible que + subjonctif; avoir → qu'elle ait.
+subj|Je ne crois pas qu'il ___ (venir).|vienne|ne crois pas|Opinião na negativa.|croire que na negativa + subjonctif.
+subj|Bien que ce ___ (être) difficile, j'essaie.|soit|Bien que|Conjunção concessiva.|bien que + subjonctif; être → soit.
+art|Je bois ___ eau. (partitivo)|de l'~de l’|eau|Água, não contável, antes de vogal.|Partitivo antes de vogal: de l'.
+art|Elle mange ___ pain. (partitivo)|du|pain|Masculino, quantidade indefinida.|Partitivo masculino: du.
+art|Il n'y a pas ___ lait.|de|pas|Depois de negação.|Na negação, du/de la/des → de (d').
+art|J'habite ___ France.|en|habite|País feminino.|Países femininos (ou que começam por vogal): en.
+art|Je vais ___ Brésil.|au|vais|País masculino.|Países masculinos: au.
+art|Nous allons ___ États-Unis.|aux|allons|País plural.|Países plurais: aux.
+art|Elle vient ___ Italie. (de + vogal)|d'~d’|vient|Origem; país que começa por vogal.|venir de + vogal → d'.
+accord|Elle est très ___ (content).|contente|Elle|Concordância em gênero.|O adjetivo concorda: feminino → -e.
+accord|Les fleurs que j'ai ___ (acheter) sont belles.|achetées|Les fleurs|O objeto vem antes do verbo.|Com avoir, o participe concorda com o COD colocado antes: fleurs → achetées.
+accord|C'est une ___ (beau) maison.|belle|une|Feminino de beau.|beau → belle.
+accord|Il est ___ grand que moi.|plus|que|Comparativo de superioridade.|plus + adjetivo + que.
+accord|Elle est la ___ de la classe. (bon, superlativo)|meilleure|la|Superlativo irregular de bon.|bon → le/la meilleur(e).
+accord|Ces filles sont ___ (heureux).|heureuses|filles|Feminino plural.|heureux → heureuse → heureuses.
+accord|Il parle ___ que moi. (bien, comparativo)|mieux|parle|Advérbio, não adjetivo.|bien → mieux (advérbio); bon → meilleur (adjetivo).`,
+};
+const GRAM_ITENS=Object.entries(GRAM_RAW).flatMap(([lang,txt])=>{
+  const cnt={};
+  return txt.trim().split("\n").filter(Boolean).map(l=>{
+    const [area,q,r,f,h,e]=l.split("|").map(x=>x.trim());
+    cnt[area]=(cnt[area]||0)+1;
+    return {id:lang+":"+area+":"+cnt[area],lang,area,q,r:r.split("~"),f,h,e};
+  });
+});
 
 function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [cfg,setCfg]=useLS("v5_idi_cfg",IDI_LANGS,userId);
@@ -1817,6 +1921,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [ii,setIi]=useLS("v5_idi_ii",{},userId);
   const [iiEd,setIiEd]=useState(null);
   const [fcN,setFcN]=useState(null);
+  const [gstat,setGstat]=useLS("v5_idi_gram",{areas:{},items:{}},userId);
+  const [gm,setGm]=useState(null);
   const [mt,setMt]=useState("");
   const [busca,setBusca]=useState("");
   const [verTodas,setVerTodas]=useState(false);
@@ -1911,7 +2017,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     return "rec";
   };
   const dominadas=vocSel.filter(v=>(v.box||0)>=4).length;
-  const ativos=new Set([...logSel.map(s=>s.data),...Object.entries(rv).filter(([d,o])=>ativas.some(l=>o[l.id]&&(o[l.id].ok+o[l.id].er)>0)).map(([d])=>d)]);
+  const ativos=new Set([...logSel.map(s=>s.data),...Object.entries(rv).filter(([d,o])=>ativas.some(l=>(o[l.id]&&(o[l.id].ok+o[l.id].er)>0)||(o[l.id+"g"]&&(o[l.id+"g"].ok+o[l.id+"g"].er)>0))).map(([d])=>d)]);
   let streak=0, folgaRec=false;
   {
     const ativoMin=[...ativos].sort()[0]||hoje; let dd=ativos.has(hoje)?hoje:addDays(hoje,-1), ultFolga=null, guard=0;
@@ -2023,6 +2129,62 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const pctArt=a=>{const t=statsArt[a].ok+statsArt[a].er;return t?Math.round(statsArt[a].ok/t*100):null;};
   const piorArt=ARTS.filter(a=>statsArt[a].ok+statsArt[a].er>=3).sort((a,b)=>pctArt(a)-pctArt(b))[0];
   const dificeis=Object.entries(sbst).filter(([k,x])=>!k.includes("|")&&(x.er||0)>0&&mapN.get(k)).sort((a,b)=>(b[1].er-a[1].er)||((a[1].ok||0)-(b[1].ok||0))).slice(0,8).map(([k,x])=>({n:mapN.get(k),x}));
+  // ── Gramática mista ──
+  const gAreas=GRAM_AREAS[sel]||[];
+  const gItens=GRAM_ITENS.filter(x=>x.lang===sel);
+  const gA=a=>((gstat.areas||{})[sel+":"+a])||{ok:0,aut:0,er:0};
+  const gTot=a=>{const x=gA(a);return x.ok+x.aut+x.er;};
+  const gPct=a=>{const x=gA(a),t=gTot(a);return t?Math.round((x.ok+x.aut*.5)/t*100):null;};
+  const dificG=gAreas.map(([k,nome])=>{const x=gA(k),t=gTot(k);return {k,nome,t,pct:gPct(k),falha:t?(x.er+x.aut*.5)/t:0};}).filter(x=>x.t>=3&&x.falha>=.25).sort((a,b)=>b.falha-a.falha);
+  const leeches=vocSel.filter(v=>(v.er||0)>=3&&(v.er||0)*2>=(v.ok||0)).sort((a,b)=>(b.er||0)-(a.er||0)).slice(0,6);
+  const artFraco=piorArt&&pctArt(piorArt)<85?piorArt:null;
+  const nDif=dificG.length+(artFraco?1:0)+Math.min(dificeis.length,4)+leeches.length;
+  const iniciarGram=af=>{
+    const stI=gstat.items||{};
+    const q={};
+    gItens.filter(x=>!af||x.area===af).forEach(x=>{
+      const st=stI[x.id];
+      const base=!st?2:((st.er||0)+(st.aut||0)*.5>(st.ok||0)?3:1);
+      (q[x.area]=q[x.area]||[]).push({x,k:base+Math.random()*1.5});
+    });
+    Object.values(q).forEach(a=>a.sort((u,v)=>v.k-u.k));
+    const ord=Object.keys(q).sort(()=>Math.random()-.5);
+    const N=af?8:10; const fila=[];
+    while(fila.length<N&&ord.some(a=>q[a].length)){
+      for(const a of ord){if(fila.length>=N)break;const it=q[a].shift();if(it)fila.push(it.x.id);}
+    }
+    if(!fila.length)return;
+    setGm({fila,i:0,tent:0,resp:"",fb:null,dica:false,ok:0,aut:0,er:0,rep:{},fim:false,af:af||null});
+  };
+  const gCur=gm&&!gm.fim?GRAM_ITENS.find(x=>x.id===gm.fila[gm.i]):null;
+  const gGravar=res=>{
+    if(!gCur)return;
+    const k=sel+":"+gCur.area; const a=gA(gCur.area); const it=(gstat.items||{})[gCur.id]||{ok:0,aut:0,er:0};
+    setGstat({areas:{...(gstat.areas||{}),[k]:{...a,[res]:(a[res]||0)+1}},items:{...(gstat.items||{}),[gCur.id]:{...it,[res]:(it[res]||0)+1,ult:hoje}}});
+    const dia=rv[hoje]||{}; const c=dia[sel+"g"]||{ok:0,er:0};
+    setRv({...rv,[hoje]:{...dia,[sel+"g"]:{ok:c.ok+(res==="er"?0:1),er:c.er+(res==="er"?1:0)}}});
+  };
+  const gVerificar=()=>{
+    if(!gm||!gCur||gm.fb||!gm.resp.trim())return;
+    const r=gCur.r.map(a=>confTexto(gm.resp,a,sel)).reduce((m,c)=>c==="ok"?"ok":(c==="quase"&&m!=="ok"?"quase":m),"er");
+    if(r!=="er"){const tipo=gm.tent===0?"ok":"aut";gGravar(tipo);setGm({...gm,fb:{tipo,quase:r==="quase"}});return;}
+    if(gm.tent===0){setGm({...gm,tent:1,dica:true});return;}
+    gGravar("er");setGm({...gm,fb:{tipo:"er"}});
+  };
+  const gMostrar=()=>{ if(!gm||!gCur||gm.fb)return; gGravar("er"); setGm({...gm,fb:{tipo:"er",skip:true}}); };
+  const gProx=()=>{
+    if(!gm||!gm.fb)return;
+    const erro=gm.fb.tipo==="er"; const id=gm.fila[gm.i];
+    const fila=(erro&&!gm.rep[id])?[...gm.fila,id]:gm.fila;
+    const prox=gm.i+1;
+    setGm({...gm,fila,rep:erro?{...gm.rep,[id]:1}:gm.rep,i:prox,tent:0,resp:"",fb:null,dica:false,ok:gm.ok+(gm.fb.tipo==="ok"?1:0),aut:gm.aut+(gm.fb.tipo==="aut"?1:0),er:gm.er+(erro?1:0),fim:prox>=fila.length});
+  };
+  const gFrase=(q,f,hl,fill)=>q.split("___").map((parte,i,arr)=>(
+    <span key={i}>
+      {(hl&&f&&parte.includes(f))?parte.split(f).flatMap((t,j,aa)=>j<aa.length-1?[t,<mark key={"m"+j} style={{background:"rgba(var(--idi-rgb),.14)",color:"inherit",borderBottom:"3px solid "+T.acc,padding:"0 2px",borderRadius:3}}>{f}</mark>]:[t]):parte}
+      {i<arr.length-1&&(fill?<b style={{color:T.ink,borderBottom:"2px solid "+T.acc,margin:"0 3px"}}>{fill}</b>:<span style={{display:"inline-block",minWidth:70,borderBottom:"2px solid "+T.ink,margin:"0 4px"}}>&nbsp;</span>)}
+    </span>));
+  const pillD={display:"inline-flex",alignItems:"center",gap:6,border:"1px solid rgba(var(--idi-rgb),.22)",background:"transparent",borderRadius:999,padding:"7px 13px",fontSize:12.5,fontWeight:600,color:T.ink,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"};
   const dsCur=ds&&!ds.fim?ds.fila[ds.i]:null;
   const vogal=t=>/^[aeiouyhàâäéèêëîïôöûùü]/i.test(t||"");
   const NomeN=({lang,art,termo})=>(lang==="fr"&&vogal(termo))
@@ -2120,7 +2282,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     {l:"Vocabulário",v:String(vocSel.length),u:dominadas+" dominadas",s:T.tiles[2],z:1.5,x:10,y:50,to:"palavras"},
     {l:"Sequência",v:String(streak),u:streak===1?"dia seguido":"dias seguidos",s:T.tiles[3],z:1.4,x:30,y:20,to:"evol"},
   ];
-  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["evol","Evolução"]];
+  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["gram","Gramática"],["evol","Evolução"]];
   const nomeSel=`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
   // Evolução
@@ -2232,6 +2394,18 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <div style={{display:"flex",gap:6,flexShrink:0}}>{ARTS.map(a=><span key={a} style={{background:ART_BG[a],color:ART_COR[a],fontWeight:700,fontSize:isMobile?12:13,padding:"7px 11px",borderRadius:999}}>{a}</span>)}</div>
           </button>)}
         {folgaRec&&<div style={{...lab,textAlign:"center",marginBottom:14}}>1 dia de folga perdoado esta semana · a sequência continua</div>}
+        <Card>
+          <Titulo k="Prioridades" t="Dificuldades a serem sanadas" dir={nDif>0?<span style={{...lab,whiteSpace:"nowrap"}}>{nDif} {nDif===1?"ponto":"pontos"}</span>:null}/>
+          {nDif===0?<Vazio>Nada crítico por enquanto. Conforme você errar em gramática, substantivos e palavras, os pontos fracos aparecem aqui para você atacar.</Vazio>:(
+            <div style={{display:"grid",gap:16}}>
+              {dificG.length>0&&<div><div style={{...lab,marginBottom:8}}>Gramática</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{dificG.map(d=><button key={d.k} style={pillD} onClick={()=>{setSub("gram");iniciarGram(d.k);}}>{d.nome}<span style={{color:IDI_RED}}>{d.pct}%</span></button>)}</div></div>}
+              {(artFraco||dificeis.length>0)&&<div><div style={{...lab,marginBottom:8}}>Substantivos</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {artFraco&&<button style={pillD} onClick={()=>setSub("subst")}>artigo <b style={{color:ART_COR[artFraco]}}>{artFraco}</b><span style={{color:IDI_RED}}>{pctArt(artFraco)}%</span></button>}
+                {dificeis.slice(0,4).map(({n,x})=><button key={n.k} style={pillD} onClick={()=>setSub("subst")}><NomeN lang={sel} art={n.art} termo={n.termo}/><span style={{color:IDI_RED}}>×{x.er}</span></button>)}
+              </div></div>}
+              {leeches.length>0&&<div><div style={{...lab,marginBottom:8}}>Palavras que não fixam</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{leeches.map(v=><button key={v.id} style={pillD} onClick={()=>setSub("palavras")}><Nome v={v}/><span style={{color:IDI_RED}}>×{v.er}</span></button>)}</div></div>}
+            </div>)}
+        </Card>
         <Card>
           <Titulo k="Hábito" t="Quando… então…" dir={iiEd?null:<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setIiEd({q:(ii[sel]||{}).q||"",f:(ii[sel]||{}).f||""})}>{ii[sel]&&ii[sel].q?"editar":"definir"}</button>}/>
           {iiEd?(<>
@@ -2496,6 +2670,61 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       </>)}
 
       {/* ═ SUBSTANTIVOS ═ */}
+      {/* ═ GRAMÁTICA ═ */}
+      {sub==="gram"&&(<>
+        {gm?(
+          <Card style={{padding:isMobile?"26px 18px":"34px 30px"}}>
+            {gm.fim?(<div style={{textAlign:"center"}}>
+              <div style={lab}>Sessão concluída</div>
+              <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{gm.ok}<small style={{fontSize:"45%",opacity:.45}}> / {gm.ok+gm.aut+gm.er}</small></div>
+              <Vazio>de primeira{gm.aut>0?` · ${gm.aut} autocorrigida${gm.aut>1?"s":""}`:""}{gm.er>0?` · ${gm.er} para revisar`:""}.</Vazio>
+              <div style={{marginTop:20,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}><button style={btnP} onClick={()=>iniciarGram(gm.af||undefined)}>Outra sessão</button><button style={btnS} onClick={()=>setGm(null)}>Fechar</button></div>
+            </div>):gCur?(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <span style={{...lab,display:"inline-flex",alignItems:"center",gap:7}}><i style={{width:8,height:8,borderRadius:"50%",background:L(sel).cor}}/>{gm.af?(gAreas.find(a=>a[0]===gm.af)||[])[1]:"Sessão mista"}</span>
+                <span style={lab}>{Math.min(gm.i+1,gm.fila.length)} / {gm.fila.length}</span>
+              </div>
+              <div style={{height:4,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden",marginBottom:26}}><div style={{width:(gm.i/gm.fila.length*100)+"%",height:"100%",background:T.ink,transition:"width .3s"}}/></div>
+              <div style={{...serif,fontSize:isMobile?25:32,lineHeight:1.45,wordBreak:"break-word",textAlign:"center"}}>{gm.fb?gFrase(gCur.q,gCur.f,false,gCur.r[0]):gFrase(gCur.q,gCur.f,gm.dica,null)}</div>
+              {!gm.fb?(<>
+                {gm.dica&&<div style={{marginTop:16,padding:"12px 14px",borderRadius:14,background:"rgba(var(--idi-rgb),.07)",fontSize:13.5,lineHeight:1.5,textAlign:"left"}}><span style={{...lab,marginRight:8}}>2ª tentativa</span>Ainda não. Revise o trecho marcado: {gCur.h}</div>}
+                <div style={{marginTop:22,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
+                  <input autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,maxWidth:300,textAlign:"center"}} value={gm.resp} onChange={e=>setGm({...gm,resp:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")gVerificar();}} placeholder="preencha a lacuna"/>
+                  <button style={{...btnP,opacity:gm.resp.trim()?1:.4}} disabled={!gm.resp.trim()} onClick={gVerificar}>Verificar</button>
+                </div>
+                {gm.dica&&<div style={{marginTop:14,textAlign:"center"}}><button onClick={gMostrar} style={{background:"none",border:"none",cursor:"pointer",fontSize:12.5,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)"}}>mostrar resposta</button></div>}
+              </>):(<>
+                <div style={{marginTop:20,padding:"14px 16px",borderRadius:16,textAlign:"left",background:gm.fb.tipo==="er"?"rgba(168,50,50,.08)":"rgba(60,130,90,.1)"}}>
+                  <div style={{...lab,color:gm.fb.tipo==="er"?IDI_RED:"#2F7A52"}}>{gm.fb.tipo==="ok"?(gm.fb.quase?"Correto · atenção à grafia":"Correto de primeira"):gm.fb.tipo==="aut"?"Autocorrigida · boa":"Resposta: "+gCur.r[0]}</div>
+                  <div style={{fontSize:14,lineHeight:1.55,marginTop:8}}>{gCur.e}</div>
+                  <div style={{...lab,marginTop:10,fontSize:9.5}}>{(gAreas.find(a=>a[0]===gCur.area)||[])[1]}</div>
+                </div>
+                <div style={{marginTop:22,textAlign:"center"}}><button style={{...btnP,minWidth:150}} onClick={gProx}>Próxima</button></div>
+              </>)}
+              <div style={{marginTop:20,textAlign:"center"}}><button onClick={()=>setGm(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)"}}>sair da sessão</button></div>
+            </>):null}
+          </Card>
+        ):(<>
+          <Card>
+            <Titulo k="Intercalação" t="Gramática mista"/>
+            <div style={{fontSize:14,lineHeight:1.6,opacity:.8,maxWidth:560}}>10 frases de áreas misturadas, para você decidir qual regra se aplica (é essa a habilidade da prova). No primeiro erro o app só <b>marca o trecho</b> e pede nova tentativa; no segundo mostra a resposta e a explicação. O que errar volta para a fila e alimenta suas dificuldades.</div>
+            <div style={{marginTop:18}}><button style={btnP} onClick={()=>iniciarGram()}>Começar sessão mista</button></div>
+          </Card>
+          <Card>
+            <Titulo k="Áreas" t={unica.nome+" · por área"}/>
+            {gAreas.map(([k,nome],n)=>{const t=gTot(k),pc=gPct(k);const total=gItens.filter(x=>x.area===k).length;return (
+              <div key={k} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderTop:n===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14.5,fontWeight:600}}>{nome}</div>
+                  <div style={{height:5,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",marginTop:7,overflow:"hidden"}}><div style={{width:(pc||0)+"%",height:"100%",background:pc!==null&&pc<60?IDI_RED:T.ink,transition:"width .4s"}}/></div>
+                  <div style={{...lab,fontSize:9.5,marginTop:6}}>{t?`${pc}% · ${t} respostas`:"ainda não treinada"} · {total} exercícios</div>
+                </div>
+                <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>iniciarGram(k)}>Treinar</button>
+              </div>);})}
+          </Card>
+        </>)}
+      </>)}
+
       {sub==="subst"&&(<>
         <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"34px 28px"}}>
           {!ds&&(<>
