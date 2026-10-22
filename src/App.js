@@ -1917,6 +1917,112 @@ const CLI_DESF=["Alta","Internado","Transferido","Óbito","Sem seguimento"];
 const CLI_MODELO="# Avaliação inicial\n\n# Exames\n\n# Conduta\n\n# Quando internar ou transferir\n\n# Pegadinhas";
 const CLI_MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 
+// ── Apoio ao raciocínio clínico (sala amarela). Lembrete de diagnósticos diferenciais e condutas iniciais; doses ficam de fora de propósito. ──
+const CLI_KB=[
+{id:"dt",nome:"Dor torácica",area:"Cardio",
+ sinais:[["op","Dor opressiva, em aperto"],["irr","Irradia para braço, mandíbula ou dorso"],["esf","Desencadeada por esforço, alivia no repouso"],["plr","Piora ao respirar (pleurítica)"],["pos","Piora deitado, melhora sentado inclinado"],["ras","Início súbito, rasgante, intensidade máxima de cara"],["dis","Dispneia associada"],["sin","Síncope ou pré-síncope"],["feb","Febre ou tosse produtiva"],["tx","Dor reproduzida à palpação ou movimento"],["fr","Fatores de risco cardiovascular"],["tev","Imobilização, cirurgia, câncer ou TEV prévio"],["hip","Hipotensão ou choque"],["sat","SpO2 baixa"],["ass","Assimetria de pulsos ou de PA entre os braços"],["rgr","Pirose, regurgitação, relação com alimentação"]],
+ dx:[
+ {n:"Síndrome coronariana aguda",nm:1,a:{op:3,irr:2,esf:2,fr:1,dis:1,sin:1,tx:-2,plr:-1,pos:-1},ex:"ECG de 12 derivações em até 10 min e seriado; troponina seriada conforme protocolo; RX de tórax; ecocardiograma se instabilidade.",cd:"Monitorização e acesso venoso. AAS se sem contraindicação. O2 só se SpO2 < 90%. Analgesia e nitrato conforme PA e sem contraindicações (IAM de VD, uso recente de inibidor de PDE5). Supra de ST, BRE novo ou alto risco: acionar fluxo de reperfusão e hemodinâmica/transferência. Antitrombóticos e doses: protocolo do serviço."},
+ {n:"Embolia pulmonar",nm:1,a:{plr:2,dis:3,sin:1,tev:3,sat:2,hip:1,feb:-1},ex:"Probabilidade pré-teste (Wells/PERC); D-dímero se baixa ou intermediária; angio-TC de tórax se indicada; ECG; ecocardiograma à beira do leito se instável.",cd:"Suporte (O2 se hipoxemia). Anticoagulação precoce se probabilidade alta enquanto aguarda confirmação e sem contraindicação. Instável (hipotensão/choque): discutir trombólise ou reperfusão conforme protocolo."},
+ {n:"Dissecção aguda de aorta",nm:1,a:{ras:4,irr:1,ass:3,hip:1,sin:1,fr:1},ex:"Angio-TC de aorta (ou eco transesofágico se instável); PA nos dois braços; RX de tórax (mediastino alargado pode faltar); ECG para ver IAM associado.",cd:"Evitar antiagregante e anticoagulante até excluir quando a suspeita for alta. Controle de dor e de FC/PA (alvos e fármacos conforme protocolo). Acionar cirurgia cardiovascular e transferência urgente."},
+ {n:"Pneumotórax (inclui hipertensivo)",nm:1,a:{plr:2,dis:3,sat:1,hip:1,ras:1},ex:"Exame físico (murmúrio abolido, timpanismo, desvio de traqueia); RX ou US à beira do leito. O hipertensivo é diagnóstico clínico.",cd:"Hipertensivo: descompressão imediata (agulha ou dreno) sem esperar imagem. Demais casos: observação ou drenagem conforme tamanho e sintomas."},
+ {n:"Pericardite ou miopericardite",a:{plr:2,pos:3,feb:1},ex:"ECG (supra difuso de ST, infra de PR), troponina, PCR, ecocardiograma (derrame).",cd:"Anti-inflamatório e demais medidas conforme protocolo. Afastar tamponamento (hipotensão, turgência jugular, bulhas abafadas). Troponina elevada sugere miocardite: observar ou internar."},
+ {n:"Pneumonia ou pleurite",a:{plr:2,feb:3,dis:1,sat:1},ex:"RX de tórax, hemograma, PCR, oximetria; escore de gravidade (CURB-65).",cd:"Antibiótico conforme gravidade e protocolo local; O2 se hipoxemia; checar critérios de internação."},
+ {n:"Dor de parede torácica (musculoesquelética)",a:{tx:3,plr:1,fr:-1,op:-1},ex:"Diagnóstico de exclusão, depois de ECG e estratificação de risco.",cd:"Analgesia e orientação com retorno se sinais de alarme."},
+ {n:"Causa esofágica ou gástrica (DRGE, espasmo)",a:{rgr:3},ex:"ECG mesmo assim; considerar endoscopia depois, ambulatorialmente.",cd:"Tratamento sintomático. Lembrar que alívio com antiácido não exclui SCA."}]},
+{id:"dp",nome:"Dispneia",area:"Resp",
+ sinais:[["ort","Ortopneia ou dispneia paroxística noturna"],["edm","Edema de MMII, ganho de peso, turgência jugular"],["sib","Sibilância; asma ou DPOC conhecidas"],["tab","Tabagismo"],["feb","Febre, tosse com escarro"],["pl","Dor pleurítica"],["tev","Imobilização, cirurgia, câncer ou TEV prévio"],["su","Início súbito"],["tr","Trauma torácico"],["ale","Exposição a alérgeno, urticária, angioedema"],["dr","Dor torácica opressiva associada"],["ac","Respiração profunda e rápida, glicemia alta ou vômitos"],["sat","SpO2 baixa"],["hip","Hipotensão"],["est","Estridor ou rouquidão"]],
+ dx:[
+ {n:"Insuficiência cardíaca descompensada / edema agudo de pulmão",a:{ort:3,edm:3,dr:1,sat:1},ex:"ECG, RX de tórax, BNP/NT-proBNP se dúvida, troponina, função renal e eletrólitos, US à beira do leito.",cd:"Posição sentada, O2 se hipoxemia, VNI (CPAP/BiPAP) se desconforto importante. Diurético e vasodilatador conforme PA e protocolo. Procurar fator precipitante (isquemia, arritmia, infecção, má adesão)."},
+ {n:"Exacerbação de asma ou DPOC",a:{sib:3,tab:2,feb:1},ex:"Oximetria, pico de fluxo (asma), RX se febre ou suspeita de complicação, gasometria se grave.",cd:"Broncodilatador inalatório, corticoide sistêmico, O2 com alvo adequado (evitar hiperóxia em retentor de CO2), antibiótico se sinais de infecção bacteriana, VNI se insuficiência respiratória."},
+ {n:"Pneumonia",a:{feb:3,pl:1,sat:1,tab:1},ex:"RX de tórax, hemograma, PCR, oximetria; CURB-65.",cd:"Antibiótico conforme gravidade e protocolo local; O2 se hipoxemia; critérios de internação."},
+ {n:"Embolia pulmonar",nm:1,a:{su:2,pl:2,tev:3,sat:1,hip:1},ex:"Probabilidade pré-teste (Wells/PERC), D-dímero se baixa ou intermediária, angio-TC, ecocardiograma à beira do leito se instável.",cd:"Suporte, anticoagulação precoce se probabilidade alta e sem contraindicação; instável: discutir reperfusão conforme protocolo."},
+ {n:"Pneumotórax",nm:1,a:{su:2,pl:2,tr:2,tab:1},ex:"Exame físico, RX ou US à beira do leito.",cd:"Hipertensivo: descompressão imediata. Demais: observação ou drenagem conforme tamanho e sintomas."},
+ {n:"Anafilaxia ou angioedema",nm:1,a:{ale:4,est:3,hip:2,su:2},ex:"Diagnóstico clínico; não atrasar tratamento por exames.",cd:"Adrenalina intramuscular precoce é a primeira linha (dose conforme protocolo), posição adequada, O2, volume se hipotensão, atenção à via aérea. Observar por risco de reação bifásica."},
+ {n:"Síndrome coronariana aguda (equivalente anginoso)",nm:1,a:{dr:3,sat:0},ex:"ECG em todo dispneico com fator de risco; troponina seriada.",cd:"Ver conduta de SCA em dor torácica."},
+ {n:"Acidose metabólica (CAD, sepse, intoxicação)",a:{ac:3},ex:"Glicemia e cetonas, gasometria, eletrólitos, lactato.",cd:"Tratar a causa de base conforme protocolo (CAD, sepse, etc.)."}]},
+{id:"da",nome:"Dor abdominal",area:"Gastro",
+ sinais:[["fid","Dor em fossa ilíaca direita ou migração periumbilical"],["fie","Dor em fossa ilíaca esquerda"],["peri","Defesa, rigidez ou descompressão brusca positiva"],["vom","Vômitos"],["dist","Distensão, parada de gases e fezes"],["fe","Febre"],["col","Cólica com irradiação para flanco ou virilha, hematúria"],["epi","Dor epigástrica, relação com alimentação"],["hd","Hipocôndrio direito, Murphy, piora após refeição gordurosa"],["bar","Dor em barra irradiada para o dorso, álcool ou litíase biliar"],["hip","Hipotensão ou taquicardia"],["pul","Massa pulsátil, idade > 60, aterosclerose, dor desproporcional ao exame"],["gin","Mulher em idade fértil, atraso menstrual ou sangramento vaginal"],["dia","Diarreia"],["sg","Sangue nas fezes ou melena"],["urm","Disúria ou polaciúria"]],
+ dx:[
+ {n:"Abdome agudo perfurativo / peritonite",nm:1,a:{peri:4,hip:1,fe:1,epi:1},ex:"Exame abdominal seriado, RX ou TC de abdome conforme disponibilidade, hemograma, lactato.",cd:"Jejum, acesso venoso, analgesia, antibiótico e avaliação cirúrgica imediata."},
+ {n:"Apendicite aguda",nm:1,a:{fid:4,vom:1,fe:1,peri:1},ex:"Hemograma, PCR, US ou TC conforme disponibilidade; considerar escore de Alvarado.",cd:"Jejum, analgesia, antibiótico conforme protocolo e avaliação cirúrgica."},
+ {n:"Obstrução intestinal",nm:1,a:{dist:4,vom:2},ex:"RX ou TC de abdome, eletrólitos, função renal, lactato.",cd:"Jejum, hidratação, correção de distúrbios, sonda nasogástrica se vômitos importantes e avaliação cirúrgica."},
+ {n:"Aneurisma de aorta roto ou isquemia mesentérica",nm:1,a:{pul:3,hip:2},ex:"US à beira do leito (aorta), angio-TC, lactato. Dor desproporcional ao exame é sinal de alerta de isquemia mesentérica.",cd:"Acesso calibroso, avaliação vascular/cirúrgica imediata; não atrasar transferência por exames."},
+ {n:"Gravidez ectópica",nm:1,a:{gin:4,hip:1},ex:"Beta-hCG em toda mulher em idade fértil com dor abdominal; US.",cd:"Instável: acesso, ressuscitação e avaliação ginecológica de imediato."},
+ {n:"Colecistite, colangite ou cólica biliar",a:{hd:3,fe:1,vom:1},ex:"US de vias biliares, hemograma, PCR, bilirrubinas, enzimas hepáticas. Febre, icterícia e dor sugerem colangite.",cd:"Analgesia, antiemético, antibiótico se colecistite/colangite e avaliação cirúrgica."},
+ {n:"Pancreatite aguda",a:{bar:3,epi:1,vom:1},ex:"Lipase, hemograma, função renal, cálcio, triglicérides; US de vias biliares.",cd:"Hidratação criteriosa, analgesia, antiemético, tratar a causa e avaliar gravidade."},
+ {n:"Cólica nefrética ou pielonefrite",a:{col:3,fe:1,urm:2},ex:"Urina tipo 1 e urocultura, função renal, US ou TC de vias urinárias; febre com obstrução é urgência.",cd:"Analgesia e antiemético; antibiótico se infecção; urgência urológica se obstrução infectada."},
+ {n:"Diverticulite",a:{fie:3,fe:1},ex:"Hemograma, PCR, TC de abdome se dúvida ou gravidade.",cd:"Conforme gravidade: ambulatorial ou internação; antibiótico conforme protocolo."},
+ {n:"Gastroenterite / diarreia aguda",a:{dia:3,vom:1,fe:1},ex:"Clínico; avaliar desidratação e sinais de gravidade.",cd:"Hidratação, antiemético se necessário, orientar sinais de alarme."},
+ {n:"Gastrite, úlcera ou sangramento digestivo",a:{epi:3,sg:3},ex:"Hemograma, ureia, coagulação; endoscopia conforme gravidade.",cd:"Acesso, ressuscitação se instável, IBP e avaliação para endoscopia nos sangramentos."}]},
+{id:"cf",nome:"Cefaleia",area:"Neuro",
+ sinais:[["tun","Início súbito, a pior dor da vida (em trovoada)"],["feb","Febre"],["rig","Rigidez de nuca ou fotofobia"],["foc","Déficit focal ou alteração do nível de consciência"],["tra","Trauma recente"],["unil","Unilateral, pulsátil, náusea, fotofobia, episódios prévios iguais"],["ida","Primeira cefaleia com mais de 50 anos, dor ao mastigar, VHS alta"],["imu","Imunossupressão, câncer ou HIV"],["pa","PA muito elevada"],["cos","Aperto bilateral, leve a moderada, sem sintomas associados"],["aut","Periorbitária unilateral com lacrimejamento e inquietação"],["gest","Gestação ou puerpério"],["pro","Piora progressiva, pior pela manhã ou ao deitar, vômitos"],["anc","Uso de anticoagulante"]],
+ dx:[
+ {n:"Hemorragia subaracnóidea",nm:1,a:{tun:4,rig:2,foc:1},ex:"TC de crânio sem contraste o mais cedo possível (mais sensível nas primeiras horas); se normal e suspeita alta, discutir punção lombar ou angiografia conforme protocolo.",cd:"Controle de PA e dor conforme protocolo, acionar neurocirurgia e transferência."},
+ {n:"Meningite ou encefalite",nm:1,a:{feb:2,rig:3,foc:1,imu:1},ex:"Hemoculturas, punção lombar (TC antes se déficit focal, rebaixamento ou imunossupressão), hemograma, PCR.",cd:"Não atrasar antibiótico (e antiviral se suspeita de encefalite) por causa de exames; corticoide conforme protocolo."},
+ {n:"AVC isquêmico ou hemorrágico",nm:1,a:{foc:4,pa:1,anc:2,tra:1},ex:"Glicemia capilar, TC de crânio sem contraste imediata, NIHSS, horário de início.",cd:"Ativar protocolo de AVC; evitar queda brusca de PA sem indicação."},
+ {n:"Hematoma subdural ou trauma",nm:1,a:{tra:3,anc:2,foc:1,pro:1},ex:"TC de crânio; atenção a idosos e anticoagulados, mesmo com trauma leve.",cd:"Observação neurológica seriada; reverter anticoagulação conforme protocolo; neurocirurgia se indicada."},
+ {n:"Arterite de células gigantes",nm:1,a:{ida:4},ex:"VHS e PCR; biópsia de artéria temporal depois.",cd:"Corticoide precoce quando a suspeita é alta, para prevenir perda visual."},
+ {n:"Emergência hipertensiva / pré-eclâmpsia",nm:1,a:{pa:2,gest:3},ex:"PA seriada, proteinúria, função renal e hepática, fundo de olho; em gestantes, avaliação obstétrica imediata.",cd:"Controle de PA conforme protocolo; sulfato de magnésio em pré-eclâmpsia grave conforme protocolo obstétrico."},
+ {n:"Lesão expansiva / hipertensão intracraniana",a:{pro:3,foc:1,imu:1},ex:"TC ou RM de crânio.",cd:"Avaliação neurológica; corticoide e neurocirurgia conforme achados."},
+ {n:"Enxaqueca",a:{unil:3},ex:"Diagnóstico clínico após afastar sinais de alarme.",cd:"Analgesia e antiemético; evitar opioides; orientar acompanhamento."},
+ {n:"Cefaleia tensional",a:{cos:3},ex:"Diagnóstico clínico.",cd:"Analgesia simples e orientação."},
+ {n:"Cefaleia em salvas",a:{aut:4},ex:"Diagnóstico clínico.",cd:"Oxigênio em alto fluxo e tratamento específico conforme protocolo."}]},
+{id:"sc",nome:"Síncope",area:"Cardio",
+ sinais:[["esf","Durante esforço"],["sup","Em decúbito ou sem pródromos"],["pal","Palpitações antes"],["cdf","Cardiopatia estrutural, FEVE reduzida, história familiar de morte súbita"],["pro","Pródromos (calor, sudorese, náusea), ortostase prolongada, dor ou emoção"],["ort","Ao levantar; anti-hipertensivo, diurético ou desidratação"],["ecg","ECG alterado (bloqueio, QT longo, pré-excitação, Brugada)"],["san","Sangramento, melena ou anemia"],["ang","Dor torácica ou dispneia associada"],["crs","Confusão prolongada, mordedura de língua, abalos"],["hgl","Glicemia baixa"],["tev","Fatores de risco para TEV"]],
+ dx:[
+ {n:"Síncope arrítmica",nm:1,a:{esf:3,sup:2,pal:3,cdf:3,ecg:4},ex:"ECG, monitorização contínua, ecocardiograma, eletrólitos incluindo K e Mg, troponina se indicado.",cd:"Monitorização e internação para investigação quando alto risco; corrigir distúrbios."},
+ {n:"Obstrução estrutural (estenose aórtica, miocardiopatia hipertrófica)",nm:1,a:{esf:3,cdf:1},ex:"Exame cardíaco (sopro), ECG, ecocardiograma.",cd:"Evitar vasodilatadores e esforço; encaminhar para avaliação cardiológica."},
+ {n:"Embolia pulmonar",nm:1,a:{tev:3,ang:2},ex:"Probabilidade pré-teste, D-dímero ou angio-TC, ECG.",cd:"Ver conduta em dor torácica."},
+ {n:"Síndrome coronariana aguda",nm:1,a:{ang:3},ex:"ECG e troponina seriada.",cd:"Ver conduta em dor torácica."},
+ {n:"Hemorragia ou anemia",nm:1,a:{san:4,ort:1},ex:"Hemoglobina, toque retal, coagulação, tipagem.",cd:"Acesso calibroso, ressuscitação e investigação da fonte."},
+ {n:"Síncope vasovagal",a:{pro:4},ex:"Diagnóstico clínico com ECG normal e sem sinais de alto risco.",cd:"Orientação, hidratação e manobras de contrapressão."},
+ {n:"Hipotensão ortostática ou medicamentosa",a:{ort:3},ex:"PA deitado e em pé (1 e 3 min), revisão de medicamentos, hemoglobina.",cd:"Ajuste de medicamentos, hidratação, orientação."},
+ {n:"Crise convulsiva",a:{crs:4},ex:"Glicemia, eletrólitos, avaliação neurológica; imagem se déficit ou primeira crise.",cd:"Conforme protocolo de crise e investigação."},
+ {n:"Hipoglicemia",a:{hgl:4},ex:"Glicemia capilar imediata.",cd:"Correção da glicemia conforme protocolo e investigação da causa."}]},
+{id:"dn",nome:"Déficit neurológico agudo",area:"Neuro",
+ sinais:[["fac","Assimetria facial"],["bra","Fraqueza em membro ou hemicorpo"],["fal","Alteração da fala (afasia, disartria)"],["vis","Perda visual ou diplopia"],["ver","Vertigem intensa com ataxia"],["cef","Cefaleia intensa, vômitos"],["pa","PA muito elevada"],["gli","Glicemia alterada"],["cri","Crise convulsiva presenciada"],["fib","Fibrilação atrial ou cardiopatia embólica"],["anc","Uso de anticoagulante"],["fe","Febre ou rigidez de nuca"],["rev","Sintomas já resolvidos"],["pro","Piora gradual em dias ou semanas"],["fper","Paralisia facial incluindo a testa, sem outros déficits"]],
+ dx:[
+ {n:"AVC isquêmico",nm:1,a:{fac:2,bra:2,fal:2,vis:1,ver:1,fib:2},ex:"Horário de início ou última vez visto bem, glicemia capilar, NIHSS, TC de crânio sem contraste imediata (ou RM), ECG.",cd:"Ativar protocolo de AVC; trombólise ou trombectomia conforme janela e critérios; evitar reduzir PA agressivamente sem indicação."},
+ {n:"AVC hemorrágico",nm:1,a:{cef:3,pa:2,anc:2,fac:1,bra:1,fal:1},ex:"TC de crânio sem contraste imediata, coagulação.",cd:"Controle de PA conforme protocolo, reversão de anticoagulação e neurocirurgia se indicada."},
+ {n:"Ataque isquêmico transitório",nm:1,a:{rev:4,fib:1},ex:"Imagem cerebral e vascular, ECG e monitorização do ritmo, escore de risco conforme protocolo.",cd:"Risco alto de AVC nas primeiras 48 h: antiagregação e investigação rápidas conforme protocolo."},
+ {n:"Hipoglicemia ou hiperglicemia",a:{gli:4},ex:"Glicemia capilar logo na chegada.",cd:"Corrigir a alteração e reavaliar o déficit."},
+ {n:"Crise convulsiva com paresia pós-ictal",a:{cri:4},ex:"Glicemia, eletrólitos, imagem se primeira crise ou déficit persistente.",cd:"Conforme protocolo de crise e investigação."},
+ {n:"Meningoencefalite ou abscesso",nm:1,a:{fe:3,cef:1},ex:"Hemoculturas, punção lombar após imagem quando indicado, hemograma, PCR.",cd:"Antibiótico e antiviral precoces conforme protocolo."},
+ {n:"Lesão expansiva",a:{pro:3},ex:"TC ou RM de crânio com contraste.",cd:"Corticoide e neurocirurgia conforme achados."},
+ {n:"Paralisia facial periférica (Bell)",a:{fper:4,fac:1},ex:"Exame neurológico completo para afastar causa central; otoscopia e pesquisa de lesões vesiculares.",cd:"Corticoide precoce conforme protocolo e proteção ocular."}]},
+{id:"fs",nome:"Febre e suspeita de sepse",area:"Infecto",
+ sinais:[["fr","Frequência respiratória ≥ 22"],["pas","PAS ≤ 100 mmHg"],["men","Alteração do estado mental"],["tos","Tosse, escarro, dispneia"],["uri","Disúria, dor lombar ou no flanco"],["abd","Dor abdominal, vômitos"],["pele","Eritema, calor e dor em pele ou partes moles; ferida"],["mn2","Rigidez de nuca, cefaleia"],["lin","Cateter, sonda ou internação recente"],["imu","Imunossupressão ou diabetes descompensado"],["via","Exposição epidemiológica (dengue, leptospirose, malária)"],["man","Petéquias, púrpura ou manchas"],["car","Sopro novo ou uso de drogas injetáveis"]],
+ dx:[
+ {n:"Pneumonia",a:{tos:4},ex:"RX de tórax, hemograma, PCR, oximetria; CURB-65.",cd:"Antibiótico conforme gravidade e protocolo local; O2 se hipoxemia."},
+ {n:"Infecção urinária / pielonefrite",a:{uri:4},ex:"Urina tipo 1, urocultura, função renal; imagem se suspeita de obstrução.",cd:"Antibiótico conforme gravidade e antibiograma local; urgência urológica se obstrução infectada."},
+ {n:"Infecção intra-abdominal",a:{abd:3},ex:"Hemograma, PCR, lactato, imagem conforme foco.",cd:"Antibiótico precoce e controle do foco (avaliação cirúrgica)."},
+ {n:"Pele e partes moles / fasceíte necrotizante",nm:1,a:{pele:3},ex:"Clínico: dor desproporcional, crepitação, bolhas hemorrágicas, toxemia; lactato, CPK; imagem não deve atrasar a cirurgia.",cd:"Antibiótico amplo e avaliação cirúrgica urgente quando há suspeita de necrotizante."},
+ {n:"Meningite",nm:1,a:{mn2:4,men:1,man:2},ex:"Hemoculturas, punção lombar (TC antes se indicado), hemograma, PCR.",cd:"Antibiótico imediato, sem esperar exames; corticoide conforme protocolo."},
+ {n:"Endocardite",nm:1,a:{car:4,lin:1},ex:"Hemoculturas seriadas antes do antibiótico, ecocardiograma.",cd:"Internação e antibiótico guiado por cultura, com discussão com infectologia."},
+ {n:"Arboviroses, leptospirose, malária (epidemiologia)",a:{via:3},ex:"Dengue: classificar em grupos A a D (sinais de alarme, comorbidades, choque), hemograma e hematócrito; notificar.",cd:"Hidratação e conduta conforme o grupo de risco do protocolo do Ministério da Saúde; investigar leptospirose se exposição a água de enchente."},
+ {n:"Infecção relacionada a dispositivo",a:{lin:3},ex:"Hemoculturas (periférica e do cateter), urocultura se sonda.",cd:"Remover ou trocar o dispositivo quando possível e iniciar antibiótico conforme protocolo."}]},
+{id:"pa",nome:"Palpitações e taquicardia",area:"Cardio",
+ sinais:[["reg","Ritmo regular, início e término abruptos"],["irr","Ritmo irregularmente irregular"],["lar","QRS largo no ECG"],["est","Instabilidade: hipotensão, dor torácica, síncope, edema pulmonar, rebaixamento"],["fev","Febre, anemia, hipovolemia, dor ou estimulantes"],["cdp","Cardiopatia estrutural ou IAM prévio"],["ins","Início gradual com gatilho (dor, febre, ansiedade)"],["qt","Drogas que prolongam o QT ou hipopotassemia"],["alc","Álcool ou cafeína em excesso"],["tir","Sintomas de hipertireoidismo"]],
+ dx:[
+ {n:"Taquicardia ventricular",nm:1,a:{lar:4,cdp:2,est:1},ex:"ECG de 12 derivações se estável, monitor, eletrólitos, troponina.",cd:"Taquicardia de QRS largo: tratar como TV até prova em contrário. Instável: cardioversão elétrica sincronizada. Estável: medicação conforme protocolo e discussão com cardiologia."},
+ {n:"Torsades de pointes / QT longo",nm:1,a:{qt:4,lar:1},ex:"ECG com QTc, K, Mg e Ca.",cd:"Suspender drogas que prolongam o QT, repor magnésio e potássio; instável: desfibrilação conforme protocolo."},
+ {n:"Fibrilação ou flutter atrial",a:{irr:4,alc:1,tir:1},ex:"ECG, eletrólitos, TSH, função renal; procurar gatilhos (infecção, TEP, álcool).",cd:"Avaliar estabilidade; controle de FC versus ritmo; risco embólico (CHA2DS2-VASc) e duração; anticoagulação conforme protocolo."},
+ {n:"Taquicardia supraventricular por reentrada",a:{reg:4,lar:-3},ex:"ECG durante o episódio.",cd:"Manobras vagais; adenosina conforme protocolo; cardioversão se instável."},
+ {n:"Taquicardia sinusal secundária",a:{fev:3,ins:3},ex:"Procurar causa: infecção, anemia, hipovolemia, dor, TEP, hipertireoidismo.",cd:"Tratar a causa; não tratar a frequência."},
+ {n:"Tireotoxicose",a:{tir:3,irr:1},ex:"TSH e T4 livre.",cd:"Controle de sintomas e tratamento específico conforme protocolo."}]},
+{id:"tv",nome:"Tontura e vertigem",area:"Neuro",
+ sinais:[["pos","Vertigem desencadeada por mudança de posição da cabeça, breve"],["con","Vertigem contínua com náuseas, horas ou dias"],["ata","Ataxia de marcha ou de tronco"],["foc","Déficit focal, disartria ou diplopia"],["nis","Nistagmo vertical ou que muda de direção"],["cef","Cefaleia súbita ou cervicalgia"],["aud","Perda auditiva, zumbido ou plenitude auricular"],["pre","Pré-síncope (cabeça vazia) ao levantar"],["fvr","Fatores de risco vasculares"],["inf","Infecção viral recente"],["med","Sedativos ou anti-hipertensivos"]],
+ dx:[
+ {n:"AVC de circulação posterior",nm:1,a:{con:2,ata:3,foc:3,nis:3,cef:1,fvr:2},ex:"Exame neurológico com marcha; HINTS por examinador treinado na vertigem contínua; TC tem pouca sensibilidade na fossa posterior, RM se suspeita.",cd:"Ativar fluxo de AVC se déficit ou HINTS central; ataxia importante é sinal de alerta."},
+ {n:"Vertigem posicional paroxística benigna (VPPB)",a:{pos:4},ex:"Manobra de Dix-Hallpike.",cd:"Manobra de reposicionamento (Epley); evitar sedativos vestibulares prolongados."},
+ {n:"Neurite vestibular",a:{con:3,inf:2,aud:-2,ata:-1},ex:"Exame neurológico e HINTS periférico.",cd:"Sintomáticos por poucos dias e reabilitação vestibular precoce."},
+ {n:"Doença de Ménière",a:{aud:3,con:1},ex:"Audiometria depois.",cd:"Sintomáticos e encaminhamento."},
+ {n:"Hipotensão ortostática ou medicamentosa",a:{pre:3,med:2},ex:"PA deitado e em pé, hemoglobina, revisão de medicamentos.",cd:"Ajuste de medicamentos e hidratação."},
+ {n:"Causas cardíacas e metabólicas",nm:1,a:{pre:2},ex:"ECG, glicemia, hemograma, eletrólitos.",cd:"Tratar a causa encontrada; monitorizar se ECG alterado."}]},
+];
+const CLI_SIT=[["aguardando-ex","Aguardando exames"],["reaval","Aguardando reavaliação"],["medicado","Medicado, em observação"],["vaga","Aguardando vaga ou transferência"],["alta","Pronto para alta"]];
+
 function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const hoje=today();
   const [casos,setCasos]=useLS("v5_med_casos",[],userId);
@@ -1942,6 +2048,17 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const [pq,setPq]=useState("");
   const [toast,setToast]=useState("");
   const [novosEd,setNovosEd]=useState(false);
+  const [pacs,setPacs]=useLS("v5_med_pac",[],userId);
+  const [kbn,setKbn]=useLS("v5_med_kbnotas",{},userId);
+  const [pacId,setPacId]=useState(null);
+  const [np,setNp]=useState({leito:"",idade:"",sexo:"",queixa:""});
+  const [npAberto,setNpAberto]=useState(false);
+  const [expDx,setExpDx]=useState(null);
+  const [pendT,setPendT]=useState("");
+  const [evoT,setEvoT]=useState("");
+  const [encDesf,setEncDesf]=useState("");
+  const [tickS,setTickS]=useState(0);
+  useEffect(()=>{if(sub!=="sala")return;const t=setInterval(()=>setTickS(x=>x+1),30000);return()=>clearInterval(t);},[sub]);
   useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(""),3200);return()=>clearTimeout(t);},[toast]);
 
   const T={ink:CLI_INK,sheet:CLI_SHEET,acc:CLI_ACC,rgb:"18,48,58",hrgb:"233,240,239"};
@@ -2030,7 +2147,73 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const protAb=prot.find(p=>p.id===pAberta)||null;
   const linhasProt=p=>(p.texto||"").split("\n").map((t,i)=>({i,t:t.trim()})).filter(x=>x.t).map(x=>x.t.startsWith("#")?{...x,h:true,t:x.t.replace(/^#+\s*/,"")}:{...x,h:false,t:x.t.replace(/^[-*]\s*/,"")});
 
-  const subs=[["hoje","Hoje"],["casos","Casos"],["rev","Revisão"+(totHoje?" · "+totHoje:"")],["cond","Condutas"]];
+  // ── sala amarela ──
+  const agoraISO=()=>{const d=new Date();return hoje+"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
+  void tickS;
+  const minsDesde=iso=>Math.max(0,Math.round((Date.now()-new Date(iso+":00").getTime())/60000));
+  const fmtDur=m=>m<60?m+" min":Math.floor(m/60)+"h"+String(m%60).padStart(2,"0");
+  const upPac=(id,patch)=>setPacs(pacs.map(x=>x.id!==id?x:{...x,...patch}));
+  const pac=pacs.find(x=>x.id===pacId)||null;
+  const pacsOrd=[...pacs].sort((a,b)=>(a.entrada||"").localeCompare(b.entrada||""));
+  const addPac=()=>{
+    if(!np.queixa.trim()&&!np.leito.trim())return;
+    const n={id:uid(),leito:np.leito.trim()||"s/ id",idade:np.idade,sexo:np.sexo,queixa:np.queixa.trim()||"(sem queixa)",entrada:agoraISO(),sit:"aguardando-ex",vit:{pa:"",fc:"",fr:"",sat:"",tax:"",gli:"",mental:false},sind:"",sinais:[],hip:[],pend:[],evo:[],conduta:""};
+    setPacs([n,...pacs]); setNp({leito:"",idade:"",sexo:"",queixa:""}); setNpAberto(false); setPacId(n.id); setExpDx(null);
+  };
+  const alertasVit=v=>{
+    const out=[]; const sys=parseInt(String(v.pa||"").split("/")[0],10); const fc=parseFloat(v.fc),fr=parseFloat(v.fr),sat=parseFloat(v.sat),tax=parseFloat(String(v.tax||"").replace(",",".")),gli=parseFloat(v.gli);
+    if(sat<92)out.push("SpO2 < 92%"); if(sys<90)out.push("PAS < 90"); if(fc>120)out.push("FC > 120"); if(fc<50)out.push("FC < 50"); if(fr>=22)out.push("FR ≥ 22"); if(tax>=38)out.push("Febre"); if(tax>0&&tax<35.5)out.push("Hipotermia"); if(gli<70)out.push("Glicemia < 70"); if(gli>=250)out.push("Glicemia ≥ 250");
+    const tem=!isNaN(fr)||!isNaN(sys)||v.mental; const q=(fr>=22?1:0)+(sys<=100?1:0)+(v.mental?1:0);
+    return {flags:out,q:tem?q:null};
+  };
+  const sx=pac?CLI_KB.find(x=>x.id===pac.sind):null;
+  const rankDx=sx?sx.dx.map((d,i)=>{let sc=0;const m=[];pac.sinais.forEach(k=>{const w=d.a[k];if(w){sc+=w;if(w>0)m.push(k);}});return {...d,i,key:sx.id+":"+i,sc,m};}):[];
+  const dxNm=rankDx.filter(d=>d.nm).sort((a,b)=>b.sc-a.sc||a.i-b.i);
+  const dxOut=rankDx.filter(d=>!d.nm).sort((a,b)=>b.sc-a.sc||a.i-b.i);
+  const maxSc=Math.max(1,...rankDx.map(d=>d.sc));
+  const toggleSinal=k=>upPac(pac.id,{sinais:pac.sinais.includes(k)?pac.sinais.filter(x=>x!==k):[...pac.sinais,k]});
+  const addHip=d=>{if(pac.hip.some(h=>h.k===d.key))return;upPac(pac.id,{hip:[...pac.hip,{k:d.key,nome:d.n,estado:"investigando"}]});};
+  const ciclaHip=k=>upPac(pac.id,{hip:pac.hip.map(h=>h.k!==k?h:{...h,estado:h.estado==="investigando"?"confirmada":h.estado==="confirmada"?"descartada":"investigando"})});
+  const addPend=()=>{if(!pendT.trim())return;upPac(pac.id,{pend:[...pac.pend,{id:uid(),t:pendT.trim(),feito:false,res:""}]});setPendT("");};
+  const upPend=(id,patch)=>upPac(pac.id,{pend:pac.pend.map(x=>x.id!==id?x:{...x,...patch})});
+  const addEvo=()=>{if(!evoT.trim())return;upPac(pac.id,{evo:[{id:uid(),h:agoraISO(),t:evoT.trim()},...pac.evo]});setEvoT("");};
+  const encerrar=()=>{
+    if(!pac||!encDesf)return;
+    const kbx=CLI_KB.find(x=>x.id===pac.sind); const v=pac.vit;
+    const sinaisTxt=kbx?pac.sinais.map(k=>(kbx.sinais.find(x=>x[0]===k)||[0,k])[1]).join("; "):"";
+    const vit=[v.pa&&"PA "+v.pa,v.fc&&"FC "+v.fc,v.fr&&"FR "+v.fr,v.sat&&"SpO2 "+v.sat+"%",v.tax&&"Tax "+v.tax,v.gli&&"Glic "+v.gli].filter(Boolean).join(" · ");
+    const pendTxt=pac.pend.map(x=>"- "+x.t+(x.res?": "+x.res:"")+(x.feito?"":" (pendente)")).join("\n");
+    const hipTxt=pac.hip.map(h=>h.nome+" ("+h.estado+")").join("; ");
+    const evoTxt=[...pac.evo].reverse().map(e=>e.h.slice(11)+" "+e.t).join("\n");
+    const hist=[vit,sinaisTxt&&"Achados: "+sinaisTxt,hipTxt&&"Hipóteses: "+hipTxt,pendTxt&&"Exames e pendências:\n"+pendTxt,evoTxt&&"Evolução:\n"+evoTxt].filter(Boolean).join("\n");
+    const caso={id:uid(),data:(pac.entrada||hoje).slice(0,10),local:"UPA",idade:pac.idade,sexo:pac.sexo,queixa:pac.queixa,area:kbx?kbx.area:"Outros",hist,conduta:pac.conduta,desf:encDesf,aprend:"",duvida:"",criada:hoje,duvidaOk:false,resolucao:""};
+    setCasos([caso,...casos]); setPacs(pacs.filter(x=>x.id!==pac.id)); setPacId(null); setEncDesf("");
+    editarCaso(caso); setToast("Caso salvo no diário. Complete o que você aprendeu.");
+  };
+  const dxCard=d=>{
+    const aberto=expDx===(pac.id+d.key); const jaHip=pac.hip.some(h=>h.k===d.key);
+    const pct=pac.sinais.length&&d.sc>0?Math.round(d.sc/maxSc*100):0;
+    return (
+      <div key={d.key} style={{border:"1px solid rgba(var(--cli-rgb),.12)",borderRadius:16,marginBottom:10,overflow:"hidden",background:d.nm?"rgba(224,122,95,.06)":"#fff"}}>
+        <div onClick={()=>setExpDx(aberto?null:pac.id+d.key)} style={{padding:"12px 14px",cursor:"pointer"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,justifyContent:"space-between"}}>
+            <div style={{fontSize:14.5,fontWeight:600,lineHeight:1.35}}>{d.n}</div>
+            <span style={{fontSize:16,opacity:.4,transform:aberto?"rotate(90deg)":"none",transition:"transform .2s"}}>›</span>
+          </div>
+          {pac.sinais.length>0&&<div style={{height:5,borderRadius:99,background:"rgba(var(--cli-rgb),.08)",marginTop:9,overflow:"hidden"}}><div style={{width:pct+"%",height:"100%",background:d.nm?CLI_ACC:T.ink,borderRadius:99,transition:"width .3s"}}/></div>}
+          {d.m.length>0&&<div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:8}}>{d.m.map(k=><span key={k} style={{fontSize:10.5,padding:"2px 8px",borderRadius:999,background:"rgba(var(--cli-rgb),.08)"}}>{(sx.sinais.find(x=>x[0]===k)||[0,k])[1]}</span>)}</div>}
+        </div>
+        {aberto&&(<div style={{padding:"0 14px 14px",fontSize:13.5,lineHeight:1.6}}>
+          <div style={{...lab,marginBottom:4}}>Para confirmar ou descartar</div><div>{d.ex}</div>
+          <div style={{...lab,margin:"12px 0 4px"}}>Conduta inicial</div><div>{d.cd}</div>
+          <div style={{...lab,margin:"12px 0 6px"}}>Minha anotação</div>
+          <textarea style={{...inp,minHeight:56,resize:"vertical",lineHeight:1.5,fontSize:13}} value={kbn[d.key]||""} onChange={e=>setKbn({...kbn,[d.key]:e.target.value})} placeholder="Doses do seu serviço, pegadinhas, referência…"/>
+          <div style={{marginTop:12}}><button style={{...(jaHip?btnS:btnP),padding:"8px 16px",fontSize:12.5}} disabled={jaHip} onClick={()=>addHip(d)}>{jaHip?"Já é hipótese deste paciente":"Marcar como hipótese"}</button></div>
+        </div>)}
+      </div>);
+  };
+  const corEstado={investigando:"rgba(var(--cli-rgb),.1)",confirmada:"rgba(60,130,90,.25)",descartada:"rgba(168,50,50,.14)"};
+  const subs=[["hoje","Hoje"],["sala","Sala amarela"+(pacs.length?" · "+pacs.length:"")],["casos","Casos"],["rev","Revisão"+(totHoje?" · "+totHoje:"")],["cond","Condutas"]];
   const tiles=[
     {l:"Casos no mês",v:String(casosMes.length),u:"registrados",s:"petroleo",z:1.5,x:20,y:30,to:"casos"},
     {l:"Cartões hoje",v:String(totHoje),u:novasLib.length?`${due.length} rev. + ${novasLib.length} novos`:"para revisar",s:"tulipa",z:1.4,x:40,y:20,to:"rev"},
@@ -2071,7 +2254,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
           <div style={{...serif,fontSize:isMobile?38:52,lineHeight:1,color:T.sheet,marginBottom:10}}>Clínica</div>
           <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".16em",textTransform:"uppercase",opacity:.75,marginBottom:6}}>Casos e condutas da rotina</div>
           <div style={{display:"flex",alignItems:"baseline",gap:14,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?96:140,lineHeight:.85,color:T.sheet}}>{casosMes.length}</span><span style={{...serif,fontSize:isMobile?22:30,opacity:.85}}>{casosMes.length===1?"caso":"casos"}<br/>em {mesNome}</span></div>
-          <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".1em",opacity:.85,marginTop:18}}>{duvidas.length} DÚVIDA{duvidas.length===1?"":"S"} EM ABERTO · {totHoje} CARTÕE{totHoje===1?"":"S"} HOJE</div>
+          <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".1em",opacity:.85,marginTop:18}}>{pacs.length>0?pacs.length+" NA SALA · ":""}{duvidas.length} DÚVIDA{duvidas.length===1?"":"S"} EM ABERTO · {totHoje} CARTÕE{totHoje===1?"":"S"} HOJE</div>
           <div className="cli-row" style={{marginTop:20}}>{subs.map(([id,l])=><button key={id} onClick={()=>setSub(id)} style={chipBtn(sub===id)}>{l}</button>)}</div>
         </div>
       </div>
@@ -2089,6 +2272,16 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
               </div>
             </div>))}
         </div>
+        {pacs.length>0&&(
+          <Card>
+            <Titulo k="Agora" t="Na sala amarela" dir={<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>{setSub("sala");setPacId(null);}}>abrir sala</button>}/>
+            {pacsOrd.slice(0,5).map((x,n)=>(
+              <div key={x.id} onClick={()=>{setSub("sala");setPacId(x.id);}} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)",cursor:"pointer"}}>
+                <span style={{...serif,fontSize:22,width:46,flexShrink:0}}>{x.leito}</span>
+                <div style={{flex:1,minWidth:0,fontSize:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.queixa}</div>
+                <span style={{...lab,whiteSpace:"nowrap"}}>{fmtDur(minsDesde(x.entrada))}</span>
+              </div>))}
+          </Card>)}
         <div className="cli-grid2">
           <Card>
             <Titulo k="Para estudar" t="Dúvidas em aberto"/>
@@ -2123,6 +2316,134 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
               {c.aprend&&<div style={{fontSize:13,opacity:.75,marginTop:6,lineHeight:1.5}}>{c.aprend}</div>}
             </div>))}
         </Card>
+      </>)}
+
+      {sub==="sala"&&(<>
+        {!pac?(<>
+          <Card>
+            <Titulo k="Em andamento" t="Sala amarela" dir={<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>setNpAberto(!npAberto)}>{npAberto?"Fechar":"Novo paciente"}</button>}/>
+            <div style={{fontSize:13.5,lineHeight:1.6,opacity:.75,maxWidth:620}}>Cadastre cada paciente que você está acompanhando, anote sinais, hipóteses, exames pendentes e evolução, e use o apoio ao raciocínio para pensar em diferenciais e conduta. Ao encerrar, o caso vai direto para o diário.</div>
+            {npAberto&&(<div style={{marginTop:16,padding:16,borderRadius:16,background:"rgba(var(--cli-rgb),.05)"}}>
+              <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 90px 100px",gap:12}}>
+                <div style={isMobile?{gridColumn:"1 / -1"}:{}}><div style={{...lab,marginBottom:6}}>Queixa principal</div><input autoFocus style={inp} value={np.queixa} onChange={e=>setNp({...np,queixa:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addPac();}} placeholder="Ex: dor torácica há 2h"/></div>
+                <div><div style={{...lab,marginBottom:6}}>Leito / ident.</div><input style={inp} value={np.leito} onChange={e=>setNp({...np,leito:e.target.value})} placeholder="A3"/></div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                  <div><div style={{...lab,marginBottom:6}}>Idade</div><input style={inp} value={np.idade} onChange={e=>setNp({...np,idade:e.target.value})} placeholder="58"/></div>
+                  <div><div style={{...lab,marginBottom:6}}>Sexo</div><select style={inp} value={np.sexo} onChange={e=>setNp({...np,sexo:e.target.value})}><option value="">—</option><option>F</option><option>M</option></select></div>
+                </div>
+              </div>
+              <div style={{marginTop:14}}><button style={{...btnP,opacity:np.queixa.trim()||np.leito.trim()?1:.4}} disabled={!(np.queixa.trim()||np.leito.trim())} onClick={addPac}>Adicionar à sala</button></div>
+            </div>)}
+          </Card>
+          {pacsOrd.length===0?<Card><Vazio>Ninguém na sala por enquanto. Toque em “Novo paciente” quando começar a atender.</Vazio></Card>:pacsOrd.map(x=>{
+            const al=alertasVit(x.vit); const abertas=x.pend.filter(y=>!y.feito).length; const hipsA=x.hip.filter(h=>h.estado!=="descartada");
+            return (
+              <div key={x.id} onClick={()=>{setPacId(x.id);setExpDx(null);try{window.scrollTo({top:0,behavior:"smooth"});}catch{}}} style={{background:"#fff",border:"1px solid rgba(var(--cli-rgb),.1)",borderRadius:24,padding:isMobile?"16px 18px":"20px 26px",marginBottom:12,cursor:"pointer"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:12}}>
+                  <div style={{display:"flex",alignItems:"baseline",gap:10,minWidth:0}}><span style={{...serif,fontSize:isMobile?26:30,lineHeight:1}}>{x.leito}</span><span style={{...lab,whiteSpace:"nowrap"}}>{x.idade?x.idade+"a":""}{x.sexo?" "+x.sexo:""}</span></div>
+                  <span style={{...lab,whiteSpace:"nowrap"}}>há {fmtDur(minsDesde(x.entrada))}</span>
+                </div>
+                <div style={{fontSize:15,fontWeight:600,marginTop:8,lineHeight:1.35}}>{x.queixa}</div>
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
+                  <Chip cor="rgba(224,122,95,.22)">{(CLI_SIT.find(c=>c[0]===x.sit)||[0,"—"])[1]}</Chip>
+                  {abertas>0&&<Chip>{abertas} pendência{abertas>1?"s":""}</Chip>}
+                  {al.flags.slice(0,3).map(f=><Chip key={f} cor="rgba(168,50,50,.16)">{f}</Chip>)}
+                  {al.q!==null&&al.q>=2&&<Chip cor="rgba(168,50,50,.28)">qSOFA {al.q}</Chip>}
+                </div>
+                {hipsA.length>0&&<div style={{fontSize:12.5,opacity:.7,marginTop:8,lineHeight:1.5}}>{hipsA.map(h=>h.nome).join(" · ")}</div>}
+              </div>);})}
+        </>):(<>
+          <div style={{marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
+            <button onClick={()=>setPacId(null)} style={{background:"none",border:"none",padding:0,cursor:"pointer",...lab,textDecoration:"underline",textUnderlineOffset:3}}>← sala amarela</button>
+            <span style={{...lab,whiteSpace:"nowrap"}}>entrada {pac.entrada.slice(11)} · há {fmtDur(minsDesde(pac.entrada))}</span>
+          </div>
+          <Card>
+            <div style={{display:"flex",alignItems:"baseline",gap:12,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?34:42,lineHeight:1}}>{pac.leito}</span><span style={lab}>{pac.idade?pac.idade+" anos":""}{pac.sexo?" · "+pac.sexo:""}</span></div>
+            <input style={{...inp,marginTop:12,fontWeight:600}} value={pac.queixa} onChange={e=>upPac(pac.id,{queixa:e.target.value})}/>
+            <div style={{...lab,margin:"16px 0 8px"}}>Situação</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_SIT.map(([k,l])=><button key={k} style={pill(pac.sit===k)} onClick={()=>upPac(pac.id,{sit:k})}>{l}</button>)}</div>
+            <div style={{...lab,margin:"16px 0 8px"}}>Sinais vitais</div>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(3,1fr)":"repeat(6,1fr)",gap:10}}>
+              {[["pa","PA","120/80"],["fc","FC","bpm"],["fr","FR","irpm"],["sat","SpO2","%"],["tax","Tax","°C"],["gli","Glicemia","mg/dL"]].map(([k,l,ph])=>(
+                <div key={k}><div style={{...lab,fontSize:9,marginBottom:5}}>{l}</div><input style={{...inp,padding:"9px 10px"}} inputMode={k==="pa"?"text":"decimal"} value={pac.vit[k]} onChange={e=>upPac(pac.id,{vit:{...pac.vit,[k]:e.target.value}})} placeholder={ph}/></div>))}
+            </div>
+            <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,marginTop:12}}><input type="checkbox" checked={!!pac.vit.mental} onChange={e=>upPac(pac.id,{vit:{...pac.vit,mental:e.target.checked}})} style={{width:"auto"}}/>Alteração do estado mental</label>
+            {(()=>{const al=alertasVit(pac.vit);return (al.flags.length>0||al.q!==null)&&(
+              <div style={{marginTop:14,padding:"12px 14px",borderRadius:14,background:al.q>=2||al.flags.length?"rgba(168,50,50,.08)":"rgba(var(--cli-rgb),.05)",fontSize:13,lineHeight:1.55}}>
+                {al.flags.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:al.q!==null?8:0}}>{al.flags.map(f=><Chip key={f} cor="rgba(168,50,50,.2)">{f}</Chip>)}</div>}
+                {al.q!==null&&<div><b>qSOFA {al.q}/3</b>{al.q>=2?": risco alto de desfecho adverso se houver infecção. Considerar sepse e seguir o pacote da primeira hora do protocolo (lactato, hemoculturas, antibiótico precoce, volume)."  :" (FR ≥ 22, PAS ≤ 100, estado mental alterado)."}</div>}
+              </div>);})()}
+          </Card>
+
+          <Card>
+            <Titulo k="Apoio ao raciocínio" t="O que pode ser?"/>
+            <div style={{...lab,marginBottom:8}}>Síndrome</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>{CLI_KB.map(k=><button key={k.id} style={pill(pac.sind===k.id)} onClick={()=>upPac(pac.id,{sind:pac.sind===k.id?"":k.id,sinais:pac.sind===k.id?[]:pac.sinais})}>{k.nome}</button>)}</div>
+            {!sx?<Vazio>Escolha a síndrome que mais se parece com a queixa. Depois marque os achados e o app ordena os diagnósticos pelo que combina, mantendo sempre à vista os que não podem ser perdidos.</Vazio>:(<>
+              <div style={{...lab,margin:"16px 0 8px"}}>Achados presentes ({pac.sinais.length})</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{sx.sinais.map(([k,l])=>{const on=pac.sinais.includes(k);return <button key={k} onClick={()=>toggleSinal(k)} style={{padding:"8px 13px",borderRadius:14,border:"1px solid "+(on?T.ink:"rgba(var(--cli-rgb),.22)"),background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontSize:12.5,lineHeight:1.35,cursor:"pointer",textAlign:"left",fontFamily:"'DM Sans',sans-serif"}}>{l}</button>;})}</div>
+              <div style={{...lab,margin:"22px 0 10px",color:"#B5533C"}}>Não pode perder (excluir primeiro)</div>
+              {dxNm.map(dxCard)}
+              <div style={{...lab,margin:"22px 0 10px"}}>Outras hipóteses frequentes</div>
+              {dxOut.map(dxCard)}
+              <div style={{fontSize:12,opacity:.6,lineHeight:1.55,marginTop:14}}>A barra mostra o quanto os achados marcados combinam com cada diagnóstico; não é probabilidade. É um lembrete de raciocínio com condutas iniciais de forma geral, sem doses. Confirme na diretriz atual e no protocolo do seu serviço, e anote as doses do seu serviço em “Minha anotação”.</div>
+            </>)}
+          </Card>
+
+          <Card>
+            <Titulo k="Raciocínio" t="Hipóteses deste paciente"/>
+            {pac.hip.length===0?<Vazio>Abra um diagnóstico acima e toque em “Marcar como hipótese”.</Vazio>:pac.hip.map((h,n)=>(
+              <div key={h.k} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)"}}>
+                <div style={{flex:1,minWidth:0,fontSize:14.5,fontWeight:600,textDecoration:h.estado==="descartada"?"line-through":"none",opacity:h.estado==="descartada"?.55:1}}>{h.nome}</div>
+                <button onClick={()=>ciclaHip(h.k)} style={{border:"none",borderRadius:999,padding:"6px 12px",fontSize:11.5,fontWeight:700,cursor:"pointer",background:corEstado[h.estado],color:T.ink,fontFamily:"'DM Sans',sans-serif"}}>{h.estado}</button>
+                <button onClick={()=>upPac(pac.id,{hip:pac.hip.filter(x=>x.k!==h.k)})} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--cli-rgb),.35)"}}>×</button>
+              </div>))}
+            {pac.hip.length>0&&<div style={{fontSize:12,opacity:.6,marginTop:8}}>Toque no estado para alternar: investigando, confirmada, descartada.</div>}
+          </Card>
+
+          <Card>
+            <Titulo k="Acompanhar" t="Exames e pendências"/>
+            {pac.pend.map((x,n)=>(
+              <div key={x.id} style={{padding:"10px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)"}}>
+                <label style={{display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer",fontSize:14.5,lineHeight:1.45}}>
+                  <input type="checkbox" checked={x.feito} onChange={e=>upPend(x.id,{feito:e.target.checked})} style={{width:20,height:20,marginTop:1,flexShrink:0,accentColor:T.ink}}/>
+                  <span style={{flex:1,textDecoration:x.feito?"line-through":"none",opacity:x.feito?.6:1}}>{x.t}</span>
+                  <button onClick={e=>{e.preventDefault();upPac(pac.id,{pend:pac.pend.filter(y=>y.id!==x.id)});}} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--cli-rgb),.35)"}}>×</button>
+                </label>
+                {x.feito&&<input style={{...inp,marginTop:8,marginLeft:32,width:"calc(100% - 32px)",padding:"8px 12px",fontSize:13}} value={x.res} onChange={e=>upPend(x.id,{res:e.target.value})} placeholder="Resultado"/>}
+              </div>))}
+            <div style={{display:"flex",gap:10,marginTop:pac.pend.length?12:0}}>
+              <input style={inp} value={pendT} onChange={e=>setPendT(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addPend();}} placeholder="Ex: troponina 2ª amostra, RX de tórax"/>
+              <button style={btnP} onClick={addPend}>Adicionar</button>
+            </div>
+          </Card>
+
+          <Card>
+            <Titulo k="Linha do tempo" t="Evolução"/>
+            <div style={{display:"flex",gap:10}}>
+              <input style={inp} value={evoT} onChange={e=>setEvoT(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addEvo();}} placeholder="Ex: reavaliado, dor melhorou após analgesia"/>
+              <button style={btnP} onClick={addEvo}>Registrar</button>
+            </div>
+            {pac.evo.map((e,n)=>(
+              <div key={e.id} style={{display:"flex",gap:12,padding:"10px 0",borderTop:n===0?"1px solid rgba(var(--cli-rgb),.08)":"1px solid rgba(var(--cli-rgb),.08)",marginTop:n===0?14:0,fontSize:14,lineHeight:1.5}}>
+                <span style={{...lab,flexShrink:0,paddingTop:3}}>{e.h.slice(11)}</span><span style={{flex:1}}>{e.t}</span>
+                <button onClick={()=>upPac(pac.id,{evo:pac.evo.filter(y=>y.id!==e.id)})} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--cli-rgb),.35)"}}>×</button>
+              </div>))}
+            <div style={{...lab,margin:"18px 0 6px"}}>Conduta</div>
+            <textarea style={{...inp,minHeight:70,resize:"vertical",lineHeight:1.5}} value={pac.conduta} onChange={e=>upPac(pac.id,{conduta:e.target.value})} placeholder="O que foi prescrito e decidido"/>
+          </Card>
+
+          <Card>
+            <Titulo k="Fechar" t="Encerrar atendimento"/>
+            <div style={{...lab,marginBottom:8}}>Desfecho</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_DESF.map(d=><button key={d} style={pill(encDesf===d)} onClick={()=>setEncDesf(encDesf===d?"":d)}>{d}</button>)}</div>
+            <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
+              <button style={{...btnP,opacity:encDesf?1:.4}} disabled={!encDesf} onClick={encerrar}>Salvar no diário e encerrar</button>
+              <button style={{...btnS,borderColor:"rgba(168,50,50,.4)",color:"#A83232"}} onClick={()=>{if(window.confirm("Remover da sala sem salvar no diário?")){setPacs(pacs.filter(x=>x.id!==pac.id));setPacId(null);}}}>Remover sem salvar</button>
+            </div>
+            <div style={{fontSize:12,opacity:.6,marginTop:10}}>O caso vai para o diário com sinais, hipóteses, exames e evolução. Depois é só preencher o que aprendeu.</div>
+          </Card>
+        </>)}
       </>)}
 
       {sub==="casos"&&(<>
