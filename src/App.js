@@ -239,6 +239,7 @@ const STY={
   veludo:  {paper:"#6C1D26",f1:"#EBC9BE",f2:"#F3DDD2",l1:"#A99A4A",l2:"#8E8138",stem:"#23301F",acc:"#6C1D26"},
   noite:   {paper:"#18220F",f1:"#8DB1EC",f2:"#6F95DB",l1:"#4B5F2A",l2:"#3B4C20",stem:"#3B4C20",acc:"#2D4A8A"},
   manteiga:{paper:"#F8E6B8",f1:"#EDAA26",f2:"#F4BF45",l1:"#7B7B3E",l2:"#6B6B35",stem:"#6B6B35",acc:"#B07A0F"},
+  petroleo: {paper:"#12303A",f1:"#F6CDBF",f2:"#E98F77",l1:"#5E9C99",l2:"#46807D",stem:"#356B68",acc:"#E07A5F"},
   marinho: {paper:"#16224B",f1:"#CBD5F8",f2:"#92A8EE",l1:"#4E8C93",l2:"#3C7279",stem:"#2F5A60",acc:"#4F6BD0"},
 };
 const Motif=({s="tulipa",z=1,x=0,y=0,p=1,bare=false,style})=>{
@@ -981,15 +982,15 @@ const EST_SEED=[
 
 // ── Alternador entre mini-apps (Finanças ⇄ Estudos) ──
 function AppSwitch({atual,onTrocar}){
-  const itens=[["fin","Finanças","#8B2B3A"],["est","Estudos","#3E5C8A"],["idi","Idiomas","#B8832A"]];
+  const itens=[["fin","Finanças","#8B2B3A"],["est","Estudos","#3E5C8A"],["idi","Idiomas","#B8832A"],["med","Clínica","#2E7D7A"]];
   const idx=itens.findIndex(i=>i[0]===atual);
   const estreito=typeof window!=="undefined"&&window.innerWidth<400;
   return (
-    <div role="tablist" aria-label="Trocar de aplicativo" style={{position:"relative",display:"inline-grid",gridTemplateColumns:"1fr 1fr 1fr",background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.3)",borderRadius:999,padding:3,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
-      <i style={{position:"absolute",top:3,bottom:3,left:3,width:"calc((100% - 6px) / 3)",borderRadius:999,background:"#FBF4E2",boxShadow:"0 6px 18px -8px rgba(0,0,0,.55)",transform:`translateX(${idx*100}%)`,transition:"transform .45s cubic-bezier(.5,0,.15,1)"}}/>
+    <div role="tablist" aria-label="Trocar de aplicativo" style={{position:"relative",display:"inline-grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.3)",borderRadius:999,padding:3,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+      <i style={{position:"absolute",top:3,bottom:3,left:3,width:"calc((100% - 6px) / 4)",borderRadius:999,background:"#FBF4E2",boxShadow:"0 6px 18px -8px rgba(0,0,0,.55)",transform:`translateX(${idx*100}%)`,transition:"transform .45s cubic-bezier(.5,0,.15,1)"}}/>
       {itens.map(([id,l,cor])=>(
         <button key={id} role="tab" aria-selected={id===atual} onClick={()=>onTrocar(id)} style={{position:"relative",zIndex:1,height:34,minHeight:34,padding:estreito?"0 6px":"0 9px",border:"none",background:"transparent",cursor:"pointer",borderRadius:999,fontFamily:"'DM Sans',sans-serif",fontSize:estreito?11:12,fontWeight:id===atual?700:500,color:id===atual?"#15251E":"rgba(255,255,255,.88)",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:estreito?4:5,transition:"color .3s",whiteSpace:"nowrap"}}>
-          <span style={{width:6,height:6,borderRadius:"50%",background:id===atual?cor:"rgba(255,255,255,.55)",transition:"background .3s"}}/>{l}
+          {!estreito&&<span style={{width:6,height:6,borderRadius:"50%",background:id===atual?cor:"rgba(255,255,255,.55)",transition:"background .3s"}}/>}{l}
         </button>))}
     </div>);
 }
@@ -1061,7 +1062,9 @@ function EstudosApp({userId,isMobile,onMenu,onTrocar}){
   const btnP={background:EST_INK,color:EST_CREAM,border:"none",borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
   const btnS={background:"transparent",color:EST_INK,border:"1px solid rgba(21,37,30,.25)",borderRadius:999,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
   const Check=({on,cor,onClick})=><button onClick={onClick} aria-label="marcar" style={{width:26,height:26,borderRadius:"50%",border:"1.5px solid "+(on?cor:"rgba(21,37,30,.3)"),background:on?cor:"transparent",color:"#fff",cursor:"pointer",flexShrink:0,fontSize:13,lineHeight:1,display:"inline-flex",alignItems:"center",justifyContent:"center",padding:0}}>{on?"✓":""}</button>;
-  const Card=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(21,37,30,.1)",borderRadius:24,padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  const CardR1=useRef(null);
+  CardR1.current=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(21,37,30,.1)",borderRadius:24,padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  const Card=useRef(pp=>CardR1.current(pp)).current;
   const Titulo=({k,t,dir})=><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,marginBottom:18}}><div><div style={lab}>{k}</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:6,lineHeight:1,color:EST_INK}}>{t}</div></div>{dir}</div>;
   const RevRow=({r})=>(
     <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderTop:"1px solid rgba(21,37,30,.08)"}}>
@@ -1906,6 +1909,396 @@ const GRAM_ITENS=Object.entries(GRAM_RAW).flatMap(([lang,txt])=>{
   });
 });
 
+// ═════════════════════════ CLÍNICA (casos, revisão, condutas) ═════════════════════════
+const CLI_INK="#12303A", CLI_SHEET="#E9F0EF", CLI_ACC="#E07A5F";
+const CLI_AREAS=["Cardio","Neuro","Resp","Gastro","Trauma","Infecto","Pediatria","Obstetrícia","Psiquiatria","Outros"];
+const CLI_LOCAIS=["UPA","Ambulância","Outro"];
+const CLI_DESF=["Alta","Internado","Transferido","Óbito","Sem seguimento"];
+const CLI_MODELO="# Avaliação inicial\n\n# Exames\n\n# Conduta\n\n# Quando internar ou transferir\n\n# Pegadinhas";
+const CLI_MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
+
+function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
+  const hoje=today();
+  const [casos,setCasos]=useLS("v5_med_casos",[],userId);
+  const [cards,setCards]=useLS("v5_med_cards",[],userId);
+  const [prot,setProt]=useLS("v5_med_prot",[],userId);
+  const [cfgM,setCfgM]=useLS("v5_med_cfg",{novosDia:8},userId);
+  const [plt]=useLS("v4_plt",[],userId);
+  const [sub,setSub]=useState("hoje");
+  const fcInit={data:hoje,local:"UPA",idade:"",sexo:"",queixa:"",area:"Cardio",hist:"",conduta:"",desf:"",aprend:"",duvida:""};
+  const [fc,setFc]=useState(fcInit);
+  const [editId,setEditId]=useState(null);
+  const [filtro,setFiltro]=useState({area:"",local:"",q:""});
+  const [verTodos,setVerTodos]=useState(false);
+  const [cardDe,setCardDe]=useState(null);
+  const [resId,setResId]=useState(null);
+  const [resTxt,setResTxt]=useState("");
+  const [resCard,setResCard]=useState(true);
+  const [rs,setRs]=useState(null);
+  const [fk,setFk]=useState({frente:"",verso:"",area:"Cardio"});
+  const [pe,setPe]=useState(null);
+  const [pAberta,setPAberta]=useState(null);
+  const [marcas,setMarcas]=useState({});
+  const [pq,setPq]=useState("");
+  const [toast,setToast]=useState("");
+  const [novosEd,setNovosEd]=useState(false);
+  useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(""),3200);return()=>clearTimeout(t);},[toast]);
+
+  const T={ink:CLI_INK,sheet:CLI_SHEET,acc:CLI_ACC,rgb:"18,48,58",hrgb:"233,240,239"};
+  const lab={fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10,letterSpacing:".12em",textTransform:"uppercase",color:"rgba(var(--cli-rgb),.6)"};
+  const serif={fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,letterSpacing:"-.03em"};
+  const chipBtn=ativo=>({background:ativo?T.sheet:"rgba(var(--cli-hrgb),.1)",color:ativo?T.ink:"rgba(var(--cli-hrgb),.88)",border:"1px solid "+(ativo?T.sheet:"rgba(var(--cli-hrgb),.3)"),borderRadius:999,padding:"0 16px",height:36,fontSize:12.5,fontWeight:ativo?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'DM Sans',sans-serif"});
+  const inp={background:"#fff",border:"1px solid rgba(var(--cli-rgb),.18)",borderRadius:12,padding:"11px 14px",fontSize:14,fontFamily:"'DM Sans',sans-serif",color:T.ink,width:"100%",minWidth:0,outline:"none"};
+  const btnP={background:T.ink,color:T.sheet,border:"none",borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
+  const btnS={background:"transparent",color:T.ink,border:"1px solid rgba(var(--cli-rgb),.25)",borderRadius:999,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
+  const pill=on=>({height:34,padding:"0 14px",borderRadius:999,border:"1px solid "+T.ink,background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"});
+  const CardR=useRef(null);
+  CardR.current=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(var(--cli-rgb),.1)",borderRadius:24,padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  const Card=useRef(pp=>CardR.current(pp)).current;
+  const Titulo=({k,t,dir})=><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,marginBottom:18}}><div><div style={lab}>{k}</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:6,lineHeight:1,color:T.ink}}>{t}</div></div>{dir}</div>;
+  const Vazio=({children})=><div style={{fontSize:14,lineHeight:1.5,color:"rgba(var(--cli-rgb),.62)"}}>{children}</div>;
+
+  // ── dados derivados ──
+  const mesAtual=hoje.slice(0,7);
+  const casosMes=casos.filter(c=>(c.data||"").startsWith(mesAtual));
+  const duvidas=casos.filter(c=>c.duvida&&c.duvida.trim()&&!c.duvidaOk);
+  const pltMes=plt.filter(p=>(p.data||"").startsWith(mesAtual)).length;
+  const d90=addDays(hoje,-90);
+  const porArea=CLI_AREAS.map(a=>({a,n:casos.filter(c=>c.area===a&&(c.data||"")>=d90).length})).filter(x=>x.n>0).sort((x,y)=>y.n-x.n);
+  const maxArea=Math.max(1,...porArea.map(x=>x.n));
+  const hhmm=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||"");return m?(+m[1])*60+(+m[2]):null;};
+  const plNoturno=q=>{const a=hhmm(q.horaInicio),b=hhmm(q.horaFim);if(a!==null&&b!==null)return b<=a||a>=18*60||(b-a)>=24*60;return (+q.horas||0)>=12;};
+  const posPlantao=plt.some(q=>q.data===addDays(hoje,-1)&&plNoturno(q));
+  const isNova=k=>!k.vista&&!((k.ok||0)+(k.er||0));
+  const due=cards.filter(k=>!isNova(k)&&k.prox<=hoje).sort((a,b)=>a.prox.localeCompare(b.prox));
+  const novasTodas=cards.filter(isNova).sort((a,b)=>(a.criada||"").localeCompare(b.criada||""));
+  const baseNov=(cfgM.novosDia===undefined||cfgM.novosDia===""||!Number.isFinite(+cfgM.novosDia))?8:+cfgM.novosDia;
+  const bloqueioNov=posPlantao?"Pós-plantão: hoje só revisões":(due.length>30?`Dívida alta (${due.length} atrasados): zere antes de liberar novos`:"");
+  const limiteHoje=bloqueioNov?0:baseNov;
+  const novasFeitas=cards.filter(k=>k.vista===hoje).length;
+  const novasLib=novasTodas.slice(0,Math.max(0,limiteHoje-novasFeitas));
+  const totHoje=due.length+novasLib.length;
+  const acertoTot=(()=>{const o=cards.reduce((a,k)=>a+(k.ok||0),0),e=cards.reduce((a,k)=>a+(k.er||0),0);return o+e?Math.round(o/(o+e)*100):null;})();
+
+  // ── casos ──
+  const salvarCaso=()=>{
+    if(!fc.queixa.trim())return;
+    const base={...fc,queixa:fc.queixa.trim()};
+    if(editId){setCasos(casos.map(c=>c.id!==editId?c:{...c,...base}));setEditId(null);setToast("Caso atualizado.");}
+    else{setCasos([{id:uid(),...base,criada:hoje,duvidaOk:false,resolucao:""},...casos]);setToast("Caso salvo.");}
+    setFc({...fcInit,local:fc.local,area:fc.area});
+  };
+  const editarCaso=c=>{setFc({data:c.data||hoje,local:c.local||"UPA",idade:c.idade||"",sexo:c.sexo||"",queixa:c.queixa||"",area:c.area||"Outros",hist:c.hist||"",conduta:c.conduta||"",desf:c.desf||"",aprend:c.aprend||"",duvida:c.duvida||""});setEditId(c.id);setSub("casos");try{window.scrollTo({top:0,behavior:"smooth"});}catch{}};
+  const casosFilt=casos.filter(c=>(!filtro.area||c.area===filtro.area)&&(!filtro.local||c.local===filtro.local)&&(!filtro.q||[c.queixa,c.hist,c.conduta,c.aprend,c.duvida].join(" ").toLowerCase().includes(filtro.q.toLowerCase()))).sort((a,b)=>(b.data||"").localeCompare(a.data||"")||String(b.id).localeCompare(String(a.id)));
+  const novoCard=(frente,verso,area,casoId)=>({id:uid(),frente:frente.trim(),verso:verso.trim(),area:area||"Outros",casoId:casoId||"",criada:hoje,box:0,prox:hoje,ok:0,er:0});
+  const abrirCardDe=c=>setCardDe({id:c.id,frente:"Caso: "+c.queixa+". Qual o ponto-chave?",verso:c.aprend||"",area:c.area||"Outros"});
+  const salvarCardDe=()=>{if(!cardDe||!cardDe.frente.trim()||!cardDe.verso.trim())return;setCards([novoCard(cardDe.frente,cardDe.verso,cardDe.area,cardDe.id),...cards]);setCardDe(null);setToast("Cartão criado. Entra nos novos do dia.");};
+  const resolverDuvida=c=>{
+    if(!resTxt.trim())return;
+    setCasos(casos.map(x=>x.id!==c.id?x:{...x,duvidaOk:true,resolucao:resTxt.trim()}));
+    if(resCard)setCards([novoCard(c.duvida,resTxt,c.area,c.id),...cards]);
+    setResId(null);setResTxt("");setToast(resCard?"Dúvida resolvida e virou cartão.":"Dúvida resolvida.");
+  };
+
+  // ── revisão ──
+  const iniciarRev=m5=>{
+    const base=m5===true?due.slice(0,15):due; const nov=m5===true?[]:novasLib;
+    const fila=[...base,...nov].map(k=>k.id);
+    if(!fila.length)return;
+    setRs({fila,i:0,show:false,ok:0,er:0,rep:{},fim:false,m5:m5===true});
+  };
+  const curK=rs&&!rs.fim?cards.find(k=>k.id===rs.fila[rs.i]):null;
+  const responder=ok=>{
+    if(!rs||rs.fim)return;
+    const id=rs.fila[rs.i]; const k=cards.find(x=>x.id===id);
+    if(!k){setRs({...rs,i:rs.i+1,show:false,fim:rs.i+1>=rs.fila.length});return;}
+    const b=k.box||0;
+    setCards(cards.map(x=>x.id!==id?x:{...x,box:ok?Math.min(b+1,5):0,prox:ok?addDays(hoje,LEIT[Math.min(b,5)]):addDays(hoje,1),vista:x.vista||hoje,ok:(x.ok||0)+(ok?1:0),er:(x.er||0)+(ok?0:1)}));
+    const fila=(!ok&&!rs.rep[id])?[...rs.fila,id]:rs.fila; const prox=rs.i+1;
+    setRs({...rs,fila,i:prox,show:false,ok:rs.ok+(ok?1:0),er:rs.er+(ok?0:1),rep:ok?rs.rep:{...rs.rep,[id]:1},fim:prox>=fila.length});
+  };
+  const addCardManual=()=>{if(!fk.frente.trim()||!fk.verso.trim())return;setCards([novoCard(fk.frente,fk.verso,fk.area,""),...cards]);setFk({...fk,frente:"",verso:""});setToast("Cartão criado.");};
+
+  // ── condutas ──
+  const salvarProt=()=>{
+    if(!pe||!pe.titulo.trim())return;
+    if(pe.id){setProt(prot.map(p=>p.id!==pe.id?p:{...p,titulo:pe.titulo.trim(),area:pe.area,texto:pe.texto,atualizada:hoje}));setPAberta(pe.id);}
+    else{const n={id:uid(),titulo:pe.titulo.trim(),area:pe.area,texto:pe.texto,atualizada:hoje};setProt([n,...prot]);setPAberta(n.id);}
+    setPe(null);
+  };
+  const protFilt=prot.filter(p=>!pq||(p.titulo+" "+p.texto+" "+p.area).toLowerCase().includes(pq.toLowerCase())).sort((a,b)=>a.titulo.localeCompare(b.titulo));
+  const protAb=prot.find(p=>p.id===pAberta)||null;
+  const linhasProt=p=>(p.texto||"").split("\n").map((t,i)=>({i,t:t.trim()})).filter(x=>x.t).map(x=>x.t.startsWith("#")?{...x,h:true,t:x.t.replace(/^#+\s*/,"")}:{...x,h:false,t:x.t.replace(/^[-*]\s*/,"")});
+
+  const subs=[["hoje","Hoje"],["casos","Casos"],["rev","Revisão"+(totHoje?" · "+totHoje:"")],["cond","Condutas"]];
+  const tiles=[
+    {l:"Casos no mês",v:String(casosMes.length),u:"registrados",s:"petroleo",z:1.5,x:20,y:30,to:"casos"},
+    {l:"Cartões hoje",v:String(totHoje),u:novasLib.length?`${due.length} rev. + ${novasLib.length} novos`:"para revisar",s:"tulipa",z:1.4,x:40,y:20,to:"rev"},
+    {l:"Dúvidas abertas",v:String(duvidas.length),u:duvidas.length===1?"para estudar":"para estudar",s:"veludo",z:1.5,x:10,y:50,to:"hoje"},
+    {l:"Plantões no mês",v:String(pltMes),u:pltMes?`${(casosMes.length/pltMes).toFixed(1).replace(".0","")} casos por plantão`:"na agenda",s:"manteiga",z:1.4,x:30,y:20,to:"casos"},
+  ];
+  const mesNome=CLI_MESES[+hoje.slice(5,7)-1];
+
+  const fmtData=d=>d?d.slice(8,10)+"/"+d.slice(5,7):"";
+  const Chip=({children,cor})=><span style={{display:"inline-block",fontSize:10.5,fontWeight:600,letterSpacing:".04em",padding:"3px 9px",borderRadius:999,background:cor||"rgba(var(--cli-rgb),.08)",color:T.ink}}>{children}</span>;
+
+  return (
+    <div className="cli" style={{"--cli-rgb":T.rgb,"--cli-hrgb":T.hrgb,minHeight:"100vh",background:T.ink,position:"relative",zIndex:1,color:T.ink,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
+      <style>{`
+        .cli .cli-hero{position:relative;overflow:hidden;background:${T.ink};color:${T.sheet};animation:cliFade .5s ease both}
+        .cli .cli-sheet{animation:cliFade .5s ease both;position:relative;background:${T.sheet};border-radius:30px 30px 0 0;margin-top:-28px;min-height:70vh;padding:${isMobile?"26px 14px 110px":"34px 28px 110px"}}
+        @keyframes cliFade{from{opacity:0}to{opacity:1}}
+        .cli .cli-scrim{position:absolute;inset:0;background:linear-gradient(95deg,rgba(8,26,32,.96) 0%,rgba(8,26,32,.8) 45%,rgba(8,26,32,.3) 100%)}
+        .cli .cli-in{position:relative;max-width:1100px;margin:0 auto;padding:${isMobile?"18px 18px 54px":"26px 28px 62px"}}
+        .cli .cli-wrap{max-width:1100px;margin:0 auto}
+        .cli .cli-grid4{display:grid;grid-template-columns:repeat(${isMobile?2:4},1fr);gap:14px;margin-bottom:16px}
+        .cli .cli-grid2{display:grid;grid-template-columns:${isMobile?"1fr":"1fr 1fr"};gap:16px}
+        .cli .cli-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+        .cli .cli-row::-webkit-scrollbar{display:none}
+        .cli input:focus,.cli select:focus,.cli textarea:focus{border-color:${T.ink}!important}
+        .cli button:active{transform:scale(.98)}
+        body:has(.cli){background:#0B2229!important}
+      `}</style>
+      <div className="cli-hero">
+        <Motif s="petroleo" z={1.2} x={40} y={15} style={{position:"absolute",inset:0,opacity:.95}}/>
+        <div className="cli-scrim"/>
+        <div className="cli-in">
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:isMobile?22:30}}>
+            <button onClick={onMenu} aria-label="Abrir menu" style={{background:"rgba(var(--cli-hrgb),.12)",border:"1px solid rgba(var(--cli-hrgb),.3)",borderRadius:99,width:40,height:40,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5}}>{[0,1,2].map(i=><i key={i} style={{width:16,height:1.5,background:T.sheet,display:"block"}}/>)}</button>
+            <AppSwitch atual="med" onTrocar={onTrocar}/>
+            <span style={{width:40,height:40}}/>
+          </div>
+          <div style={{...serif,fontSize:isMobile?38:52,lineHeight:1,color:T.sheet,marginBottom:10}}>Clínica</div>
+          <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".16em",textTransform:"uppercase",opacity:.75,marginBottom:6}}>Casos e condutas da rotina</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:14,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?96:140,lineHeight:.85,color:T.sheet}}>{casosMes.length}</span><span style={{...serif,fontSize:isMobile?22:30,opacity:.85}}>{casosMes.length===1?"caso":"casos"}<br/>em {mesNome}</span></div>
+          <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".1em",opacity:.85,marginTop:18}}>{duvidas.length} DÚVIDA{duvidas.length===1?"":"S"} EM ABERTO · {totHoje} CARTÕE{totHoje===1?"":"S"} HOJE</div>
+          <div className="cli-row" style={{marginTop:20}}>{subs.map(([id,l])=><button key={id} onClick={()=>setSub(id)} style={chipBtn(sub===id)}>{l}</button>)}</div>
+        </div>
+      </div>
+
+      <div className="cli-sheet"><div className="cli-wrap">
+
+      {sub==="hoje"&&(<>
+        <div className="cli-grid4">
+          {tiles.map(t=>(
+            <div key={t.l} className="bento-tile" onClick={()=>setSub(t.to)} style={{background:STY[t.s].paper,cursor:"pointer",minHeight:isMobile?172:200}}>
+              <Motif s={t.s} z={t.z} x={t.x} y={t.y} style={{position:"absolute",inset:0,zIndex:0,pointerEvents:"none"}}/>
+              <div className="tile-panel" style={{marginTop:"auto"}}>
+                <div style={{...lab,fontSize:9.5,color:"rgba(var(--cli-rgb),.65)"}}>{t.l}</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:6,marginTop:6,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?34:42,lineHeight:1,color:T.ink}}>{t.v}</span><span style={{fontSize:11.5,opacity:.6}}>{t.u}</span></div>
+              </div>
+            </div>))}
+        </div>
+        <div className="cli-grid2">
+          <Card>
+            <Titulo k="Para estudar" t="Dúvidas em aberto"/>
+            {duvidas.length===0?<Vazio>Nenhuma dúvida pendente. Quando um caso te deixar com uma pergunta, ela aparece aqui até você resolver.</Vazio>:duvidas.slice(0,6).map((c,n)=>(
+              <div key={c.id} style={{padding:"12px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)"}}>
+                <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}><Chip>{c.area}</Chip><span style={{...lab,fontSize:9.5}}>{fmtData(c.data)} · {c.queixa}</span></div>
+                <div style={{fontSize:14.5,lineHeight:1.5,fontWeight:600}}>{c.duvida}</div>
+                {resId===c.id?(<div style={{marginTop:10}}>
+                  <textarea style={{...inp,minHeight:70,resize:"vertical",lineHeight:1.5}} value={resTxt} onChange={e=>setResTxt(e.target.value)} placeholder="O que você descobriu? (fonte, diretriz, resposta)"/>
+                  <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,marginTop:10}}><input type="checkbox" checked={resCard} onChange={e=>setResCard(e.target.checked)} style={{width:"auto"}}/>Virar cartão de revisão</label>
+                  <div style={{display:"flex",gap:10,marginTop:12}}><button style={{...btnP,opacity:resTxt.trim()?1:.4}} disabled={!resTxt.trim()} onClick={()=>resolverDuvida(c)}>Resolver</button><button style={btnS} onClick={()=>{setResId(null);setResTxt("");}}>Cancelar</button></div>
+                </div>):<button style={{...btnS,padding:"7px 14px",fontSize:12,marginTop:10}} onClick={()=>{setResId(c.id);setResTxt("");}}>Resolver</button>}
+              </div>))}
+            {duvidas.length>6&&<div style={{...lab,marginTop:10}}>+ {duvidas.length-6} dúvidas</div>}
+          </Card>
+          <Card>
+            <Titulo k="Últimos 90 dias" t="Casos por área"/>
+            {porArea.length===0?<Vazio>Registre casos para ver onde você mais atua e onde precisa reforçar.</Vazio>:porArea.map(x=>(
+              <div key={x.a} style={{display:"flex",alignItems:"center",gap:12,marginBottom:10}}>
+                <span style={{width:92,fontSize:13,fontWeight:600,flexShrink:0}}>{x.a}</span>
+                <div style={{flex:1,height:8,borderRadius:99,background:"rgba(var(--cli-rgb),.08)",overflow:"hidden"}}><div style={{width:(x.n/maxArea*100)+"%",height:"100%",background:T.ink,borderRadius:99}}/></div>
+                <span style={{...lab,width:24,textAlign:"right"}}>{x.n}</span>
+              </div>))}
+          </Card>
+        </div>
+        <Card>
+          <Titulo k="Recentes" t="Últimos casos" dir={casos.length>0?<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setSub("casos")}>ver todos</button>:null}/>
+          {casos.length===0?<Vazio>Nenhum caso ainda. Registre o primeiro na aba Casos: leva um minuto e fica como memória de plantão.</Vazio>:[...casos].sort((a,b)=>(b.data||"").localeCompare(a.data||"")).slice(0,4).map((c,n)=>(
+            <div key={c.id} style={{padding:"11px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)"}}>
+              <div style={{fontSize:14.5,fontWeight:600}}>{c.queixa}</div>
+              <div style={{...lab,fontSize:9.5,marginTop:4}}>{fmtData(c.data)} · {c.local} · {c.area}{c.desf?" · "+c.desf:""}</div>
+              {c.aprend&&<div style={{fontSize:13,opacity:.75,marginTop:6,lineHeight:1.5}}>{c.aprend}</div>}
+            </div>))}
+        </Card>
+      </>)}
+
+      {sub==="casos"&&(<>
+        <Card>
+          <Titulo k={editId?"Editando":"Novo"} t={editId?"Editar caso":"Registrar caso"}/>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"150px 1fr 90px 110px",gap:12}}>
+            <div style={isMobile?{}:{}}><div style={{...lab,marginBottom:6}}>Data</div><input style={inp} type="date" value={fc.data} onChange={e=>setFc({...fc,data:e.target.value})}/></div>
+            <div style={isMobile?{gridColumn:"1 / -1",order:-1}:{}}><div style={{...lab,marginBottom:6}}>Queixa / hipótese</div><input style={inp} value={fc.queixa} onChange={e=>setFc({...fc,queixa:e.target.value})} placeholder="Ex: dor torácica típica, 58a"/></div>
+            <div><div style={{...lab,marginBottom:6}}>Idade</div><input style={inp} value={fc.idade} onChange={e=>setFc({...fc,idade:e.target.value})} placeholder="58"/></div>
+            <div><div style={{...lab,marginBottom:6}}>Sexo</div><select style={inp} value={fc.sexo} onChange={e=>setFc({...fc,sexo:e.target.value})}><option value="">—</option><option>F</option><option>M</option></select></div>
+          </div>
+          <div style={{...lab,margin:"16px 0 8px"}}>Onde</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_LOCAIS.map(l=><button key={l} style={pill(fc.local===l)} onClick={()=>setFc({...fc,local:l})}>{l}</button>)}</div>
+          <div style={{...lab,margin:"16px 0 8px"}}>Área</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_AREAS.map(a=><button key={a} style={pill(fc.area===a)} onClick={()=>setFc({...fc,area:a})}>{a}</button>)}</div>
+          <div style={{marginTop:16}}><div style={{...lab,marginBottom:6}}>Apresentação e achados</div><textarea style={{...inp,minHeight:80,resize:"vertical",lineHeight:1.5}} value={fc.hist} onChange={e=>setFc({...fc,hist:e.target.value})} placeholder="História, exame físico, exames complementares"/></div>
+          <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Conduta</div><textarea style={{...inp,minHeight:70,resize:"vertical",lineHeight:1.5}} value={fc.conduta} onChange={e=>setFc({...fc,conduta:e.target.value})} placeholder="O que foi feito"/></div>
+          <div style={{...lab,margin:"16px 0 8px"}}>Desfecho</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_DESF.map(d=><button key={d} style={pill(fc.desf===d)} onClick={()=>setFc({...fc,desf:fc.desf===d?"":d})}>{d}</button>)}</div>
+          <div style={{marginTop:16}}><div style={{...lab,marginBottom:6}}>O que aprendi</div><textarea style={{...inp,minHeight:70,resize:"vertical",lineHeight:1.5}} value={fc.aprend} onChange={e=>setFc({...fc,aprend:e.target.value})} placeholder="O ponto-chave que você quer lembrar (vira cartão depois)"/></div>
+          <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Dúvida para estudar</div><input style={inp} value={fc.duvida} onChange={e=>setFc({...fc,duvida:e.target.value})} placeholder="O que ficou sem resposta?"/></div>
+          <div style={{display:"flex",gap:10,marginTop:18,flexWrap:"wrap"}}>
+            <button style={{...btnP,opacity:fc.queixa.trim()?1:.4}} disabled={!fc.queixa.trim()} onClick={salvarCaso}>{editId?"Salvar alterações":"Salvar caso"}</button>
+            {editId&&<button style={btnS} onClick={()=>{setEditId(null);setFc({...fcInit});}}>Cancelar</button>}
+          </div>
+        </Card>
+        <Card>
+          <Titulo k="Histórico" t="Seus casos" dir={<span style={{...lab,whiteSpace:"nowrap"}}>{casosFilt.length} de {casos.length}</span>}/>
+          <input style={{...inp,marginBottom:10}} value={filtro.q} onChange={e=>setFiltro({...filtro,q:e.target.value})} placeholder="Buscar em queixa, conduta, aprendizado…"/>
+          <div className="cli-row" style={{marginBottom:6}}>
+            <button style={pill(!filtro.area)} onClick={()=>setFiltro({...filtro,area:""})}>Todas</button>
+            {CLI_AREAS.map(a=><button key={a} style={pill(filtro.area===a)} onClick={()=>setFiltro({...filtro,area:filtro.area===a?"":a})}>{a}</button>)}
+          </div>
+          <div className="cli-row" style={{marginBottom:12}}>
+            {CLI_LOCAIS.map(l=><button key={l} style={pill(filtro.local===l)} onClick={()=>setFiltro({...filtro,local:filtro.local===l?"":l})}>{l}</button>)}
+          </div>
+          {casosFilt.length===0?<Vazio>{casos.length===0?"Nenhum caso registrado.":"Nada encontrado com esses filtros."}</Vazio>:(verTodos?casosFilt:casosFilt.slice(0,20)).map((c,n)=>(
+            <div key={c.id} style={{padding:"16px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.1)"}}>
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:8}}><Chip>{c.area}</Chip><Chip>{c.local}</Chip>{c.desf&&<Chip cor="rgba(224,122,95,.25)">{c.desf}</Chip>}<span style={{...lab,fontSize:9.5}}>{fmtData(c.data)}{c.idade?` · ${c.idade}a`:""}{c.sexo?` ${c.sexo}`:""}</span></div>
+              <div style={{fontSize:16,fontWeight:600,lineHeight:1.35}}>{c.queixa}</div>
+              {c.hist&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,opacity:.8,whiteSpace:"pre-wrap"}}>{c.hist}</div>}
+              {c.conduta&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,whiteSpace:"pre-wrap"}}><b style={{...lab,marginRight:6}}>conduta</b>{c.conduta}</div>}
+              {c.aprend&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,padding:"10px 12px",borderRadius:12,background:"rgba(224,122,95,.12)",whiteSpace:"pre-wrap"}}><b style={{...lab,marginRight:6}}>aprendi</b>{c.aprend}</div>}
+              {c.duvida&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8}}><b style={{...lab,marginRight:6}}>dúvida{c.duvidaOk?" resolvida":""}</b>{c.duvida}{c.duvidaOk&&c.resolucao&&<div style={{opacity:.75,marginTop:4,whiteSpace:"pre-wrap"}}>→ {c.resolucao}</div>}</div>}
+              {cardDe&&cardDe.id===c.id?(
+                <div style={{marginTop:12,padding:14,borderRadius:16,background:"rgba(var(--cli-rgb),.05)"}}>
+                  <div style={{...lab,marginBottom:6}}>Frente (pergunta)</div><input style={inp} value={cardDe.frente} onChange={e=>setCardDe({...cardDe,frente:e.target.value})}/>
+                  <div style={{...lab,margin:"10px 0 6px"}}>Verso (resposta)</div><textarea style={{...inp,minHeight:64,resize:"vertical",lineHeight:1.5}} value={cardDe.verso} onChange={e=>setCardDe({...cardDe,verso:e.target.value})}/>
+                  <div style={{display:"flex",gap:10,marginTop:12}}><button style={{...btnP,opacity:cardDe.frente.trim()&&cardDe.verso.trim()?1:.4}} disabled={!(cardDe.frente.trim()&&cardDe.verso.trim())} onClick={salvarCardDe}>Criar cartão</button><button style={btnS} onClick={()=>setCardDe(null)}>Cancelar</button></div>
+                </div>
+              ):(
+                <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
+                  {c.aprend&&<button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={()=>abrirCardDe(c)}>Virar cartão</button>}
+                  <button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={()=>editarCaso(c)}>Editar</button>
+                  <button style={{...btnS,padding:"7px 14px",fontSize:12,borderColor:"rgba(168,50,50,.4)",color:"#A83232"}} onClick={()=>{if(window.confirm("Excluir este caso?"))setCasos(casos.filter(x=>x.id!==c.id));}}>Excluir</button>
+                </div>)}
+            </div>))}
+          {!verTodos&&casosFilt.length>20&&<button style={{...btnS,marginTop:12}} onClick={()=>setVerTodos(true)}>Ver todos ({casosFilt.length})</button>}
+        </Card>
+      </>)}
+
+      {sub==="rev"&&(<>
+        {rs?(
+          <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"36px 28px"}}>
+            {rs.fim?(<>
+              <div style={lab}>{rs.m5?"Modo 5 min concluído":"Revisão concluída"}</div>
+              <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{rs.ok}<small style={{fontSize:"45%",opacity:.45}}> / {rs.ok+rs.er}</small></div>
+              <Vazio>acertos nesta sessão. Os cartões voltam em intervalos crescentes.</Vazio>
+              <div style={{marginTop:20}}><button style={btnP} onClick={()=>setRs(null)}>Fechar</button></div>
+            </>):curK?(<>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <Chip>{curK.area}</Chip><span style={lab}>{Math.min(rs.i+1,rs.fila.length)} / {rs.fila.length}</span>
+              </div>
+              <div style={{height:4,borderRadius:99,background:"rgba(var(--cli-rgb),.1)",overflow:"hidden",marginBottom:26}}><div style={{width:(rs.i/rs.fila.length*100)+"%",height:"100%",background:T.ink,transition:"width .3s"}}/></div>
+              <div style={{...serif,fontSize:isMobile?26:34,lineHeight:1.3,wordBreak:"break-word",whiteSpace:"pre-wrap"}}>{curK.frente}</div>
+              {rs.show?(<>
+                <div style={{fontSize:isMobile?16:18,lineHeight:1.6,marginTop:22,padding:"16px 18px",borderRadius:16,background:"rgba(224,122,95,.12)",textAlign:"left",whiteSpace:"pre-wrap"}}>{curK.verso}</div>
+                <div style={{display:"flex",justifyContent:"center",gap:12,marginTop:26}}>
+                  <button style={{...btnS,minWidth:130,borderColor:"#A83232",color:"#A83232"}} onClick={()=>responder(false)}>Errei</button>
+                  <button style={{...btnP,minWidth:130}} onClick={()=>responder(true)}>Acertei</button>
+                </div>
+              </>):<div style={{marginTop:32}}><button style={btnP} onClick={()=>setRs({...rs,show:true})}>Mostrar resposta</button></div>}
+            </>):null}
+            {!rs.fim&&<div style={{marginTop:22}}><button onClick={()=>setRs(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--cli-rgb),.55)"}}>sair da revisão</button></div>}
+          </Card>
+        ):(<>
+          <Card>
+            <Titulo k="Repetição espaçada" t="Revisar" dir={<div style={{textAlign:"right"}}><div style={lab}>acerto</div><div style={{...serif,fontSize:isMobile?30:38,marginTop:4,color:CLI_ACC}}>{acertoTot===null?"—":acertoTot+"%"}</div></div>}/>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+              <button style={{...btnP,opacity:totHoje?1:.4}} disabled={!totHoje} onClick={()=>iniciarRev()}>{totHoje?`Revisar ${due.length}${novasLib.length?` + ${novasLib.length} ${novasLib.length===1?"novo":"novos"}`:""}`:"Nada para hoje"}</button>
+              {due.length>0&&<button style={btnS} onClick={()=>iniciarRev(true)}>Modo 5 min</button>}
+            </div>
+            <div style={{marginTop:16,fontSize:12.5,lineHeight:1.6,opacity:.8}}>
+              Novos hoje: <b>{novasFeitas}</b> de {limiteHoje}{novasTodas.length>0?` · ${novasTodas.length} na fila`:""}
+              {bloqueioNov&&<div style={{color:"#A83232",fontWeight:600}}>{bloqueioNov}</div>}
+              <div style={{marginTop:6}}>{novosEd
+                ?<span style={{display:"inline-flex",gap:8,alignItems:"center"}}>Novos por dia <input style={{...inp,width:70,padding:"6px 10px"}} type="number" min="0" value={cfgM.novosDia} onChange={e=>setCfgM({...cfgM,novosDia:e.target.value===""?"":Math.max(0,+e.target.value)})}/><button style={{...btnS,padding:"6px 12px",fontSize:12}} onClick={()=>setNovosEd(false)}>ok</button></span>
+                :<button onClick={()=>setNovosEd(true)} style={{background:"none",border:"none",padding:0,cursor:"pointer",textDecoration:"underline",textUnderlineOffset:3,fontSize:12.5,color:T.ink}}>ajustar limite diário</button>}</div>
+            </div>
+            <div style={{...lab,marginTop:12}}>{cards.length} cartões no total</div>
+          </Card>
+          <Card>
+            <Titulo k="Novo" t="Criar cartão"/>
+            <div style={{...lab,marginBottom:6}}>Frente (pergunta)</div><input style={inp} value={fk.frente} onChange={e=>setFk({...fk,frente:e.target.value})} placeholder="Ex: Quando suspeitar de…?"/>
+            <div style={{...lab,margin:"12px 0 6px"}}>Verso (resposta)</div><textarea style={{...inp,minHeight:70,resize:"vertical",lineHeight:1.5}} value={fk.verso} onChange={e=>setFk({...fk,verso:e.target.value})}/>
+            <div style={{...lab,margin:"12px 0 8px"}}>Área</div>
+            <div className="cli-row">{CLI_AREAS.map(a=><button key={a} style={pill(fk.area===a)} onClick={()=>setFk({...fk,area:a})}>{a}</button>)}</div>
+            <div style={{marginTop:16}}><button style={{...btnP,opacity:fk.frente.trim()&&fk.verso.trim()?1:.4}} disabled={!(fk.frente.trim()&&fk.verso.trim())} onClick={addCardManual}>Criar cartão</button></div>
+            <div style={{fontSize:12,opacity:.6,marginTop:12}}>Dica: o jeito mais rápido é registrar o caso e tocar em “Virar cartão” no ponto-chave.</div>
+          </Card>
+          {cards.length>0&&<Card>
+            <Titulo k="Banco" t="Seus cartões"/>
+            {cards.slice(0,25).map((k,n)=>(
+              <div key={k.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)"}}>
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:600,lineHeight:1.4}}>{k.frente}</div><div style={{...lab,fontSize:9.5,marginTop:4}}>{k.area}{isNova(k)?" · novo":""}</div></div>
+                <div style={{display:"flex",gap:3}} title={"nível "+(k.box||0)+" de 5"}>{[0,1,2,3,4].map(i=><i key={i} style={{width:6,height:6,borderRadius:"50%",background:i<(k.box||0)?T.ink:"rgba(var(--cli-rgb),.15)"}}/>)}</div>
+                <button onClick={()=>setCards(cards.filter(x=>x.id!==k.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--cli-rgb),.35)"}}>×</button>
+              </div>))}
+            {cards.length>25&&<div style={{...lab,marginTop:10}}>+ {cards.length-25} cartões</div>}
+          </Card>}
+        </>)}
+      </>)}
+
+      {sub==="cond"&&(<>
+        {pe?(
+          <Card>
+            <Titulo k={pe.id?"Editando":"Nova"} t={pe.id?"Editar ficha":"Ficha de conduta"}/>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 200px",gap:12}}>
+              <div><div style={{...lab,marginBottom:6}}>Título</div><input style={inp} value={pe.titulo} onChange={e=>setPe({...pe,titulo:e.target.value})} placeholder="Ex: Dor torácica no pronto atendimento"/></div>
+              <div><div style={{...lab,marginBottom:6}}>Área</div><select style={inp} value={pe.area} onChange={e=>setPe({...pe,area:e.target.value})}>{CLI_AREAS.map(a=><option key={a}>{a}</option>)}</select></div>
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"16px 0 6px"}}><div style={lab}>Conteúdo</div><button style={{...btnS,padding:"6px 12px",fontSize:11.5}} onClick={()=>setPe({...pe,texto:pe.texto.trim()?pe.texto+"\n\n"+CLI_MODELO:CLI_MODELO})}>inserir modelo de seções</button></div>
+            <textarea style={{...inp,minHeight:260,resize:"vertical",lineHeight:1.6,fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:13}} value={pe.texto} onChange={e=>setPe({...pe,texto:e.target.value})} placeholder={"# Seção\nitem do checklist\nOutro item"}/>
+            <div style={{fontSize:12,opacity:.6,marginTop:8,lineHeight:1.5}}>Linhas com <b>#</b> viram títulos de seção; as demais viram itens que você marca à beira do leito. Escreva conforme o protocolo do seu serviço: o app não traz conteúdo clínico pronto.</div>
+            <div style={{display:"flex",gap:10,marginTop:16}}><button style={{...btnP,opacity:pe.titulo.trim()?1:.4}} disabled={!pe.titulo.trim()} onClick={salvarProt}>Salvar ficha</button><button style={btnS} onClick={()=>setPe(null)}>Cancelar</button></div>
+          </Card>
+        ):protAb?(
+          <Card>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:12,marginBottom:6}}>
+              <button onClick={()=>setPAberta(null)} style={{background:"none",border:"none",padding:0,cursor:"pointer",...lab,textDecoration:"underline",textUnderlineOffset:3}}>← fichas</button>
+              <Chip>{protAb.area}</Chip>
+            </div>
+            <div style={{...serif,fontSize:isMobile?28:36,lineHeight:1.1,marginBottom:6}}>{protAb.titulo}</div>
+            <div style={{...lab,fontSize:9.5,marginBottom:18}}>atualizada em {fmtData(protAb.atualizada)}</div>
+            {linhasProt(protAb).length===0?<Vazio>Ficha vazia. Toque em editar para escrever.</Vazio>:linhasProt(protAb).map(x=>x.h
+              ?<div key={x.i} style={{...lab,color:T.ink,fontWeight:700,margin:"18px 0 8px",paddingBottom:6,borderBottom:"2px solid "+CLI_ACC,display:"inline-block"}}>{x.t}</div>
+              :<label key={x.i} style={{display:"flex",gap:12,alignItems:"flex-start",padding:"8px 0",cursor:"pointer",fontSize:15,lineHeight:1.5,textDecoration:marcas[protAb.id+":"+x.i]?"line-through":"none",opacity:marcas[protAb.id+":"+x.i]?.5:1}}>
+                <input type="checkbox" checked={!!marcas[protAb.id+":"+x.i]} onChange={e=>setMarcas({...marcas,[protAb.id+":"+x.i]:e.target.checked})} style={{width:20,height:20,marginTop:2,flexShrink:0,accentColor:T.ink}}/><span>{x.t}</span></label>)}
+            <div style={{display:"flex",gap:8,marginTop:22,flexWrap:"wrap"}}>
+              <button style={btnP} onClick={()=>setPe({id:protAb.id,titulo:protAb.titulo,area:protAb.area,texto:protAb.texto||""})}>Editar</button>
+              <button style={btnS} onClick={()=>setMarcas(Object.fromEntries(Object.entries(marcas).filter(([k])=>!k.startsWith(protAb.id+":"))))}>Limpar marcas</button>
+              <button style={{...btnS,borderColor:"rgba(168,50,50,.4)",color:"#A83232"}} onClick={()=>{if(window.confirm("Excluir esta ficha?")){setProt(prot.filter(x=>x.id!==protAb.id));setPAberta(null);}}}>Excluir</button>
+            </div>
+          </Card>
+        ):(<>
+          <Card>
+            <Titulo k="Fichas de bolso" t="Condutas" dir={<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>setPe({titulo:"",area:"Cardio",texto:""})}>Nova ficha</button>}/>
+            {prot.length===0?<Vazio>Crie fichas por queixa (dor torácica, sepse, AVC…) com o checklist do seu serviço. Na hora do plantão, abra e vá marcando.</Vazio>:(<>
+              <input style={{...inp,marginBottom:10}} value={pq} onChange={e=>setPq(e.target.value)} placeholder="Buscar ficha…"/>
+              {protFilt.map((p,n)=>(
+                <div key={p.id} onClick={()=>setPAberta(p.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)",cursor:"pointer"}}>
+                  <div style={{flex:1,minWidth:0}}><div style={{fontSize:15.5,fontWeight:600}}>{p.titulo}</div><div style={{...lab,fontSize:9.5,marginTop:4}}>{p.area} · {linhasProt(p).filter(x=>!x.h).length} itens</div></div>
+                  <span style={{fontSize:18,opacity:.35}}>›</span>
+                </div>))}
+              {protFilt.length===0&&<Vazio>Nada encontrado.</Vazio>}
+            </>)}
+          </Card>
+        </>)}
+      </>)}
+
+      </div></div>
+      {toast&&<div role="status" style={{position:"fixed",left:"50%",transform:"translateX(-50%)",bottom:20,zIndex:61,background:T.ink,color:T.sheet,borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:600,boxShadow:"0 14px 34px -10px rgba(0,0,0,.5)",maxWidth:"calc(100% - 32px)",textAlign:"center"}}>{toast}</div>}
+    </div>
+  );
+}
+
 function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [cfg,setCfg]=useLS("v5_idi_cfg",IDI_LANGS,userId);
   const [log,setLog]=useLS("v5_idi_log",[],userId);
@@ -1938,6 +2331,18 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [leit,setLeit]=useLS("v5_idi_leit",[],userId);
   const [lts,setLts]=useState({});
   const [lw,setLw]=useState(null);
+  const [midia,setMidia]=useLS("v5_idi_midia",[],userId);
+  const [mfo,setMfo]=useState({tipo:"serie",titulo:""});
+  const [mfonte,setMfonte]=useState("");
+  const [ms,setMs]=useState({min:"",comp:70});
+  const [mm,setMm]=useState({frase:"",lacuna:"",trad:"",tempo:""});
+  const [pl,setPl]=useState(null);
+  const [plT,setPlT]=useState(0);
+  const [plA,setPlA]=useState(null);
+  const [plB,setPlB]=useState(null);
+  const [plLoop,setPlLoop]=useState(false);
+  const [plV,setPlV]=useState(1);
+  const plRef=useRef(null);
   const [lf,setLf]=useState({trad:"",art:""});
   const [mt,setMt]=useState("");
   const [busca,setBusca]=useState("");
@@ -2239,6 +2644,47 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setLeit([{id:uid(),lang:sel,titulo:lt.titulo.trim()||lt.texto.trim().slice(0,32)+"…",texto:lt.texto,data:hoje},...leit]);
     setToast("Texto salvo.");
   };
+  // ── Escuta (podcasts, séries, filmes) ──
+  const MID_TIPOS=[["podcast","Podcast"],["serie","Série"],["filme","Filme"],["youtube","YouTube"]];
+  const midiaL=midia.filter(x=>x.lang===sel);
+  const fonteAtual=midiaL.find(x=>x.id===mfonte)||midiaL[0]||null;
+  const sessoesF=f=>log.filter(x=>x.lang===sel&&x.fonte===f.id);
+  const minF=f=>sessoesF(f).reduce((a,x)=>a+(+x.min||0),0);
+  const compF=f=>{const a=sessoesF(f).filter(x=>x.comp!==undefined).slice(0,5);return a.length?Math.round(a.reduce((t,x)=>t+x.comp,0)/a.length):null;};
+  const minOuvirSem=logSel.filter(x=>x.tipo==="ouvir"&&x.data>=iniSem).reduce((a,x)=>a+(+x.min||0),0);
+  const vereditoEscuta=c=>c>=90?"Muito fácil: ótimo para volume e relaxar o ouvido.":c>=70?"Faixa boa: você entende o fio e ainda captura palavras novas.":c>=50?"Puxado: ative legenda no idioma que está aprendendo e repita trechos.":"Difícil demais agora: escolha algo mais lento ou mais simples.";
+  const addFonte=()=>{
+    if(!mfo.titulo.trim())return;
+    const n={id:uid(),lang:sel,tipo:mfo.tipo,titulo:mfo.titulo.trim(),criada:hoje};
+    setMidia([n,...midia]); setMfonte(n.id); setMfo({...mfo,titulo:""});
+  };
+  const registrarEscuta=()=>{
+    const min=+ms.min; if(!(min>0)||!fonteAtual)return;
+    setLog([{id:uid(),lang:sel,tipo:"ouvir",min,nota:fonteAtual.titulo+" · "+ms.comp+"% entendido",data:hoje,fonte:fonteAtual.id,comp:+ms.comp},...log]);
+    setMs({...ms,min:""}); setToast("Sessão de escuta registrada.");
+  };
+  const mmM=(()=>{const f=mm.frase,l=mm.lacuna.trim();if(!f.trim()||!l)return -1;return f.toLowerCase().indexOf(l.toLowerCase());})();
+  const criarCartaoEscuta=()=>{
+    if(mmM<0||!mm.trad.trim())return;
+    const f=mm.frase.replace(/\s+/g," ").trim(); const l=mm.lacuna.trim();
+    const k=f.toLowerCase().indexOf(l.toLowerCase()); if(k<0)return;
+    const ex=f.slice(0,k)+"[["+f.slice(k,k+l.length)+"]]"+f.slice(k+l.length);
+    const fonte=fonteAtual?fonteAtual.titulo:"escuta";
+    setVocab([{id:uid(),lang:sel,termo:l,trad:mm.trad.trim(),ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,fonte,...(mm.tempo.trim()?{tempo:mm.tempo.trim()}:{})},...vocab]);
+    setMm({frase:"",lacuna:"",trad:"",tempo:""}); setToast("Cartão criado a partir do que você ouviu.");
+  };
+  const fmtMS=t=>{const x=Math.max(0,Math.floor(t));return Math.floor(x/60)+":"+String(x%60).padStart(2,"0");};
+  const abrirArq=e=>{
+    const f=e.target.files&&e.target.files[0]; if(!f)return;
+    if(pl&&pl.url){try{URL.revokeObjectURL(pl.url);}catch{}}
+    setPl({url:URL.createObjectURL(f),nome:f.name,video:/^video\//.test(f.type)}); setPlA(null); setPlB(null); setPlLoop(false); setPlT(0);
+  };
+  useEffect(()=>{
+    if(!plLoop||plA===null||plB===null)return;
+    const t=setInterval(()=>{const v=plRef.current;if(v&&!v.paused&&v.currentTime>=plB)v.currentTime=plA;},80);
+    return()=>clearInterval(t);
+  },[plLoop,plA,plB]);
+  useEffect(()=>{if(plRef.current)plRef.current.playbackRate=plV;},[plV,pl]);
   const pillD={display:"inline-flex",alignItems:"center",gap:6,border:"1px solid rgba(var(--idi-rgb),.22)",background:"transparent",borderRadius:999,padding:"7px 13px",fontSize:12.5,fontWeight:600,color:T.ink,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"};
   const dsCur=ds&&!ds.fim?ds.fila[ds.i]:null;
   const vogal=t=>/^[aeiouyhàâäéèêëîïôöûùü]/i.test(t||"");
@@ -2315,7 +2761,9 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const inp={background:"#fff",border:"1px solid rgba(var(--idi-rgb),.18)",borderRadius:12,padding:"11px 14px",fontSize:14,fontFamily:"'DM Sans',sans-serif",color:T.ink,width:"100%",minWidth:0,outline:"none"};
   const btnP={background:T.ink,color:T.sheet,border:"none",borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
   const btnS={background:"transparent",color:T.ink,border:"1px solid rgba(var(--idi-rgb),.25)",borderRadius:999,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
-  const Card=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(var(--idi-rgb),.1)",borderRadius:24,padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  const CardR2=useRef(null);
+  CardR2.current=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(var(--idi-rgb),.1)",borderRadius:24,padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  const Card=useRef(pp=>CardR2.current(pp)).current;
   const Titulo=({k,t,dir})=><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,marginBottom:18}}><div><div style={lab}>{k}</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:6,lineHeight:1,color:T.ink}}>{t}</div></div>{dir}</div>;
   const Vazio=({children})=><div style={{fontSize:14,lineHeight:1.45,color:"rgba(var(--idi-rgb),.62)"}}>{children}</div>;
   const Pick=({val,set,opts})=>(
@@ -2337,7 +2785,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     {l:"Vocabulário",v:String(vocSel.length),u:dominadas+" dominadas",s:T.tiles[2],z:1.5,x:10,y:50,to:"palavras"},
     {l:"Sequência",v:String(streak),u:streak===1?"dia seguido":"dias seguidos",s:T.tiles[3],z:1.4,x:30,y:20,to:"evol"},
   ];
-  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["evol","Evolução"]];
+  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
   const nomeSel=`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
   // Evolução
@@ -2611,6 +3059,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                   <div style={{fontSize:isMobile?20:24,marginTop:18,fontWeight:500}}>{cur.trad}</div>
                   {cur.plural&&<div style={{fontSize:14,marginTop:8,opacity:.65}}>plural: {(GEN[cur.lang]||G).plArt} {cur.plural}</div>}
                   {cur.ex&&<div style={{fontSize:14,marginTop:10,fontStyle:"italic",opacity:.75,lineHeight:1.5}}>{clozeVer(cur.ex,true)}</div>}
+                  {cur.fonte&&<div style={{...lab,marginTop:8,fontSize:9.5}}>{cur.fonte}{cur.tempo?" · "+cur.tempo:""}</div>}
                   {caixaMinha()}
                   <div style={{display:"flex",justifyContent:"center",gap:12,marginTop:28}}>
                     <button style={{...btnS,minWidth:130,borderColor:IDI_RED,color:IDI_RED}} onClick={()=>responder(false)}>Errei</button>
@@ -2640,6 +3089,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                   </div>
                   {cur.plural&&<div style={{fontSize:14,marginTop:12,opacity:.65}}>plural: {(GEN[cur.lang]||G).plArt} {cur.plural}</div>}
                   {cur.ex&&<div style={{fontSize:14,marginTop:10,fontStyle:"italic",opacity:.75,lineHeight:1.5}}>{clozeVer(cur.ex,true)}</div>}
+                  {cur.fonte&&<div style={{...lab,marginTop:8,fontSize:9.5}}>{cur.fonte}{cur.tempo?" · "+cur.tempo:""}</div>}
                   {caixaMinha()}
                   <div style={{display:"flex",justifyContent:"center",gap:12,marginTop:24,flexWrap:"wrap"}}>
                     {rs.res.r==="er"&&!rs.res.skip&&<button style={{...btnS,minWidth:130}} onClick={()=>responder(true)}>Contar como acerto</button>}
@@ -2845,6 +3295,77 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 <button onClick={()=>setLeit(leit.filter(y=>y.id!==x.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
               </div>))}
           </Card>)}
+      </>)}
+
+      {/* ═ ESCUTA ═ */}
+      {sub==="midia"&&(<>
+        <Card>
+          <Titulo k="Input real" t="Podcasts, séries e filmes" dir={<div style={{textAlign:"right"}}><div style={lab}>ouvir na semana</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:4}}>{minOuvirSem}<small style={{fontSize:"50%",opacity:.55}}> min</small></div></div>}/>
+          <div style={{fontSize:13.5,lineHeight:1.6,opacity:.78,maxWidth:620}}>Áudio de pessoas reais, com vozes e sotaques variados, é o melhor treino de ouvido. Assista ou ouça no app de sempre (Netflix, Spotify, YouTube) e use este espaço para <b>registrar</b> o tempo, medir o quanto você entendeu e <b>pescar frases</b> que viram cartão.</div>
+        </Card>
+        <Card>
+          <Titulo k="Fontes" t={"O que você ouve em "+unica.nome.toLowerCase()}/>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>{MID_TIPOS.map(([k,l])=><button key={k} onClick={()=>setMfo({...mfo,tipo:k})} style={{height:34,padding:"0 16px",borderRadius:999,border:"1px solid "+T.ink,background:mfo.tipo===k?T.ink:"transparent",color:mfo.tipo===k?T.sheet:T.ink,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{l}</button>)}</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+            <input style={{...inp,flex:"1 1 200px",width:"auto"}} value={mfo.titulo} onChange={e=>setMfo({...mfo,titulo:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addFonte();}} placeholder={sel==="fr"?"Ex: Dix pour cent, Inner French":"Ex: Dark, Easy German, Tagesschau"}/>
+            <button style={btnP} onClick={addFonte}>Adicionar</button>
+          </div>
+          {midiaL.length>0&&<div style={{marginTop:16}}>{midiaL.map((f,n)=>{const on=fonteAtual&&fonteAtual.id===f.id;const c=compF(f);return (
+            <div key={f.id} onClick={()=>setMfonte(f.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 10px",margin:"0 -10px",borderRadius:14,cursor:"pointer",background:on?"rgba(var(--idi-rgb),.07)":"transparent",borderTop:n===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+              <i style={{width:10,height:10,borderRadius:"50%",background:on?T.ink:"rgba(var(--idi-rgb),.2)",flexShrink:0}}/>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.titulo}</div><div style={{...lab,fontSize:9.5,marginTop:3}}>{(MID_TIPOS.find(x=>x[0]===f.tipo)||[0,f.tipo])[1]} · {minF(f)} min{c!==null?` · ${c}% entendido`:""}</div></div>
+              <button onClick={e=>{e.stopPropagation();setMidia(midia.filter(x=>x.id!==f.id));}} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
+            </div>);})}</div>}
+        </Card>
+        {fonteAtual&&(<>
+          <Card>
+            <Titulo k="Sessão" t={"Registrar: "+fonteAtual.titulo}/>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"140px 1fr",gap:16,alignItems:"end"}}>
+              <div><div style={{...lab,marginBottom:6}}>Minutos</div><input style={inp} type="number" min="1" value={ms.min} onChange={e=>setMs({...ms,min:e.target.value})} placeholder="40"/></div>
+              <div><div style={{...lab,marginBottom:6}}>Quanto eu entendi: <b style={{color:T.ink}}>{ms.comp}%</b></div><input type="range" min="0" max="100" step="5" value={ms.comp} onChange={e=>setMs({...ms,comp:+e.target.value})}/></div>
+            </div>
+            <div style={{fontSize:13.5,lineHeight:1.5,marginTop:12,opacity:.85}}>{vereditoEscuta(ms.comp)}</div>
+            <div style={{marginTop:14}}><button style={{...btnP,opacity:+ms.min>0?1:.4}} disabled={!(+ms.min>0)} onClick={registrarEscuta}>Registrar sessão</button></div>
+          </Card>
+          <Card>
+            <Titulo k="Pescar" t="Frase que escapou"/>
+            <div style={{fontSize:13,opacity:.7,lineHeight:1.5,marginBottom:12}}>Pausou e não entendeu um trecho? Escreva a frase como está na legenda (ou como você a decifrou) e marque o trecho que escapou. Vira um cartão de lacuna.</div>
+            <textarea style={{...inp,minHeight:70,resize:"vertical",lineHeight:1.5}} value={mm.frase} onChange={e=>setMm({...mm,frase:e.target.value})} placeholder="Frase completa, no idioma original"/>
+            <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginTop:12}}>
+              <div><div style={{...lab,marginBottom:6}}>Trecho que escapou</div><input style={inp} value={mm.lacuna} onChange={e=>setMm({...mm,lacuna:e.target.value})} placeholder="palavra ou expressão da frase"/></div>
+              <div><div style={{...lab,marginBottom:6}}>Tradução do trecho</div><input style={inp} value={mm.trad} onChange={e=>setMm({...mm,trad:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")criarCartaoEscuta();}} placeholder="em português"/></div>
+            </div>
+            <div style={{display:"flex",gap:10,marginTop:12,alignItems:"center",flexWrap:"wrap"}}>
+              <input style={{...inp,maxWidth:150}} value={mm.tempo} onChange={e=>setMm({...mm,tempo:e.target.value})} placeholder="min:seg (opc.)"/>
+              {pl&&<button style={{...btnS,padding:"9px 14px",fontSize:12}} onClick={()=>setMm({...mm,tempo:fmtMS(plRef.current?plRef.current.currentTime:plT)})}>usar tempo do player</button>}
+            </div>
+            {mm.frase.trim()&&mm.lacuna.trim()&&mmM<0&&<div style={{fontSize:12.5,color:IDI_RED,marginTop:10}}>Esse trecho não aparece na frase. Copie exatamente como está escrito.</div>}
+            <div style={{marginTop:14}}><button style={{...btnP,opacity:mmM>=0&&mm.trad.trim()?1:.4}} disabled={!(mmM>=0&&mm.trad.trim())} onClick={criarCartaoEscuta}>Criar cartão</button></div>
+          </Card>
+        </>)}
+        <Card>
+          <Titulo k="Shadowing" t="Player com repetição de trecho"/>
+          <div style={{fontSize:13,opacity:.7,lineHeight:1.5,marginBottom:12}}>Se você tiver um arquivo de áudio ou vídeo seu (podcast baixado, gravação), abra aqui para repetir um trecho em loop e falar junto, com atraso mínimo. O arquivo fica só no seu aparelho, não é enviado a lugar nenhum.</div>
+          <input type="file" accept="audio/*,video/*" onChange={abrirArq} style={{fontSize:13,maxWidth:"100%"}}/>
+          {pl&&(<div style={{marginTop:16}}>
+            {pl.video
+              ?<video ref={plRef} src={pl.url} preload="auto" controls playsInline onTimeUpdate={e=>setPlT(e.target.currentTime)} style={{width:"100%",borderRadius:14,background:"#000",maxHeight:300}}/>
+              :<audio ref={plRef} src={pl.url} preload="auto" controls onTimeUpdate={e=>setPlT(e.target.currentTime)} style={{width:"100%"}}/>}
+            <div style={{...lab,marginTop:8}}>{pl.nome} · {fmtMS(plT)}</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12,alignItems:"center"}}>
+              <span style={lab}>velocidade</span>
+              {[0.75,0.9,1,1.15].map(v=><button key={v} onClick={()=>setPlV(v)} style={{height:32,padding:"0 13px",borderRadius:999,border:"1px solid "+T.ink,background:plV===v?T.ink:"transparent",color:plV===v?T.sheet:T.ink,fontSize:12.5,fontWeight:600,cursor:"pointer"}}>{v}x</button>)}
+            </div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:12}}>
+              <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>{if(plRef.current)plRef.current.currentTime=Math.max(0,plRef.current.currentTime-5);}}>−5 s</button>
+              <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>{if(plRef.current)plRef.current.currentTime+=5;}}>+5 s</button>
+              <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>{setPlA(plRef.current?plRef.current.currentTime:plT);}}>Marcar início{plA!==null?" · "+fmtMS(plA):""}</button>
+              <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>{setPlB(plRef.current?plRef.current.currentTime:plT);}}>Marcar fim{plB!==null?" · "+fmtMS(plB):""}</button>
+              <button style={{...(plLoop?btnP:btnS),padding:"8px 14px",fontSize:12,opacity:plA!==null&&plB!==null&&plB>plA?1:.4}} disabled={!(plA!==null&&plB!==null&&plB>plA)} onClick={()=>{setPlLoop(!plLoop);if(!plLoop&&plRef.current){plRef.current.currentTime=plA;plRef.current.play();}}}>{plLoop?"Loop ligado":"Repetir trecho"}</button>
+            </div>
+            <div style={{fontSize:12.5,opacity:.65,lineHeight:1.55,marginTop:14}}>Roteiro: 1) ouça o trecho sem ler; 2) ouça lendo a transcrição; 3) repita junto, imitando ritmo e entonação; 4) grave você mesma e compare.</div>
+          </div>)}
+        </Card>
       </>)}
 
       {sub==="subst"&&(<>
@@ -5601,14 +6122,15 @@ function AppMain({user, onLogout}) {
     {id:"categorias",icon:"☰",label:"Categorias"},
     {id:"estudos",icon:"✦",label:"Estudos"},
     {id:"idiomas",icon:"✎",label:"Idiomas"},
+    {id:"clinica",icon:"✚",label:"Clínica"},
   ];
   const navTo=id=>{setTab(id);setSideOpen(false);};
   const [trocando,setTrocando]=useState(null);
   const trocarApp=dest=>{
-    const atualApp=tab==="estudos"?"est":tab==="idiomas"?"idi":"fin";
+    const atualApp=tab==="estudos"?"est":tab==="idiomas"?"idi":tab==="clinica"?"med":"fin";
     if(dest===atualApp||trocando)return;
     setTrocando(dest);
-    setTimeout(()=>{navTo(dest==="est"?"estudos":dest==="idi"?"idiomas":"dashboard");try{window.scrollTo(0,0);}catch{}},300);
+    setTimeout(()=>{navTo(dest==="est"?"estudos":dest==="idi"?"idiomas":dest==="med"?"clinica":"dashboard");try{window.scrollTo(0,0);}catch{}},300);
     setTimeout(()=>setTrocando(null),900);
   };
   const showCard=id=>dashCards[id]!==false;
@@ -5628,7 +6150,7 @@ function AppMain({user, onLogout}) {
   const TMUT="rgba(26,18,9,0.45)";
 
   return (
-    <div className={"vl"+(isMobile?" mobile":"")+(tab==="estudos"||tab==="idiomas"?" est-on":"")+(tab==="idiomas"?" idi-on":"")} style={{...((p)=>({"--m1":p.m1,"--m2":p.m2,"--m3":p.m3,"--m4":p.m4,"--base":p.base,"--h1":p.h1,"--h2":p.h2,"--h3":p.h3,"--hb":p.hb,"--acc":p.acc}))(BG_PALETTES[bgId]||BG_PALETTES.tartan),minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
+    <div className={"vl"+(isMobile?" mobile":"")+(tab==="estudos"||tab==="idiomas"||tab==="clinica"?" est-on":"")+(tab==="idiomas"?" idi-on":"")+(tab==="clinica"?" clin-on":"")} style={{...((p)=>({"--m1":p.m1,"--m2":p.m2,"--m3":p.m3,"--m4":p.m4,"--base":p.base,"--h1":p.h1,"--h2":p.h2,"--h3":p.h3,"--hb":p.hb,"--acc":p.acc}))(BG_PALETTES[bgId]||BG_PALETTES.tartan),minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
       <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap');
@@ -5698,6 +6220,7 @@ function AppMain({user, onLogout}) {
         .vl.est-on .m-hero,.vl.est-on .sheet,.vl.est-on .wallpaper-bg{display:none!important}
         .vl.est-on,body:has(.vl.est-on){background:#15251E}
         .vl.idi-on,body:has(.vl.idi-on){background:#2A1E14}
+        .vl.clin-on,body:has(.vl.clin-on){background:#0B2229}
         .vl .sheet{background:var(--base);border-radius:30px 30px 0 0;margin-top:-26px;position:relative;z-index:1;min-height:70vh}
         .mobile .sheet{margin-top:-24px}
         .mobile .main-wrap{padding:24px 14px 96px!important}
@@ -5886,7 +6409,7 @@ function AppMain({user, onLogout}) {
           <div className="m-hero-scrim"/>
           <div className="m-hero-in">
           <div className="m-hero-top" style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
-            <button onClick={()=>setSideOpen(true)} aria-label="Abrir menu" style={{background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:99,width:40,height:40,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5,minHeight:40}}>
+            <button onClick={()=>setSideOpen(true)} aria-label="Abrir menu" style={{background:"rgba(255,255,255,0.16)",border:"1px solid rgba(255,255,255,0.3)",borderRadius:99,width:40,height:40,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5,minHeight:40,flexShrink:0}}>
               <div style={{width:16,height:1.5,background:"#fff",borderRadius:1}}/>
               <div style={{width:16,height:1.5,background:"#fff",borderRadius:1}}/>
               <div style={{width:10,height:1.5,background:"#fff",borderRadius:1,alignSelf:"flex-start",marginLeft:12}}/>
@@ -5960,12 +6483,13 @@ function AppMain({user, onLogout}) {
         </div>
       </div>
 
-      {trocando&&(()=>{const est=trocando==="est",idi=trocando==="idi";const sty=est?"noite":idi?"manteiga":palBg.hero.s;return (
+      {trocando&&(()=>{const est=trocando==="est",idi=trocando==="idi",med=trocando==="med";const sty=est?"noite":idi?"manteiga":med?"petroleo":palBg.hero.s;return (
         <div className="app-swap" style={{background:STY[sty].paper}}>
           <Motif s={sty} z={1.1} x={est?40:30} y={est?10:20} style={{position:"absolute",inset:0}}/>
-          <div className="app-swap-card"><div className="mono" style={{fontSize:10,letterSpacing:".24em",textTransform:"uppercase",opacity:.6,marginBottom:8}}>Velara</div><div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,fontSize:46,letterSpacing:"-.03em",lineHeight:1}}>{est?"Estudos":idi?"Idiomas":"Finanças"}</div></div>
+          <div className="app-swap-card"><div className="mono" style={{fontSize:10,letterSpacing:".24em",textTransform:"uppercase",opacity:.6,marginBottom:8}}>Velara</div><div style={{fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,fontSize:46,letterSpacing:"-.03em",lineHeight:1}}>{est?"Estudos":idi?"Idiomas":med?"Clínica":"Finanças"}</div></div>
         </div>);})()}
       {tab==="idiomas"&&<IdiomasApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
+      {tab==="clinica"&&<ClinicaApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
       {tab==="estudos"&&<EstudosApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
       <div className="sheet">
       <div className="main-wrap" style={{maxWidth:1100,margin:"0 auto",padding:"14px 24px 80px",position:"relative",zIndex:1}}>
