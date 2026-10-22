@@ -1918,6 +1918,65 @@ const CLI_MODELO="# Avaliação inicial\n\n# Exames\n\n# Conduta\n\n# Quando int
 const CLI_MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","agosto","setembro","outubro","novembro","dezembro"];
 
 // ── Apoio ao raciocínio clínico (sala amarela). Lembrete de diagnósticos diferenciais e condutas iniciais; doses ficam de fora de propósito. ──
+// ── Clínica: anexos (IndexedDB, só neste aparelho) e exames laboratoriais ──
+const CLI_DTIPO=["Evolução","Reavaliação","Medicação","Intercorrência","Contato"];
+const CLI_IMGT=["ECG","RX","TC","USG","RM","Outro"];
+const CLI_LAB=[
+  ["Hemograma",[["hb","Hb","g/dL",[12,17.5]],["ht","Ht","%",[36,52]],["leu","Leucócitos","/mm³",[4000,11000]],["bast","Bastões","%",[0,5]],["plq","Plaquetas","mil/mm³",[150,450]]]],
+  ["Bioquímica",[["ur","Ureia","mg/dL",[15,45]],["cr","Creatinina","mg/dL",[0.6,1.3]],["na","Na","mEq/L",[135,145]],["k","K","mEq/L",[3.5,5.1]],["mg","Mg","mg/dL",[1.6,2.6]],["glic","Glicemia","mg/dL",[70,140]],["tgo","TGO","U/L",[0,40]],["tgp","TGP","U/L",[0,41]],["bt","Bilirrubina total","mg/dL",[0,1.2]],["lip","Lipase","U/L",[0,60]]]],
+  ["Cardíaco e inflamatório",[["trop","Troponina","valor + unidade",null],["ckmb","CK-MB","valor + unidade",null],["bnp","BNP / NT-proBNP","valor + unidade",null],["dd","D-dímero","valor + unidade",null],["pcr","PCR","mg/L",[0,5]],["lac","Lactato","mmol/L",[0.5,2]],["inr","INR","",[0.8,1.2]]]],
+  ["Gasometria",[["ph","pH","",[7.35,7.45]],["pco2","pCO2","mmHg",[35,45]],["hco3","HCO3","mEq/L",[22,26]],["po2","pO2","mmHg",[80,100]],["be","BE","mEq/L",[-2,2]]]]
+];
+const refLab=(a,sexo)=>a[0]==="hb"?(sexo==="F"?[12,16]:sexo==="M"?[13,17.5]:a[3]):a[3];
+const flagLab=(a,v,sexo)=>{const r=refLab(a,sexo);if(!r)return "";const n=parseFloat(String(v).replace(",","."));if(isNaN(n))return "";return n<r[0]?"↓":n>r[1]?"↑":"";};
+function medDb(){return new Promise((res,rej)=>{try{const r=indexedDB.open("velara_med_files",1);r.onupgradeneeded=()=>r.result.createObjectStore("f");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
+async function medPut(id,val){const db=await medDb();return new Promise((res,rej)=>{const t=db.transaction("f","readwrite");t.objectStore("f").put(val,id);t.oncomplete=()=>res(true);t.onerror=()=>rej(t.error);});}
+async function medGet(id){const db=await medDb();return new Promise((res,rej)=>{const q=db.transaction("f","readonly").objectStore("f").get(id);q.onsuccess=()=>res(q.result||null);q.onerror=()=>rej(q.error);});}
+async function medDel(id){try{const db=await medDb();return await new Promise(res=>{const t=db.transaction("f","readwrite");t.objectStore("f").delete(id);t.oncomplete=()=>res(true);t.onerror=()=>res(false);});}catch{return false;}}
+async function medPrep(file){
+  if(!/^image\//.test(file.type))return file;
+  try{
+    const bmp=await createImageBitmap(file); const k=Math.min(1,1800/Math.max(bmp.width,bmp.height));
+    const c=document.createElement("canvas"); c.width=Math.max(1,Math.round(bmp.width*k)); c.height=Math.max(1,Math.round(bmp.height*k));
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
+    const b=await new Promise(r=>c.toBlob(r,"image/jpeg",0.82)); return b||file;
+  }catch{return file;}
+}
+function MedThumb({fid,mime,nome,onOpen}){
+  const [u,setU]=useState(null); const [st,setSt]=useState("...");
+  useEffect(()=>{
+    let url=null,vivo=true;
+    medGet(fid).then(r=>{if(!vivo)return;if(!r){setSt("falta");return;}if(/^image\//.test(r.blob.type||mime||"")){url=URL.createObjectURL(r.blob);setU(url);}setSt("ok");}).catch(()=>{if(vivo)setSt("falta");});
+    return()=>{vivo=false;if(url)URL.revokeObjectURL(url);};
+  },[fid,mime]);
+  return (
+    <button type="button" onClick={()=>st==="ok"&&onOpen({fid,nome,mime})} title={nome} style={{width:86,height:86,borderRadius:14,border:"1px solid rgba(0,0,0,.12)",background:"#F2F4F4",padding:0,overflow:"hidden",cursor:st==="ok"?"pointer":"default",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10.5,lineHeight:1.3,textAlign:"center",color:"#4a5558",fontFamily:"'DM Sans',sans-serif",flexShrink:0}}>
+      {u?<img src={u} alt={nome} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:st==="falta"?<span style={{padding:6}}>só no aparelho de origem</span>:st==="ok"?<span style={{fontWeight:700}}>{/pdf/i.test(mime||"")?"PDF":"arquivo"}</span>:"…"}
+    </button>);
+}
+function MedLightbox({lb,onClose}){
+  const [u,setU]=useState(null); const [img,setImg]=useState(true); const [z,setZ]=useState(false);
+  useEffect(()=>{
+    let url=null,vivo=true;
+    medGet(lb.fid).then(r=>{if(!vivo||!r)return;url=URL.createObjectURL(r.blob);setImg(/^image\//.test(r.blob.type||lb.mime||""));setU(url);});
+    return()=>{vivo=false;if(url)URL.revokeObjectURL(url);};
+  },[lb.fid,lb.mime]);
+  const bt={background:"rgba(255,255,255,.14)",color:"#fff",border:"1px solid rgba(255,255,255,.3)",borderRadius:999,padding:"8px 16px",fontSize:13,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",textDecoration:"none"};
+  return (
+    <div style={{position:"fixed",inset:0,zIndex:99999,background:"rgba(0,0,0,.94)",display:"flex",flexDirection:"column"}}>
+      <div style={{display:"flex",gap:10,padding:"12px 14px",alignItems:"center",flexWrap:"wrap"}}>
+        <button style={bt} onClick={onClose}>Fechar</button>
+        {u&&img&&<button style={bt} onClick={()=>setZ(!z)}>{z?"Ajustar à tela":"Ampliar"}</button>}
+        {u&&!img&&<button style={bt} onClick={()=>window.open(u,"_blank")}>Abrir PDF</button>}
+        {u&&<a style={bt} href={u} download={lb.nome||"arquivo"}>Baixar</a>}
+        <span style={{color:"rgba(255,255,255,.6)",fontSize:12,minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{lb.nome}</span>
+      </div>
+      <div style={{flex:1,overflow:"auto",display:"flex",alignItems:z?"flex-start":"center",justifyContent:z?"flex-start":"center",padding:8}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+        {u&&img&&<img src={u} alt={lb.nome} onClick={()=>setZ(!z)} style={z?{width:"220%",maxWidth:"none",cursor:"zoom-out"}:{maxWidth:"100%",maxHeight:"100%",objectFit:"contain",cursor:"zoom-in"}}/>}
+        {!u&&<span style={{color:"#fff",fontSize:14}}>Arquivo não encontrado neste aparelho.</span>}
+      </div>
+    </div>);
+}
 const CLI_KB=[
 {id:"dt",nome:"Dor torácica",area:"Cardio",
  sinais:[["op","Dor opressiva, em aperto"],["irr","Irradia para braço, mandíbula ou dorso"],["esf","Desencadeada por esforço, alivia no repouso"],["plr","Piora ao respirar (pleurítica)"],["pos","Piora deitado, melhora sentado inclinado"],["ras","Início súbito, rasgante, intensidade máxima de cara"],["dis","Dispneia associada"],["sin","Síncope ou pré-síncope"],["feb","Febre ou tosse produtiva"],["tx","Dor reproduzida à palpação ou movimento"],["fr","Fatores de risco cardiovascular"],["tev","Imobilização, cirurgia, câncer ou TEV prévio"],["hip","Hipotensão ou choque"],["sat","SpO2 baixa"],["ass","Assimetria de pulsos ou de PA entre os braços"],["rgr","Pirose, regurgitação, relação com alimentação"]],
@@ -2058,6 +2117,17 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const [evoT,setEvoT]=useState("");
   const [encDesf,setEncDesf]=useState("");
   const [tickS,setTickS]=useState(0);
+  const [ptab,setPtab]=useState("resumo");
+  const [exSub,setExSub]=useState("lab");
+  const [dTipo,setDTipo]=useState("Evolução");
+  const [dQuando,setDQuando]=useState("");
+  const [dVit,setDVit]=useState(false);
+  const [evoEd,setEvoEd]=useState(null);
+  const [evoEdT,setEvoEdT]=useState("");
+  const [labF,setLabF]=useState(null);
+  const [imgF,setImgF]=useState(null);
+  const [lb,setLb]=useState(null);
+  const [subindo,setSubindo]=useState(false);
   useEffect(()=>{if(sub!=="sala")return;const t=setInterval(()=>setTickS(x=>x+1),30000);return()=>clearInterval(t);},[sub]);
   useEffect(()=>{if(!toast)return;const t=setTimeout(()=>setToast(""),3200);return()=>clearTimeout(t);},[toast]);
 
@@ -2151,14 +2221,14 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const agoraISO=()=>{const d=new Date();return hoje+"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");};
   void tickS;
   const minsDesde=iso=>Math.max(0,Math.round((Date.now()-new Date(iso+":00").getTime())/60000));
-  const fmtDur=m=>m<60?m+" min":Math.floor(m/60)+"h"+String(m%60).padStart(2,"0");
+  const fmtDur=m=>m<60?m+" min":m<1440?Math.floor(m/60)+"h"+String(m%60).padStart(2,"0"):Math.floor(m/1440)+"d "+Math.floor((m%1440)/60)+"h";
   const upPac=(id,patch)=>setPacs(pacs.map(x=>x.id!==id?x:{...x,...patch}));
   const pac=pacs.find(x=>x.id===pacId)||null;
   const pacsOrd=[...pacs].sort((a,b)=>(a.entrada||"").localeCompare(b.entrada||""));
   const addPac=()=>{
     if(!np.queixa.trim()&&!np.leito.trim())return;
     const n={id:uid(),leito:np.leito.trim()||"s/ id",idade:np.idade,sexo:np.sexo,queixa:np.queixa.trim()||"(sem queixa)",entrada:agoraISO(),sit:"aguardando-ex",vit:{pa:"",fc:"",fr:"",sat:"",tax:"",gli:"",mental:false},sind:"",sinais:[],hip:[],pend:[],evo:[],conduta:""};
-    setPacs([n,...pacs]); setNp({leito:"",idade:"",sexo:"",queixa:""}); setNpAberto(false); setPacId(n.id); setExpDx(null);
+    setPacs([n,...pacs]); setNp({leito:"",idade:"",sexo:"",queixa:""}); setNpAberto(false); setPacId(n.id); setExpDx(null); setPtab("resumo"); setLabF(null); setImgF(null);
   };
   const alertasVit=v=>{
     const out=[]; const sys=parseInt(String(v.pa||"").split("/")[0],10); const fc=parseFloat(v.fc),fr=parseFloat(v.fr),sat=parseFloat(v.sat),tax=parseFloat(String(v.tax||"").replace(",",".")),gli=parseFloat(v.gli);
@@ -2176,17 +2246,59 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const ciclaHip=k=>upPac(pac.id,{hip:pac.hip.map(h=>h.k!==k?h:{...h,estado:h.estado==="investigando"?"confirmada":h.estado==="confirmada"?"descartada":"investigando"})});
   const addPend=()=>{if(!pendT.trim())return;upPac(pac.id,{pend:[...pac.pend,{id:uid(),t:pendT.trim(),feito:false,res:""}]});setPendT("");};
   const upPend=(id,patch)=>upPac(pac.id,{pend:pac.pend.map(x=>x.id!==id?x:{...x,...patch})});
-  const addEvo=()=>{if(!evoT.trim())return;upPac(pac.id,{evo:[{id:uid(),h:agoraISO(),t:evoT.trim()},...pac.evo]});setEvoT("");};
+  const abrirPac=id=>{setPacId(id);setExpDx(null);setPtab("resumo");setLabF(null);setImgF(null);setEvoEd(null);try{window.scrollTo({top:0,behavior:"smooth"});}catch{}};
+  const vitTxt=v=>[v.pa&&"PA "+v.pa,v.fc&&"FC "+v.fc,v.fr&&"FR "+v.fr,v.sat&&"SpO2 "+v.sat+"%",v.tax&&"Tax "+v.tax,v.gli&&"Glic "+v.gli,v.mental&&"estado mental alterado"].filter(Boolean).join(" · ");
+  const addEvo=()=>{if(!evoT.trim())return;const h=dQuando||agoraISO();upPac(pac.id,{evo:[{id:uid(),h,tipo:dTipo,t:evoT.trim(),vit:dVit?vitTxt(pac.vit):""},...(pac.evo||[])]});setEvoT("");setDQuando("");setDVit(false);};
+  const salvarEvoEd=()=>{if(!evoEdT.trim())return;upPac(pac.id,{evo:pac.evo.map(e=>e.id!==evoEd?e:{...e,t:evoEdT.trim()})});setEvoEd(null);};
+  const diaN=iso=>Math.round((new Date(iso.slice(0,10)+"T12:00:00")-new Date((pac?pac.entrada:iso).slice(0,10)+"T12:00:00"))/864e5)+1;
+  const evoOrd=pac?[...(pac.evo||[])].sort((a,b)=>b.h.localeCompare(a.h)):[];
+  const evoGrupos=[];evoOrd.forEach(e=>{const d=e.h.slice(0,10);const g=evoGrupos[evoGrupos.length-1];if(g&&g.d===d)g.it.push(e);else evoGrupos.push({d,it:[e]});});
+  const diaTxt=d=>{try{return new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"}).replace(".","");}catch{return d;}};
+  const labsOrd=pac?[...(pac.lab||[])].sort((a,b)=>a.h.localeCompare(b.h)):[];
+  const salvarLab=()=>{
+    const vals={};Object.keys(labF.vals).forEach(k=>{const v=String(labF.vals[k]).trim();if(v)vals[k]=v;});
+    if(!Object.keys(vals).length&&!labF.outros.trim())return;
+    const e={id:labF.id||uid(),h:labF.h||agoraISO(),vals,outros:labF.outros.trim()};
+    const l=pac.lab||[]; upPac(pac.id,{lab:labF.id?l.map(x=>x.id===e.id?e:x):[...l,e]}); setLabF(null);
+  };
+  const excluirLab=()=>{if(!labF.id)return;if(!window.confirm("Excluir esta coleta?"))return;upPac(pac.id,{lab:(pac.lab||[]).filter(x=>x.id!==labF.id)});setLabF(null);};
+  const addArqs=async ev=>{
+    const fs=[...ev.target.files]; ev.target.value=""; if(!fs.length)return;
+    setSubindo(true); const novos=[];
+    for(const f of fs){
+      if(f.size>15*1024*1024){setToast(f.name+" é grande demais (máx. 15 MB).");continue;}
+      try{const b=await medPrep(f);const fid=uid();const mime=b.type||f.type;await medPut(fid,{blob:b,nome:f.name,mime});novos.push({fid,nome:f.name,mime});}
+      catch(e){setToast("Não consegui guardar "+f.name+" neste aparelho.");}
+    }
+    setImgF(prev=>prev?{...prev,files:[...prev.files,...novos],novos:[...prev.novos,...novos.map(n=>n.fid)]}:prev);
+    setSubindo(false);
+  };
+  const tirarArq=fid=>setImgF(prev=>{const novo=prev.novos.includes(fid);if(novo)medDel(fid);return {...prev,files:prev.files.filter(f=>f.fid!==fid),novos:prev.novos.filter(x=>x!==fid),remover:novo?prev.remover:[...prev.remover,fid]};});
+  const cancelarImg=()=>{(imgF.novos||[]).forEach(f=>medDel(f));setImgF(null);};
+  const salvarImg=()=>{
+    if(!imgF.files.length&&!imgF.laudo.trim()&&!imgF.regiao.trim())return;
+    imgF.remover.forEach(f=>medDel(f));
+    const e={id:imgF.id||uid(),h:imgF.h||agoraISO(),tipo:imgF.tipo,regiao:imgF.regiao.trim(),laudo:imgF.laudo.trim(),files:imgF.files};
+    const l=pac.img||[]; upPac(pac.id,{img:imgF.id?l.map(x=>x.id===e.id?e:x):[e,...l]}); setImgF(null);
+  };
+  const removerImg=e=>{if(!window.confirm("Excluir este exame e as imagens anexadas?"))return;e.files.forEach(f=>medDel(f.fid));upPac(pac.id,{img:(pac.img||[]).filter(x=>x.id!==e.id)});};
+  const limparArq=p=>{(p.img||[]).forEach(i=>i.files.forEach(f=>medDel(f.fid)));};
   const encerrar=()=>{
     if(!pac||!encDesf)return;
     const kbx=CLI_KB.find(x=>x.id===pac.sind); const v=pac.vit;
     const sinaisTxt=kbx?pac.sinais.map(k=>(kbx.sinais.find(x=>x[0]===k)||[0,k])[1]).join("; "):"";
-    const vit=[v.pa&&"PA "+v.pa,v.fc&&"FC "+v.fc,v.fr&&"FR "+v.fr,v.sat&&"SpO2 "+v.sat+"%",v.tax&&"Tax "+v.tax,v.gli&&"Glic "+v.gli].filter(Boolean).join(" · ");
+    const dm=iso=>iso.slice(8,10)+"/"+iso.slice(5,7);
     const pendTxt=pac.pend.map(x=>"- "+x.t+(x.res?": "+x.res:"")+(x.feito?"":" (pendente)")).join("\n");
     const hipTxt=pac.hip.map(h=>h.nome+" ("+h.estado+")").join("; ");
-    const evoTxt=[...pac.evo].reverse().map(e=>e.h.slice(11)+" "+e.t).join("\n");
-    const hist=[vit,sinaisTxt&&"Achados: "+sinaisTxt,hipTxt&&"Hipóteses: "+hipTxt,pendTxt&&"Exames e pendências:\n"+pendTxt,evoTxt&&"Evolução:\n"+evoTxt].filter(Boolean).join("\n");
+    const labTxt=[...(pac.lab||[])].sort((a,b)=>a.h.localeCompare(b.h)).map(l=>{
+      const itens=CLI_LAB.flatMap(([g,as])=>as.filter(a=>l.vals[a[0]]).map(a=>a[1]+" "+l.vals[a[0]]+flagLab(a,l.vals[a[0]],pac.sexo)));
+      return "- "+dm(l.h)+" "+l.h.slice(11)+": "+[...itens,l.outros].filter(Boolean).join(", ");
+    }).join("\n");
+    const imgTxt=[...(pac.img||[])].sort((a,b)=>a.h.localeCompare(b.h)).map(e=>"- "+e.tipo+(e.regiao?" "+e.regiao:"")+" ("+dm(e.h)+")"+(e.laudo?": "+e.laudo:"")).join("\n");
+    const evoTxt=[...(pac.evo||[])].sort((a,b)=>a.h.localeCompare(b.h)).map(e=>dm(e.h)+" "+e.h.slice(11)+(e.tipo&&e.tipo!=="Evolução"?" ["+e.tipo+"]":"")+" "+e.t+(e.vit?" ("+e.vit+")":"")).join("\n");
+    const hist=[vitTxt(v),sinaisTxt&&"Achados: "+sinaisTxt,hipTxt&&"Hipóteses: "+hipTxt,pendTxt&&"Pendências:\n"+pendTxt,labTxt&&"Laboratório:\n"+labTxt,imgTxt&&"Imagem:\n"+imgTxt,evoTxt&&"Diário:\n"+evoTxt].filter(Boolean).join("\n");
     const caso={id:uid(),data:(pac.entrada||hoje).slice(0,10),local:"UPA",idade:pac.idade,sexo:pac.sexo,queixa:pac.queixa,area:kbx?kbx.area:"Outros",hist,conduta:pac.conduta,desf:encDesf,aprend:"",duvida:"",criada:hoje,duvidaOk:false,resolucao:""};
+    limparArq(pac);
     setCasos([caso,...casos]); setPacs(pacs.filter(x=>x.id!==pac.id)); setPacId(null); setEncDesf("");
     editarCaso(caso); setToast("Caso salvo no diário. Complete o que você aprendeu.");
   };
@@ -2276,7 +2388,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
           <Card>
             <Titulo k="Agora" t="Na sala amarela" dir={<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>{setSub("sala");setPacId(null);}}>abrir sala</button>}/>
             {pacsOrd.slice(0,5).map((x,n)=>(
-              <div key={x.id} onClick={()=>{setSub("sala");setPacId(x.id);}} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)",cursor:"pointer"}}>
+              <div key={x.id} onClick={()=>{setSub("sala");abrirPac(x.id);}} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)",cursor:"pointer"}}>
                 <span style={{...serif,fontSize:22,width:46,flexShrink:0}}>{x.leito}</span>
                 <div style={{flex:1,minWidth:0,fontSize:14,fontWeight:600,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{x.queixa}</div>
                 <span style={{...lab,whiteSpace:"nowrap"}}>{fmtDur(minsDesde(x.entrada))}</span>
@@ -2338,7 +2450,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
           {pacsOrd.length===0?<Card><Vazio>Ninguém na sala por enquanto. Toque em “Novo paciente” quando começar a atender.</Vazio></Card>:pacsOrd.map(x=>{
             const al=alertasVit(x.vit); const abertas=x.pend.filter(y=>!y.feito).length; const hipsA=x.hip.filter(h=>h.estado!=="descartada");
             return (
-              <div key={x.id} onClick={()=>{setPacId(x.id);setExpDx(null);try{window.scrollTo({top:0,behavior:"smooth"});}catch{}}} style={{background:"#fff",border:"1px solid rgba(var(--cli-rgb),.1)",borderRadius:24,padding:isMobile?"16px 18px":"20px 26px",marginBottom:12,cursor:"pointer"}}>
+              <div key={x.id} onClick={()=>abrirPac(x.id)} style={{background:"#fff",border:"1px solid rgba(var(--cli-rgb),.1)",borderRadius:24,padding:isMobile?"16px 18px":"20px 26px",marginBottom:12,cursor:"pointer"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:12}}>
                   <div style={{display:"flex",alignItems:"baseline",gap:10,minWidth:0}}><span style={{...serif,fontSize:isMobile?26:30,lineHeight:1}}>{x.leito}</span><span style={{...lab,whiteSpace:"nowrap"}}>{x.idade?x.idade+"a":""}{x.sexo?" "+x.sexo:""}</span></div>
                   <span style={{...lab,whiteSpace:"nowrap"}}>há {fmtDur(minsDesde(x.entrada))}</span>
@@ -2351,6 +2463,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
                   {al.q!==null&&al.q>=2&&<Chip cor="rgba(168,50,50,.28)">qSOFA {al.q}</Chip>}
                 </div>
                 {hipsA.length>0&&<div style={{fontSize:12.5,opacity:.7,marginTop:8,lineHeight:1.5}}>{hipsA.map(h=>h.nome).join(" · ")}</div>}
+                {(()=>{const ult=(x.evo||[]).map(e=>e.h).sort().pop();return <div style={{fontSize:12,opacity:.6,marginTop:8}}>{ult?"Último registro no diário há "+fmtDur(minsDesde(ult)):"Sem registro no diário"}{(x.lab||[]).length>0?" · "+(x.lab||[]).length+" coleta"+((x.lab||[]).length>1?"s":""):""}{(x.img||[]).length>0?" · "+(x.img||[]).length+" imagem"+((x.img||[]).length>1?"s":""):""}</div>;})()}
               </div>);})}
         </>):(<>
           <div style={{marginBottom:14,display:"flex",justifyContent:"space-between",alignItems:"center",gap:10}}>
@@ -2360,6 +2473,9 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
           <Card>
             <div style={{display:"flex",alignItems:"baseline",gap:12,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?34:42,lineHeight:1}}>{pac.leito}</span><span style={lab}>{pac.idade?pac.idade+" anos":""}{pac.sexo?" · "+pac.sexo:""}</span></div>
             <input style={{...inp,marginTop:12,fontWeight:600}} value={pac.queixa} onChange={e=>upPac(pac.id,{queixa:e.target.value})}/>
+            <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginTop:12}}><span style={lab}>Entrada</span><input type="datetime-local" style={{...inp,width:"100%",maxWidth:260,padding:"8px 10px",fontSize:13,boxSizing:"border-box"}} value={pac.entrada} onChange={e=>{if(e.target.value)upPac(pac.id,{entrada:e.target.value});}}/></div>
+            {ptab!=="resumo"&&<div style={{marginTop:10}}><Chip cor="rgba(224,122,95,.22)">{(CLI_SIT.find(c=>c[0]===pac.sit)||[0,"—"])[1]}</Chip></div>}
+            {ptab==="resumo"&&(<>
             <div style={{...lab,margin:"16px 0 8px"}}>Situação</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_SIT.map(([k,l])=><button key={k} style={pill(pac.sit===k)} onClick={()=>upPac(pac.id,{sit:k})}>{l}</button>)}</div>
             <div style={{...lab,margin:"16px 0 8px"}}>Sinais vitais</div>
@@ -2368,6 +2484,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
                 <div key={k}><div style={{...lab,fontSize:9,marginBottom:5}}>{l}</div><input style={{...inp,padding:"9px 10px"}} inputMode={k==="pa"?"text":"decimal"} value={pac.vit[k]} onChange={e=>upPac(pac.id,{vit:{...pac.vit,[k]:e.target.value}})} placeholder={ph}/></div>))}
             </div>
             <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13,marginTop:12}}><input type="checkbox" checked={!!pac.vit.mental} onChange={e=>upPac(pac.id,{vit:{...pac.vit,mental:e.target.checked}})} style={{width:"auto"}}/>Alteração do estado mental</label>
+            </>)}
             {(()=>{const al=alertasVit(pac.vit);return (al.flags.length>0||al.q!==null)&&(
               <div style={{marginTop:14,padding:"12px 14px",borderRadius:14,background:al.q>=2||al.flags.length?"rgba(168,50,50,.08)":"rgba(var(--cli-rgb),.05)",fontSize:13,lineHeight:1.55}}>
                 {al.flags.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:al.q!==null?8:0}}>{al.flags.map(f=><Chip key={f} cor="rgba(168,50,50,.2)">{f}</Chip>)}</div>}
@@ -2375,6 +2492,10 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
               </div>);})()}
           </Card>
 
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",margin:"2px 0 16px"}}>
+            {[["resumo","Resumo"+(pac.pend.filter(y=>!y.feito).length?" · "+pac.pend.filter(y=>!y.feito).length:"")],["rac","Raciocínio"],["dia","Diário"+((pac.evo||[]).length?" · "+pac.evo.length:"")],["ex","Exames"+(((pac.lab||[]).length+(pac.img||[]).length)?" · "+((pac.lab||[]).length+(pac.img||[]).length):"")]].map(([k,l])=><button key={k} style={pill(ptab===k)} onClick={()=>setPtab(k)}>{l}</button>)}
+          </div>
+          {ptab==="rac"&&(<>
           <Card>
             <Titulo k="Apoio ao raciocínio" t="O que pode ser?"/>
             <div style={{...lab,marginBottom:8}}>Síndrome</div>
@@ -2401,8 +2522,17 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
             {pac.hip.length>0&&<div style={{fontSize:12,opacity:.6,marginTop:8}}>Toque no estado para alternar: investigando, confirmada, descartada.</div>}
           </Card>
 
+          </>)}
+
+          {ptab==="resumo"&&(<>
           <Card>
-            <Titulo k="Acompanhar" t="Exames e pendências"/>
+            <Titulo k="Raciocínio" t="Hipóteses"/>
+            {pac.hip.length===0?<Vazio>Nenhuma ainda. Use a aba Raciocínio para pensar nos diferenciais e marcar as hipóteses.</Vazio>:<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{pac.hip.map(h=><button key={h.k} onClick={()=>ciclaHip(h.k)} style={{border:"none",borderRadius:999,padding:"8px 14px",fontSize:13,fontWeight:600,cursor:"pointer",background:corEstado[h.estado],color:T.ink,textDecoration:h.estado==="descartada"?"line-through":"none",fontFamily:"'DM Sans',sans-serif"}}>{h.nome} · {h.estado}</button>)}</div>}
+            <div style={{marginTop:10}}><button onClick={()=>setPtab("rac")} style={{background:"none",border:"none",padding:0,cursor:"pointer",...lab,textDecoration:"underline",textUnderlineOffset:3}}>abrir raciocínio</button></div>
+          </Card>
+
+          <Card>
+            <Titulo k="Acompanhar" t="Pendências"/>
             {pac.pend.map((x,n)=>(
               <div key={x.id} style={{padding:"10px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)"}}>
                 <label style={{display:"flex",gap:12,alignItems:"flex-start",cursor:"pointer",fontSize:14.5,lineHeight:1.45}}>
@@ -2419,18 +2549,8 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
           </Card>
 
           <Card>
-            <Titulo k="Linha do tempo" t="Evolução"/>
-            <div style={{display:"flex",gap:10}}>
-              <input style={inp} value={evoT} onChange={e=>setEvoT(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addEvo();}} placeholder="Ex: reavaliado, dor melhorou após analgesia"/>
-              <button style={btnP} onClick={addEvo}>Registrar</button>
-            </div>
-            {pac.evo.map((e,n)=>(
-              <div key={e.id} style={{display:"flex",gap:12,padding:"10px 0",borderTop:n===0?"1px solid rgba(var(--cli-rgb),.08)":"1px solid rgba(var(--cli-rgb),.08)",marginTop:n===0?14:0,fontSize:14,lineHeight:1.5}}>
-                <span style={{...lab,flexShrink:0,paddingTop:3}}>{e.h.slice(11)}</span><span style={{flex:1}}>{e.t}</span>
-                <button onClick={()=>upPac(pac.id,{evo:pac.evo.filter(y=>y.id!==e.id)})} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--cli-rgb),.35)"}}>×</button>
-              </div>))}
-            <div style={{...lab,margin:"18px 0 6px"}}>Conduta</div>
-            <textarea style={{...inp,minHeight:70,resize:"vertical",lineHeight:1.5}} value={pac.conduta} onChange={e=>upPac(pac.id,{conduta:e.target.value})} placeholder="O que foi prescrito e decidido"/>
+            <Titulo k="Decisões" t="Conduta"/>
+            <textarea style={{...inp,minHeight:84,resize:"vertical",lineHeight:1.5}} value={pac.conduta} onChange={e=>upPac(pac.id,{conduta:e.target.value})} placeholder="O que foi prescrito e decidido"/>
           </Card>
 
           <Card>
@@ -2439,10 +2559,126 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_DESF.map(d=><button key={d} style={pill(encDesf===d)} onClick={()=>setEncDesf(encDesf===d?"":d)}>{d}</button>)}</div>
             <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
               <button style={{...btnP,opacity:encDesf?1:.4}} disabled={!encDesf} onClick={encerrar}>Salvar no diário e encerrar</button>
-              <button style={{...btnS,borderColor:"rgba(168,50,50,.4)",color:"#A83232"}} onClick={()=>{if(window.confirm("Remover da sala sem salvar no diário?")){setPacs(pacs.filter(x=>x.id!==pac.id));setPacId(null);}}}>Remover sem salvar</button>
+              <button style={{...btnS,borderColor:"rgba(168,50,50,.4)",color:"#A83232"}} onClick={()=>{if(window.confirm("Remover da sala sem salvar no diário? As imagens anexadas serão apagadas deste aparelho.")){limparArq(pac);setPacs(pacs.filter(x=>x.id!==pac.id));setPacId(null);}}}>Remover sem salvar</button>
             </div>
-            <div style={{fontSize:12,opacity:.6,marginTop:10}}>O caso vai para o diário com sinais, hipóteses, exames e evolução. Depois é só preencher o que aprendeu.</div>
+            <div style={{fontSize:12,opacity:.6,marginTop:10}}>O caso vai para o diário de casos com sinais, hipóteses, exames, imagens (laudo) e o diário do paciente. As imagens anexadas são apagadas deste aparelho ao encerrar.</div>
           </Card>
+          </>)}
+
+          {ptab==="dia"&&(<Card>
+            <Titulo k={"Dia "+diaN(agoraISO())+" na sala"} t="Diário do paciente"/>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:12}}>{CLI_DTIPO.map(t=><button key={t} style={pill(dTipo===t)} onClick={()=>setDTipo(t)}>{t}</button>)}</div>
+            <textarea style={{...inp,minHeight:90,resize:"vertical",lineHeight:1.5}} value={evoT} onChange={e=>setEvoT(e.target.value)} placeholder="O que mudou, o que foi feito, o que fica pendente"/>
+            <div style={{display:"flex",gap:16,alignItems:"center",flexWrap:"wrap",marginTop:12}}>
+              <label style={{display:"flex",alignItems:"center",gap:8,fontSize:13}}><input type="checkbox" checked={dVit} onChange={e=>setDVit(e.target.checked)} style={{width:"auto"}}/>Anexar sinais vitais atuais</label>
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",width:"100%"}}><span style={{...lab,whiteSpace:"nowrap"}}>Horário (vazio = agora)</span><input type="datetime-local" style={{...inp,width:"100%",maxWidth:260,padding:"8px 10px",fontSize:13,boxSizing:"border-box"}} value={dQuando} onChange={e=>setDQuando(e.target.value)}/></div>
+            </div>
+            <div style={{marginTop:14}}><button style={{...btnP,opacity:evoT.trim()?1:.4}} disabled={!evoT.trim()} onClick={addEvo}>Registrar</button></div>
+            {evoGrupos.length===0&&<div style={{marginTop:18}}><Vazio>Nada registrado ainda. Anote reavaliações, medicações e intercorrências para ter a história do paciente na sala.</Vazio></div>}
+            {evoGrupos.map(g=>(
+              <div key={g.d} style={{marginTop:22}}>
+                <div style={{...lab,marginBottom:8,color:"#B5533C"}}>{diaN(g.d)>=1?"Dia "+diaN(g.d)+" · ":"Antes da entrada · "}{diaTxt(g.d)}</div>
+                {g.it.map((e,n)=>(
+                  <div key={e.id} style={{padding:"12px 0",borderTop:"1px solid rgba(var(--cli-rgb),.08)",fontSize:14,lineHeight:1.55}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+                      <span style={{...lab,flexShrink:0}}>{e.h.slice(11)}</span>
+                      <Chip cor={(e.tipo||"Evolução")==="Intercorrência"?"rgba(168,50,50,.2)":(e.tipo||"Evolução")==="Medicação"?"rgba(60,130,90,.22)":undefined}>{e.tipo||"Evolução"}</Chip>
+                      <span style={{flex:1}}/>
+                      {evoEd!==e.id&&<button onClick={()=>{setEvoEd(e.id);setEvoEdT(e.t);}} style={{background:"none",border:"none",cursor:"pointer",...lab,textDecoration:"underline",textUnderlineOffset:3}}>editar</button>}
+                      <button onClick={()=>{if(window.confirm("Excluir este registro?"))upPac(pac.id,{evo:pac.evo.filter(y=>y.id!==e.id)});}} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--cli-rgb),.35)"}}>×</button>
+                    </div>
+                    {evoEd===e.id?(<div>
+                      <textarea style={{...inp,minHeight:80,resize:"vertical",lineHeight:1.5}} value={evoEdT} onChange={ev=>setEvoEdT(ev.target.value)}/>
+                      <div style={{display:"flex",gap:8,marginTop:8}}><button style={{...btnP,padding:"8px 16px",fontSize:12.5}} onClick={salvarEvoEd}>Salvar</button><button style={{...btnS,padding:"8px 16px",fontSize:12.5}} onClick={()=>setEvoEd(null)}>Cancelar</button></div>
+                    </div>):<div style={{whiteSpace:"pre-wrap"}}>{e.t}</div>}
+                    {e.vit&&<div style={{...lab,marginTop:6,letterSpacing:".03em",textTransform:"none"}}>{e.vit}</div>}
+                  </div>))}
+              </div>))}
+          </Card>)}
+
+          {ptab==="ex"&&(<>
+            <div style={{display:"flex",gap:8,marginBottom:14}}>{[["lab","Laboratório"+((pac.lab||[]).length?" · "+pac.lab.length:"")],["img","Imagem"+((pac.img||[]).length?" · "+pac.img.length:"")]].map(([k,l])=><button key={k} style={pill(exSub===k)} onClick={()=>setExSub(k)}>{l}</button>)}</div>
+
+            {exSub==="lab"&&(<Card>
+              <Titulo k="Resultados" t="Laboratório" dir={!labF&&<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>setLabF({id:null,h:agoraISO(),vals:{},outros:""})}>Nova coleta</button>}/>
+              {labF&&(<div style={{padding:16,borderRadius:16,background:"rgba(var(--cli-rgb),.05)",marginBottom:18}}>
+                <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:6}}><span style={lab}>Coleta em</span><input type="datetime-local" style={{...inp,width:"100%",maxWidth:260,padding:"8px 10px",fontSize:13,boxSizing:"border-box"}} value={labF.h} onChange={e=>setLabF({...labF,h:e.target.value})}/></div>
+                <div style={{fontSize:12,opacity:.6,marginBottom:4}}>Preencha só o que veio. As setas indicam valores fora da faixa de adulto; a referência muda por laboratório.</div>
+                {CLI_LAB.map(([g,as])=>(<div key={g}>
+                  <div style={{...lab,margin:"16px 0 8px"}}>{g}</div>
+                  <div style={{display:"grid",gridTemplateColumns:isMobile?"repeat(2,1fr)":"repeat(4,1fr)",gap:10}}>
+                    {as.map(a=>{const v=labF.vals[a[0]]||"";const f=v?flagLab(a,v,pac.sexo):"";const r=refLab(a,pac.sexo);return (
+                      <div key={a[0]}><div style={{...lab,fontSize:9,marginBottom:5,textTransform:"none",letterSpacing:".02em"}}>{a[1]}{a[2]?" · "+a[2]:""}{r?" ("+r[0]+"–"+r[1]+")":""}</div>
+                        <input style={{...inp,padding:"9px 10px",borderColor:f?"rgba(168,50,50,.55)":undefined,color:f?"#A83232":undefined}} inputMode={r?"decimal":"text"} value={v} onChange={e=>setLabF({...labF,vals:{...labF.vals,[a[0]]:e.target.value}})}/></div>);})}
+                  </div></div>))}
+                <div style={{...lab,margin:"16px 0 8px"}}>Outros (urina, culturas, sorologias…)</div>
+                <textarea style={{...inp,minHeight:60,resize:"vertical",lineHeight:1.5}} value={labF.outros} onChange={e=>setLabF({...labF,outros:e.target.value})}/>
+                <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
+                  <button style={btnP} onClick={salvarLab}>Salvar coleta</button>
+                  <button style={btnS} onClick={()=>setLabF(null)}>Cancelar</button>
+                  {labF.id&&<button style={{...btnS,borderColor:"rgba(168,50,50,.4)",color:"#A83232"}} onClick={excluirLab}>Excluir coleta</button>}
+                </div>
+              </div>)}
+              {labsOrd.length===0&&!labF&&<Vazio>Nenhuma coleta registrada. Toque em “Nova coleta” para lançar hemograma, bioquímica, troponina, gasometria e o que mais vier.</Vazio>}
+              {labsOrd.length>0&&(()=>{
+                const linhas=CLI_LAB.flatMap(([g,as])=>as.filter(a=>labsOrd.some(l=>l.vals[a[0]])));
+                const th={padding:"8px 10px",fontSize:11,fontWeight:700,textAlign:"center",whiteSpace:"nowrap",borderBottom:"1px solid rgba(var(--cli-rgb),.15)",cursor:"pointer",lineHeight:1.35};
+                return (<>
+                  <div style={{overflowX:"auto",margin:"0 -6px"}}><table style={{borderCollapse:"collapse",fontSize:13.5,minWidth:"100%"}}>
+                    <thead><tr><th style={{...th,textAlign:"left",position:"sticky",left:0,background:"#fff",cursor:"default",zIndex:1}}/>{labsOrd.map(l=><th key={l.id} style={th} onClick={()=>setLabF({id:l.id,h:l.h,vals:{...l.vals},outros:l.outros||""})} title="Editar coleta">{l.h.slice(8,10)}/{l.h.slice(5,7)}<br/><span style={{fontWeight:500,opacity:.6}}>{l.h.slice(11)}</span></th>)}</tr></thead>
+                    <tbody>{linhas.map(a=>(<tr key={a[0]}>
+                      <td style={{padding:"8px 10px",position:"sticky",left:0,background:"#fff",borderBottom:"1px solid rgba(var(--cli-rgb),.07)",fontWeight:600,whiteSpace:"nowrap",zIndex:1}}>{a[1]}<span style={{fontWeight:400,opacity:.5,fontSize:10.5}}> {a[2]&&a[2].indexOf(" ")<0?a[2]:""}</span></td>
+                      {labsOrd.map(l=>{const v=l.vals[a[0]];const f=v?flagLab(a,v,pac.sexo):"";return <td key={l.id} style={{padding:"8px 10px",textAlign:"center",whiteSpace:"nowrap",borderBottom:"1px solid rgba(var(--cli-rgb),.07)",background:f?"rgba(168,50,50,.1)":"transparent",color:f?"#A83232":T.ink,fontWeight:f?700:400}}>{v?v+(f?" "+f:""):"·"}</td>;})}
+                    </tr>))}</tbody>
+                  </table></div>
+                  {labsOrd.filter(l=>l.outros).map(l=><div key={l.id} style={{fontSize:13.5,lineHeight:1.55,marginTop:12}}><span style={lab}>{l.h.slice(8,10)}/{l.h.slice(5,7)} {l.h.slice(11)}</span> {l.outros}</div>)}
+                  <div style={{fontSize:12,opacity:.6,marginTop:12}}>Toque na data de uma coluna para editar ou excluir a coleta.</div>
+                </>);})()}
+            </Card>)}
+
+            {exSub==="img"&&(<Card>
+              <Titulo k="Resultados" t="Imagem e ECG" dir={!imgF&&<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>setImgF({id:null,h:agoraISO(),tipo:"RX",regiao:"",laudo:"",files:[],novos:[],remover:[]})}>Novo exame</button>}/>
+              {imgF&&(<div style={{padding:16,borderRadius:16,background:"rgba(var(--cli-rgb),.05)",marginBottom:18}}>
+                <div style={{...lab,marginBottom:8}}>Tipo</div>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_IMGT.map(t=><button key={t} style={pill(imgF.tipo===t)} onClick={()=>setImgF({...imgF,tipo:t})}>{t}</button>)}</div>
+                <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12,marginTop:14}}>
+                  <div><div style={{...lab,marginBottom:6}}>Região ou detalhe</div><input style={inp} value={imgF.regiao} onChange={e=>setImgF({...imgF,regiao:e.target.value})} placeholder="Ex: tórax PA e perfil, crânio sem contraste"/></div>
+                  <div><div style={{...lab,marginBottom:6}}>Realizado em</div><input type="datetime-local" style={inp} value={imgF.h} onChange={e=>setImgF({...imgF,h:e.target.value})}/></div>
+                </div>
+                <div style={{...lab,margin:"14px 0 6px"}}>Laudo ou minha leitura</div>
+                <textarea style={{...inp,minHeight:80,resize:"vertical",lineHeight:1.5}} value={imgF.laudo} onChange={e=>setImgF({...imgF,laudo:e.target.value})} placeholder="O que o laudo diz, ou o que você viu"/>
+                <div style={{...lab,margin:"14px 0 8px"}}>Imagens e PDFs</div>
+                <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-start"}}>
+                  {imgF.files.map(f=>(<div key={f.fid} style={{position:"relative"}}><MedThumb fid={f.fid} mime={f.mime} nome={f.nome} onOpen={setLb}/><button onClick={()=>tirarArq(f.fid)} aria-label="remover arquivo" style={{position:"absolute",top:-6,right:-6,width:22,height:22,borderRadius:99,border:"none",background:"#A83232",color:"#fff",fontSize:14,lineHeight:1,cursor:"pointer"}}>×</button></div>))}
+                  <label style={{width:86,height:86,borderRadius:14,border:"1.5px dashed rgba(var(--cli-rgb),.35)",display:"flex",alignItems:"center",justifyContent:"center",textAlign:"center",fontSize:11.5,lineHeight:1.3,cursor:"pointer",flexShrink:0,opacity:subindo?.5:1}}>
+                    <input type="file" accept="image/*,application/pdf" multiple onChange={addArqs} style={{display:"none"}}/>{subindo?"salvando…":"+ foto ou arquivo"}
+                  </label>
+                </div>
+                <div style={{fontSize:12,opacity:.6,marginTop:8,lineHeight:1.5}}>As imagens ficam guardadas só neste aparelho (não sincronizam com a conta) e são reduzidas para ocupar pouco espaço. O texto do laudo sincroniza normalmente. Evite fotografar nome ou prontuário do paciente.</div>
+                <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
+                  <button style={btnP} onClick={salvarImg}>Salvar exame</button>
+                  <button style={btnS} onClick={cancelarImg}>Cancelar</button>
+                </div>
+              </div>)}
+              {(pac.img||[]).length===0&&!imgF&&<Vazio>Nenhum exame de imagem. Registre ECG, RX, TC, USG e anexe a foto ou o PDF do laudo.</Vazio>}
+              {[...(pac.img||[])].sort((a,b)=>b.h.localeCompare(a.h)).map((e,n)=>(
+                <div key={e.id} style={{padding:"14px 0",borderTop:n===0&&!imgF?"none":"1px solid rgba(var(--cli-rgb),.08)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <Chip cor="rgba(224,122,95,.22)">{e.tipo}</Chip>
+                    <span style={{fontSize:14.5,fontWeight:600}}>{e.regiao}</span>
+                    <span style={{flex:1}}/>
+                    <span style={lab}>{e.h.slice(8,10)}/{e.h.slice(5,7)} {e.h.slice(11)}</span>
+                  </div>
+                  {e.files.length>0&&<div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:10}}>{e.files.map(f=><MedThumb key={f.fid} fid={f.fid} mime={f.mime} nome={f.nome} onOpen={setLb}/>)}</div>}
+                  {e.laudo&&<div style={{fontSize:14,lineHeight:1.55,marginTop:10,whiteSpace:"pre-wrap"}}>{e.laudo}</div>}
+                  {!imgF&&<div style={{display:"flex",gap:14,marginTop:10}}>
+                    <button onClick={()=>setImgF({id:e.id,h:e.h,tipo:e.tipo,regiao:e.regiao||"",laudo:e.laudo||"",files:[...e.files],novos:[],remover:[]})} style={{background:"none",border:"none",padding:0,cursor:"pointer",...lab,textDecoration:"underline",textUnderlineOffset:3}}>editar</button>
+                    <button onClick={()=>removerImg(e)} style={{background:"none",border:"none",padding:0,cursor:"pointer",...lab,textDecoration:"underline",textUnderlineOffset:3,color:"#A83232"}}>excluir</button>
+                  </div>}
+                </div>))}
+            </Card>)}
+          </>)}
+
         </>)}
       </>)}
 
@@ -2616,6 +2852,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
 
       </div></div>
       {toast&&<div role="status" style={{position:"fixed",left:"50%",transform:"translateX(-50%)",bottom:20,zIndex:61,background:T.ink,color:T.sheet,borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:600,boxShadow:"0 14px 34px -10px rgba(0,0,0,.5)",maxWidth:"calc(100% - 32px)",textAlign:"center"}}>{toast}</div>}
+      {lb&&<MedLightbox lb={lb} onClose={()=>setLb(null)}/>}
     </div>
   );
 }
