@@ -1938,6 +1938,47 @@ function gItemErro(m,nomeArea){
   }
   return {q:"Reescreva corretamente: "+A,r:[C],f:"",h,e:exp};
 }
+const IA_KC="velara_claude_key", IA_KG="velara_gemini_key";
+const iaKey=k=>{try{return localStorage.getItem(k)||"";}catch{return "";}};
+async function iaChamar(prompt,b64,json){
+  const ck=iaKey(IA_KC), gk=iaKey(IA_KG);
+  if(!ck&&!gk)throw new Error("SEM_CHAVE");
+  if(ck){
+    const content=[]; if(b64)content.push({type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}}); content.push({type:"text",text:prompt});
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":ck,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-5-5",max_tokens:4096,messages:[{role:"user",content}]})});
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error.message||"erro na API");
+    return (data.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
+  }
+  const parts=[]; if(b64)parts.push({inline_data:{mime_type:"image/jpeg",data:b64}}); parts.push({text:prompt});
+  const resp=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+gk,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts}],generationConfig:json?{responseMimeType:"application/json",temperature:0.1}:{temperature:0.3}})});
+  const data=await resp.json();
+  if(data.error)throw new Error(data.error.message||"erro na API");
+  const c=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0];
+  return (c&&c.text)||"";
+}
+async function gFotoErros(file,lang,areas){
+  if(!iaKey(IA_KC)&&!iaKey(IA_KG))throw new Error("SEM_CHAVE");
+  const b=await medPrep(file);
+  const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=rej;r.readAsDataURL(b);});
+  const idioma=lang==="de"?"alemão":"francês";
+  const chaves=areas.map(a=>a[0]+" = "+a[1]).join("; ");
+  const prompt="Você é professor de "+idioma+" (nível A2). A imagem mostra exercícios de livro didático resolvidos por uma aluna brasileira, já com a correção (marcas, riscos ou gabarito). Encontre SOMENTE os erros dela. Para cada erro devolva a frase COMPLETA como ela escreveu (errada) e a frase COMPLETA correta (certa), copiando do livro; se o exercício for de lacuna, monte a frase inteira com a resposta dela e com a resposta correta. Não invente frases e não inclua o que já está certo. Em area use UMA destas chaves: "+chaves+". Use outro se nenhuma servir. Em exercicio coloque o número do exercício, se visível. Em analise escreva, em português do Brasil e em até 120 palavras: o padrão comum dos erros desta página, o ponto gramatical a revisar e, se o capítulo, a lição ou a página aparecer, a que parte do livro voltar. Se não houver erros legíveis, devolva erros vazio. Responda SOMENTE com JSON: {\"erros\":[{\"errada\":\"\",\"certa\":\"\",\"area\":\"\",\"exercicio\":\"\"}],\"analise\":\"\"}";
+  const txt=await iaChamar(prompt,b64,true);
+  let obj; try{const t=txt.replace(/```json|```/g,"").trim();const i0=t.indexOf("{"),i1=t.lastIndexOf("}");obj=JSON.parse(i0>=0?t.slice(i0,i1+1):t);}catch{throw new Error("resposta ilegível");}
+  const arr=Array.isArray(obj)?obj:(Array.isArray(obj.erros)?obj.erros:[]);
+  const ok=new Set(areas.map(a=>a[0]));
+  const erros=arr.filter(x=>x&&typeof x.errada==="string"&&typeof x.certa==="string"&&x.errada.trim()&&x.certa.trim()&&x.errada.trim()!==x.certa.trim()).slice(0,30)
+    .map(x=>({errada:x.errada.trim(),certa:x.certa.trim(),area:ok.has(x.area)?x.area:"outro",exercicio:String(x.exercicio||"").trim()}));
+  return {erros,analise:(!Array.isArray(obj)&&typeof obj.analise==="string")?obj.analise.trim():""};
+}
+async function gAnalisarErros(lista,lang,areas,stats){
+  const idioma=lang==="de"?"alemão":"francês";
+  const nome=k=>(areas.find(a=>a[0]===k)||[])[1]||k;
+  const linhas=lista.map(m=>nome(m.area)+": "+m.errada+" => "+m.certa+(m.fonte?" ("+m.fonte+")":"")).join("\n");
+  const prompt="Você é professor de "+idioma+" (nível A2) acompanhando uma aluna brasileira que quer ficar fluente e também precisa de um certificado de proficiência. Estes são os erros que ela registrou (assunto: errada => certa):\n"+linhas+"\n\nDesempenho nos exercícios do app: "+(stats||"sem dados ainda")+".\n\nResponda em português do Brasil, direto, em no máximo 200 palavras, nesta ordem: 1) Padrão dos erros (a causa comum, não a lista). 2) Onde voltar (o ponto gramatical a revisar; se houver capítulo, lição ou página na fonte, cite). 3) O que treinar nesta semana (3 itens concretos). Sem elogios e sem rodeios.";
+  return (await iaChamar(prompt,null,false)).trim();
+}
 const GRAM_ITENS=Object.entries(GRAM_RAW).flatMap(([lang,txt])=>{
   const cnt={};
   return txt.trim().split("\n").filter(Boolean).map(l=>{
@@ -3357,6 +3398,10 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [meus,setMeus]=useLS("v5_idi_meuserro",[],userId);
   const [ef,setEf]=useState({area:"",txt:"",fonte:""});
   const [efMsg,setEfMsg]=useState("");
+  const [foto,setFoto]=useState({load:false,msg:"",res:null,analise:""});
+  const [ana,setAna]=useState({load:false,txt:"",msg:""});
+  const [gk,setGk]=useState("");
+  const [,setKT]=useState(0);
   const [conh,setConh]=useLS("v5_idi_conh",{},userId);
   const [leit,setLeit]=useLS("v5_idi_leit",[],userId);
   const [lts,setLts]=useState({});
@@ -3608,6 +3653,36 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     if(!novos.length){setEfMsg("Use uma linha por erro: frase errada => frase correta.");return;}
     setMeus([...novos,...meus]); setEf({...ef,txt:""});
     setEfMsg(novos.length+(novos.length>1?" erros registrados":" erro registrado")+(ign?" · "+ign+" linha"+(ign>1?"s":"")+" ignorada"+(ign>1?"s":""):"")+".");
+  };
+  const iaNome=iaKey(IA_KC)?"Claude":(iaKey(IA_KG)?"Gemini":"");
+  const salvarChave=()=>{
+    const v=gk.trim(); if(v.length<10)return;
+    try{localStorage.setItem(v.startsWith("sk-ant")?IA_KC:IA_KG,v);}catch{}
+    setGk(""); setFoto({load:false,msg:"",res:null,analise:""}); setKT(x=>x+1);
+  };
+  const analisarTudo=async()=>{
+    setAna({load:true,txt:"",msg:""});
+    const st=gAreas.filter(([k])=>gTot(k)>0).map(([k,nome])=>nome.replace(/ \(.*\)/,"")+" "+gPct(k)+"% em "+gTot(k)).join("; ");
+    try{const t=await gAnalisarErros(meusSel.slice(0,60),sel,gAreas,st);setAna({load:false,txt:t,msg:""});}
+    catch(err){setAna({load:false,txt:"",msg:err.message==="SEM_CHAVE"?"Cadastre uma chave acima.":"Não consegui analisar ("+err.message+")."});}
+  };
+  const setRes=(i,pt)=>setFoto(f=>({...f,res:f.res.map((x,j)=>j===i?{...x,...pt}:x)}));
+  const enviarFoto=async e=>{
+    const f=e.target.files&&e.target.files[0]; e.target.value="";
+    if(!f)return;
+    setFoto({load:true,msg:"",res:null,analise:""});
+    try{
+      const r=await gFotoErros(f,sel,gAreas);
+      setFoto({load:false,msg:r.erros.length?"":"Não achei erros legíveis nessa foto. Tente de perto, com boa luz e a página inteira no enquadramento.",res:r.erros.map(x=>({...x,on:true})),analise:r.analise});
+    }catch(err){
+      setFoto({load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave acima.":"Não consegui analisar a foto ("+err.message+").",res:null,analise:""});
+    }
+  };
+  const salvarFoto=()=>{
+    const novos=(foto.res||[]).filter(r=>r.on&&r.errada.trim()&&r.certa.trim()&&r.errada.trim()!==r.certa.trim()).map(r=>({id:uid(),lang:sel,area:r.area,errada:r.errada.trim(),certa:r.certa.trim(),fonte:"foto"+(r.exercicio?" · ex "+r.exercicio:""),data:hoje}));
+    if(!novos.length){setFoto({...foto,msg:"Nada marcado para salvar."});return;}
+    setMeus([...novos,...meus]); setFoto({load:false,msg:"",res:null,analise:""});
+    setEfMsg(novos.length+(novos.length>1?" erros registrados da foto.":" erro registrado da foto."));
   };
   const iniciarGram=(af,fr)=>{
     const stI=gstat.items||{};
@@ -4280,14 +4355,52 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <div style={{...lab,fontSize:9.5,marginTop:14,lineHeight:1.6}}>{voltamHoje>0?voltamHoje+(voltamHoje>1?" exercícios voltam":" exercício volta")+" hoje para manter o que você já domina":"Nada vencido hoje"}. Dominar não tira o exercício da fila: ele volta em 1, 3, 7, 21, 60 e 150 dias, e um erro devolve para o começo.</div>
           </Card>
           <Card>
-            <Titulo k="Meus erros" t="Registrar em linha"/>
+            <Titulo k="Meus erros" t="Registrar erros"/>
             <div style={{fontSize:13.5,lineHeight:1.6,opacity:.8,maxWidth:600,marginBottom:12}}>Uma linha por erro: <b>frase errada =&gt; frase correta</b>. O app troca só o trecho errado por uma lacuna e devolve a frase no treino, até você acertar sem ajuda.</div>
+            <div style={{marginBottom:16,padding:"14px 16px",borderRadius:16,background:"rgba(var(--idi-rgb),.05)"}}>
+              <div style={{...lab,marginBottom:8}}>Ou mande a foto</div>
+              <div style={{fontSize:13,lineHeight:1.55,opacity:.8,marginBottom:10}}>Foto do exercício já corrigido: o app lê os erros, sugere o assunto de cada um e você confere antes de salvar. A imagem vai {iaNome==="Claude"?"à Anthropic (Claude)":"ao Google (Gemini)"} só para essa leitura.</div>
+              {!iaNome?(<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                <input style={{...inp,flex:1,minWidth:180}} value={gk} onChange={e=>setGk(e.target.value)} placeholder="Chave da Anthropic (sk-ant…) ou Gemini (AIza…)"/>
+                <button style={{...btnP,opacity:gk.trim().length>=10?1:.4}} disabled={gk.trim().length<10} onClick={salvarChave}>Salvar chave</button>
+              </div>):(<div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"center"}}>
+                <label style={{...btnS,display:"inline-block",cursor:foto.load?"default":"pointer",opacity:foto.load?.5:1}}>{foto.load?"Lendo a foto…":"Enviar foto do exercício"}<input type="file" accept="image/*" disabled={foto.load} style={{display:"none"}} onChange={enviarFoto}/></label>
+                <span style={{...lab,fontSize:9.5}}>Leitura por {iaNome}</span>
+              </div>)}
+              {iaNome==="Gemini"&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>
+                <input style={{...inp,flex:1,minWidth:180}} value={gk} onChange={e=>setGk(e.target.value)} placeholder="Para usar o Claude: chave da Anthropic (sk-ant…)"/>
+                <button style={{...btnS,opacity:gk.trim().startsWith("sk-ant")?1:.4}} disabled={!gk.trim().startsWith("sk-ant")} onClick={salvarChave}>Usar Claude</button>
+              </div>}
+              {iaNome==="Claude"&&<div style={{marginTop:10}}><button onClick={()=>{try{localStorage.removeItem(IA_KC);}catch{}setKT(x=>x+1);}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)",padding:0}}>remover a chave da Anthropic deste aparelho</button></div>}
+              {foto.msg&&<div style={{marginTop:10,fontSize:13,color:IDI_RED}}>{foto.msg}</div>}
+              {foto.analise&&<div style={{marginTop:14,padding:"12px 14px",borderRadius:14,background:"rgba(var(--idi-rgb),.07)",fontSize:13.5,lineHeight:1.6,whiteSpace:"pre-wrap"}}><div style={{...lab,marginBottom:6}}>Análise desta página</div>{foto.analise}</div>}
+              {foto.res&&foto.res.length>0&&(<div style={{marginTop:14}}>
+                <div style={{...lab,marginBottom:6}}>Confira antes de salvar · {foto.res.filter(r=>r.on).length} de {foto.res.length}</div>
+                {foto.res.map((r,i)=>(
+                  <div key={i} style={{padding:"10px 0",borderTop:"1px solid rgba(var(--idi-rgb),.1)"}}>
+                    <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+                      <input type="checkbox" aria-label="Incluir" checked={r.on} onChange={e=>setRes(i,{on:e.target.checked})}/>
+                      <select style={{...inp,width:"auto",flex:"1 1 150px"}} value={r.area} onChange={e=>setRes(i,{area:e.target.value})}>{gAreas.map(([k,nome])=><option key={k} value={k}>{nome.replace(/ \(.*\)/,"")}</option>)}</select>
+                      {r.exercicio&&<span style={{...lab,fontSize:9.5}}>ex {r.exercicio}</span>}
+                    </div>
+                    <input style={{...inp,marginBottom:6,opacity:.65}} value={r.errada} onChange={e=>setRes(i,{errada:e.target.value})} aria-label="Frase errada"/>
+                    <input style={inp} value={r.certa} onChange={e=>setRes(i,{certa:e.target.value})} aria-label="Frase correta"/>
+                  </div>))}
+                <div style={{marginTop:12,display:"flex",gap:10,flexWrap:"wrap"}}><button style={btnP} onClick={salvarFoto}>Salvar {foto.res.filter(r=>r.on).length} erro{foto.res.filter(r=>r.on).length===1?"":"s"}</button><button style={btnS} onClick={()=>setFoto({load:false,msg:"",res:null,analise:""})}>Descartar</button></div>
+              </div>)}
+            </div>
+            <div style={{...lab,marginBottom:8}}>Ou digite em linha</div>
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>{gAreas.map(([k,nome])=><button key={k} onClick={()=>setEf({...ef,area:k})} aria-pressed={ef.area===k} style={{...(ef.area===k?btnP:btnS),padding:"8px 14px",fontSize:12.5}}>{nome.replace(/ \(.*\)/,"")}</button>)}</div>
             <textarea style={{...inp,minHeight:90,resize:"vertical",lineHeight:1.5}} value={ef.txt} onChange={e=>setEf({...ef,txt:e.target.value})} placeholder={sel==="de"?"Ich helfe dich => Ich helfe dir":"Je lui vois => Je la vois"}/>
             <input style={{...inp,marginTop:10}} value={ef.fonte} onChange={e=>setEf({...ef,fonte:e.target.value})} placeholder="De onde veio (opcional): lição, redação, conversa…"/>
             <div style={{marginTop:12,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}><button style={{...btnP,opacity:ef.txt.trim()?1:.4}} disabled={!ef.txt.trim()} onClick={salvarErros}>Salvar erros</button>{efMsg&&<span style={{fontSize:13,opacity:.8}}>{efMsg}</span>}</div>
             {meusSel.length>0&&<div style={{marginTop:18}}>
               <div style={{...lab,marginBottom:8}}>{meusSel.length} registrados · {meusSel.filter(m=>!mAtivo(m)).length} dominados</div>
+              {iaNome&&meusSel.length>=3&&<div style={{marginBottom:12}}>
+                <button style={{...btnS,opacity:ana.load?.5:1}} disabled={ana.load} onClick={analisarTudo}>{ana.load?"Analisando…":"Analisar meus erros"}</button>
+                {ana.msg&&<div style={{marginTop:8,fontSize:13,color:IDI_RED}}>{ana.msg}</div>}
+                {ana.txt&&<div style={{marginTop:10,padding:"12px 14px",borderRadius:14,background:"rgba(var(--idi-rgb),.07)",fontSize:13.5,lineHeight:1.6,whiteSpace:"pre-wrap"}}><div style={{...lab,marginBottom:6}}>Análise · {iaNome}</div>{ana.txt}</div>}
+              </div>}
               {meusSel.slice(0,5).map(m=>(
                 <div key={m.id} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"8px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)",fontSize:13.5,lineHeight:1.5}}>
                   <div style={{flex:1,minWidth:0,wordBreak:"break-word"}}><span style={{textDecoration:"line-through",opacity:.5}}>{m.errada}</span><br/>{m.certa}<div style={{...lab,fontSize:9,marginTop:3}}>{nomeAreaG(m.area).replace(/ \(.*\)/,"")}{!mAtivo(m)?" · dominado, volta em "+(stIt("me:"+m.id).prox||"—"):""}</div></div>
