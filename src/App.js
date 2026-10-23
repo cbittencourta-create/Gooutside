@@ -1796,8 +1796,8 @@ const ART_NOME={der:"azul",die:"vermelho",das:"verde",le:"azul",la:"vermelho"};
 // ── Gramática: banco de exercícios (anexar ao fim de cada idioma; não reordenar, os ids dependem da ordem) ──
 // formato: área | enunciado (___ = lacuna) | resposta(s) separadas por ~ | trecho a destacar | dica | explicação
 const GRAM_AREAS={
-  de:[["kasus","Casos (Akk/Dat/Gen)"],["prep","Preposições"],["adj","Terminações de adjetivo"],["satz","Posição do verbo"],["perf","Perfekt"],["konj","Konjunktiv II"],["pass","Passiv"]],
-  fr:[["temps","Passé composé × imparfait"],["aux","Auxiliar être/avoir"],["pron","Pronomes (COD, COI, y, en)"],["subj","Subjonctif × indicatif"],["art","Artigos e preposições de lugar"],["accord","Concordância e comparação"]],
+  de:[["kasus","Casos (Akk/Dat/Gen)"],["prep","Preposições"],["adj","Terminações de adjetivo"],["satz","Posição do verbo"],["perf","Perfekt"],["konj","Konjunktiv II"],["pass","Passiv"],["pron","Pronomes (pessoal, reflexivo, possessivo, relativo)"],["outro","Outros (meus erros)"]],
+  fr:[["temps","Passé composé × imparfait"],["aux","Auxiliar être/avoir"],["pron","Pronomes (COD, COI, y, en)"],["subj","Subjonctif × indicatif"],["art","Artigos e preposições de lugar"],["accord","Concordância e comparação"],["outro","Outros (meus erros)"]],
 };
 const GRAM_RAW={
 de:`kasus|Ich habe ___ Bruder gestern angerufen. (mein-)|meinen|angerufen|Que caso o verbo "anrufen" pede? E Bruder é masculino.|anrufen + Akkusativ. Masculino no Akkusativ: mein → meinen.
@@ -1845,7 +1845,28 @@ pass|Die Patienten ___ untersucht. (werden, presente)|werden|Patienten|Concorde 
 pass|Der Brief ___ gestern geschrieben. (werden, Präteritum)|wurde|gestern|Passado simples de werden.|Passiv Präteritum: wurde + Partizip II.
 pass|Das Medikament ___ vom Arzt verschrieben. (werden, presente)|wird|vom Arzt|O agente da passiva vem com von.|Presente: wird + Partizip II; agente = von + Dativ.
 pass|Die Tür ist geöffnet ___. (Perfekt Passiv)|worden|geöffnet|No Perfekt do Passiv, o particípio de werden é especial.|Perfekt Passiv: sein + Partizip II + worden.
-pass|Hier ___ nicht geraucht. (werden, presente)|wird|nicht|Passiv sem sujeito.|Passiv impessoal: wird + Partizip II.`,
+pass|Hier ___ nicht geraucht. (werden, presente)|wird|nicht|Passiv sem sujeito.|Passiv impessoal: wird + Partizip II.
+pron|Ich sehe Peter jeden Tag. Ich sehe ___ jeden Tag. (er)|ihn|sehe|Objeto direto: qual caso? Peter é masculino.|sehen + Akkusativ. er → ihn.
+pron|Kennst du Anna? Ja, ich kenne ___ gut. (sie)|sie|kenne|Objeto direto, feminino.|No Akkusativ, sie (feminino) continua sendo sie.
+pron|Ich schenke meiner Mutter Blumen. Ich schenke ___ Blumen. (sie)|ihr|schenke|Quem recebe as flores: objeto direto ou indireto?|Quem recebe = Dativ. sie (feminino) → ihr.
+pron|Der Arzt hilft dem Patienten. Der Arzt hilft ___. (er)|ihm|hilft|helfen exige qual caso?|helfen + Dativ. er → ihm.
+pron|Wir besuchen unsere Eltern. Wir besuchen ___. (sie, plural)|sie|besuchen|Objeto direto, plural.|Akkusativ plural: sie. (No Dativ plural seria ihnen.)
+pron|Ich telefoniere mit meinen Freunden. Ich telefoniere mit ___. (sie, plural)|ihnen|mit|Essa preposição pede sempre o mesmo caso.|mit + Dativ. sie (plural) → ihnen.
+pron|Das Kind ist krank. Die Ärztin gibt ___ ein Medikament. (es)|ihm|gibt|Quem recebe o remédio?|Quem recebe = Dativ. es (neutro) → ihm.
+pron|Kannst du ___ bitte helfen? (ich)|mir|helfen|helfen + qual caso?|helfen + Dativ. ich → mir.
+pron|Er schenkt seiner Frau die Blumen. Er schenkt ___. (die Blumen = sie, seiner Frau = ihr)|sie ihr|schenkt|Dois pronomes juntos: qual vem primeiro, o direto ou o indireto?|Com dois pronomes, o Akkusativ vem antes do Dativ: sie ihr.
+pron|Ich freue ___ auf den Urlaub.|mich|freue|Verbo reflexivo: qual pronome para ich?|sich freuen: ich freue mich (Akkusativ).
+pron|Er interessiert ___ für Musik.|sich|interessiert|Verbo reflexivo, 3ª pessoa.|er, sie, es → sich.
+pron|Wir treffen ___ morgen um acht.|uns|treffen|Reflexivo recíproco, wir.|sich treffen: wir treffen uns.
+pron|Hast du ___ schon die Hände gewaschen?|dir|Hände|Já existe um objeto direto (die Hände). Então o reflexivo vai em outro caso.|Se a frase já tem objeto direto, o reflexivo fica no Dativ: du → dir.
+pron|Ich nehme ___ Auto. (ich: meu)|mein|nehme|Possessivo de ich, neutro, Akkusativ.|Possessivo neutro em Nom/Akk não tem terminação: mein Auto.
+pron|Wir besuchen ___ Großeltern. (wir: nossos)|unsere|Großeltern|Possessivo de wir, plural, Akkusativ.|Plural em Nom/Akk: terminação -e → unsere.
+pron|Er gibt ___ Schwester das Buch. (er: da sua, Dativ feminino)|seiner|gibt|Possessivo no Dativ feminino.|Dativ feminino: terminação -er → seiner.
+pron|Das ist die Frau, ___ ich gestern getroffen habe. (relativo)|die|Frau|Gênero do antecedente e caso dentro da oração relativa.|Relativo: gênero de Frau (feminino) e caso Akkusativ → die.
+pron|Das ist der Mann, ___ ich helfe. (relativo)|dem|Mann|Qual caso helfen exige? Masculino.|Relativo masculino em Dativ → dem.
+pron|Wartest du auf den Bus? Ja, ich warte ___. (da + preposição)|darauf|warte|Substitui "auf + coisa".|Para coisas: da(r) + preposição → darauf. Para pessoas: auf ihn, auf sie.
+pron|Interessierst du dich für Politik? Ja, ich interessiere mich ___.|dafür|interessiere|Substitui "für + coisa".|da + für → dafür.
+pron|___ wartest du? Auf den Bus. (pergunta sobre coisa)|Worauf|wartest|Perguntar por coisa usa wo(r) + preposição.|Coisa: Worauf? Pessoa: Auf wen?`,
 fr:`temps|Hier, j'___ (manger) une pizza.|ai mangé|Hier|Ação concluída e pontual no passado.|Passé composé para ação pontual: avoir + participe.
 temps|Quand j'étais petite, je ___ (jouer) dehors tous les jours.|jouais|tous les jours|Hábito repetido no passado.|Imparfait para hábitos e descrições no passado.
 temps|Il ___ (pleuvoir) quand je suis sorti.|pleuvait|quand|Qual é o pano de fundo e qual é a ação que interrompe?|Imparfait = cenário em curso; passé composé = o evento que interrompe.
@@ -1900,6 +1921,23 @@ const LEIT_EX={
   fr:"Hier soir, j'ai travaillé aux urgences. Vers trois heures du matin, un homme âgé est arrivé avec une forte douleur à la poitrine. Le médecin l'a examiné tout de suite et a fait un électrocardiogramme. Heureusement, ce n'était pas un infarctus, mais le patient a dû rester à l'hôpital pendant la nuit. Le matin, j'étais fatiguée, mais j'étais contente parce que j'avais pu aider.",
 };
 const tokenizarLeit=t=>{const re=/\p{L}+(?:-\p{L}+)*/gu;const out=[];let m;while((m=re.exec(t||"")))out.push({w:m[0],i:m.index});return out;};
+const GLAD=[1,3,7,21,60,150];
+function gItemErro(m,nomeArea){
+  const A=(m.errada||"").trim(), C=(m.certa||"").trim();
+  const ta=A.split(/\s+/), tc=C.split(/\s+/);
+  let i=0; while(i<ta.length&&i<tc.length&&ta[i]===tc[i])i++;
+  let j=0; while(j<ta.length-i&&j<tc.length-i&&ta[ta.length-1-j]===tc[tc.length-1-j])j++;
+  const mc=tc.slice(i,tc.length-j), ma=ta.slice(i,ta.length-j);
+  const exp="Sua frase correta: «"+C+"»."+(m.fonte?" ("+m.fonte+")":"");
+  const h="Assunto: "+nomeArea+"."+(ma.length?" Você tinha escrito «"+ma.join(" ")+"».":"");
+  if(mc.length>=1&&mc.length<=4){
+    const ult=mc[mc.length-1]; const pm=/[.,;!?]+$/.exec(ult); const pu=pm?pm[0]:"";
+    const resp=mc.join(" ").replace(/[.,;!?]+$/,"");
+    const q=[...tc.slice(0,i),"___"+pu,...tc.slice(tc.length-j)].join(" ");
+    return {q,r:[resp],f:"",h,e:exp};
+  }
+  return {q:"Reescreva corretamente: "+A,r:[C],f:"",h,e:exp};
+}
 const GRAM_ITENS=Object.entries(GRAM_RAW).flatMap(([lang,txt])=>{
   const cnt={};
   return txt.trim().split("\n").filter(Boolean).map(l=>{
@@ -1928,8 +1966,8 @@ const CLI_LAB=[
   ["Hemograma",[["hb","Hb","g/dL",[12,17.5]],["ht","Ht","%",[36,52]],["leu","Leucócitos","/mm³",[4000,11000]],["bast","Bastões","%",[0,5]],["plq","Plaquetas","mil/mm³",[150,450]]]],
   ["Bioquímica",[["ur","Ureia","mg/dL",[15,45]],["cr","Creatinina","mg/dL",[0.6,1.3]],["na","Na","mEq/L",[135,145]],["cl","Cl","mEq/L",[98,107]],["k","K","mEq/L",[3.5,5.1]],["mg","Mg","mg/dL",[1.6,2.6]],["glic","Glicemia","mg/dL",[70,140]],["tgo","TGO","U/L",[0,40]],["tgp","TGP","U/L",[0,41]],["bt","Bilirrubina total","mg/dL",[0,1.2]],["lip","Lipase","U/L",[0,60]]]],
   ["Cardíaco e inflamatório",[["trop","Troponina","valor + unidade",null],["ckmb","CK-MB","valor + unidade",null],["bnp","BNP / NT-proBNP","valor + unidade",null],["dd","D-dímero","valor + unidade",null],["pcr","PCR","mg/L",[0,5]],["lac","Lactato","mmol/L",[0.5,2]],["inr","INR","",[0.8,1.2]]]],
-  ["Urina (EAS)",[["den","Densidade","",null],["phu","pH urinário","",null],["leu_u","Leucócitos","/campo ou +",null],["hem_u","Hemácias","/campo ou +",null],["nit","Nitrito","pos/neg",null],["prot","Proteína","",null],["glic_u","Glicose","",null],["cet","Cetonas","",null],["bac","Bactérias","",null]]],
-  ["Gasometria",[["ph","pH","",[7.35,7.45]],["pco2","pCO2","mmHg",[35,45]],["hco3","HCO3","mEq/L",[22,26]],["po2","pO2","mmHg",[80,100]],["be","BE","mEq/L",[-2,2]]]]
+  ["Urina (EAS)",[["den","Densidade","",null],["phu","pH urinário","",null],["leu_u","Leucócitos (urina)","/campo ou +",null],["hem_u","Hemácias (urina)","/campo ou +",null],["nit","Nitrito","pos/neg",null],["prot","Proteína (urina)","",null],["glic_u","Glicose (urina)","",null],["cet","Cetonas","",null],["bac","Bactérias","",null]]],
+  ["Gasometria",[["ph","pH","",[7.35,7.45]],["pco2","pCO2","mmHg",[35,45]],["hco3","HCO3","mEq/L",[22,26]],["po2","pO2","valor",null],["be","BE","mEq/L",[-2,2]],["sao2","SatO2","%",[92,100]]]]
 ];
 const refLab=(a,sexo)=>a[0]==="hb"?(sexo==="F"?[12,16]:sexo==="M"?[13,17.5]:a[3]):a[3];
 const flagLab=(a,v,sexo)=>{const r=refLab(a,sexo);if(!r)return "";const n=parseFloat(String(v).replace(",","."));if(isNaN(n))return "";return n<r[0]?"↓":n>r[1]?"↑":"";};
@@ -2036,7 +2074,7 @@ function cliLeitura(p){
     if(ac){d=loB&&hiC?"acidose mista (metabólica e respiratória).":loB?"acidose metabólica.":hiC?"acidose respiratória.":"acidemia; faltam pCO2 ou HCO3 para definir o componente.";}
     else if(al){d=hiB&&loC?"alcalose mista.":hiB?"alcalose metabólica.":loC?"alcalose respiratória.":"alcalemia; faltam pCO2 ou HCO3 para definir o componente.";}
     else d=(loB||hiB||hiC||loC)?"pH normal com pCO2 ou HCO3 alterados: distúrbio compensado ou misto.":"sem distúrbio ácido-base evidente.";
-    push(ac||al?"alerta":"info","Gasometria: "+d);
+    push(ac||al?"alerta":"info","Gasometria (referência arterial): "+d);
     if(ac&&loB&&pco2!=null){const esp=1.5*hco3+8;push(pco2>esp+2?"alerta":"info","Compensação (Winter): pCO2 esperado ~"+esp.toFixed(0)+" (±2), medido "+pco2+(pco2>esp+2?": acidose respiratória associada.":pco2<esp-2?": alcalose respiratória associada.":": dentro do esperado."));}
     if(ac&&loB){if(na!=null&&cl!=null){const ag=na-cl-hco3;push(ag>12?"alerta":"info","Ânion gap "+ag.toFixed(0)+" (ref. ~8–12; corrigir pela albumina). "+(ag>12?"Elevado: pensar em lactato, cetoacidose, uremia e tóxicos.":"Normal: acidose hiperclorêmica (diarreia, perda de bicarbonato, acidose tubular)."));}else push("info","Ânion gap não calculado: informe Na e Cl.");}
   }
@@ -2111,6 +2149,50 @@ function cliResumo(p){
   if(ev.length)L.push("Diário recente:\n"+ev.map(e=>"- "+dm(e.h)+" ["+(e.tipo||"Evolução")+"] "+e.t.replace(/\n/g," ")).join("\n"));
   L.push("\nPedido: interprete os exames e o quadro, diga quais síndromes e diferenciais considerar, o que ainda falta pedir ou perguntar, e comente conduta e armadilhas, separando o que é diretriz do que é inferência.");
   return L.join("\n");
+}
+const CLI_ALIAS=[
+  ["hb",["hb","hgb","hemoglobina"]],["ht",["ht","hto","hematocrito"]],["leu",["leuc","leucocitos","leucocito","leucograma","wbc"]],["bast",["bastoes","bastonetes","bast"]],["plq",["plaquetas","plaq","plq","plt"]],
+  ["ur",["ureia","urea","ur"]],["cr",["creatinina","creat","cr"]],["na",["sodio","na"]],["cl",["cloro","cl"]],["k",["potassio","k"]],["mg",["magnesio","mg"]],
+  ["glic",["glicemia","glicose","glic","hgt","dextro","glc"]],["tgo",["tgo","ast"]],["tgp",["tgp","alt"]],["bt",["bilirrubina total","bilirrubina","bt"]],["lip",["lipase"]],
+  ["trop",["troponina i","troponina t","troponina","trop","tni","tnt","hstnt","hstni"]],["ckmb",["ck-mb","ckmb"]],["bnp",["nt-probnp","ntprobnp","bnp"]],["dd",["d-dimero","ddimero","dd"]],
+  ["pcr",["proteina c reativa","pcr"]],["lac",["lactato","lact","lac"]],["inr",["inr","rni"]],
+  ["ph",["ph"]],["pco2",["paco2","pco2"]],["hco3",["hco3","bicarbonato","bic"]],["po2",["pao2","po2"]],["be",["excesso de base","base excess","be"]],["sao2",["sao2","sato2"]],
+  ["den",["densidade","dens"]],["nit",["nitrito","nitritos"]],["hem_u",["hemacias","hemacia"]],["prot",["proteinuria","proteina"]],["cet",["cetonas","corpos cetonicos","cetona"]],["bac",["bacterias","bacteria"]]
+];
+const CLI_URINA={leu:"leu_u",ph:"phu",glic:"glic_u"};
+const CLI_TXTLAB=["trop","ckmb","bnp","dd"];
+function cliParseLab(texto){
+  const t0=cliNrm(texto); const vals={}; let sobra=[];
+  const mapa={}; const alts=[];
+  CLI_ALIAS.forEach(([k,al])=>al.forEach(a=>{mapa[a]=k;alts.push(a);}));
+  alts.sort((a,b)=>b.length-a.length);
+  const esc=a=>a.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  const QUAL="(positivo|negativo|pos|neg|ausentes?|presentes?|tracos?|\\+{1,4}|raras?|numerosas?|incontaveis|escassas?|normal)(?![a-z])";
+  const NUM="([<>]?\\s*-?\\d+(?:[.,]\\d+)*)(?:\\s*(ng\\/l|ng\\/ml|pg\\/ml|ng\\/dl|ui\\/l|u\\/l|mg\\/l|mg\\/dl|g\\/dl|mmol\\/l|meq\\/l|mmhg|%|mil|\\/mm3|mm3))?";
+  t0.split(/\n|\|/).forEach(seg=>{
+    if(!seg.trim())return;
+    const urina=/(^|[^a-z])(eas|urina|urinaria|sumario de urina)([^a-z]|$)/.test(seg);
+    const re=new RegExp("(^|[^a-z0-9])("+alts.map(esc).join("|")+")(?![a-z0-9])[\\s:=]*(?:"+QUAL+"|"+NUM+")","g");
+    const usado=Array(seg.length).fill(false); let m;
+    while((m=re.exec(seg))){
+      let k=mapa[m[2]]; if(urina&&CLI_URINA[k])k=CLI_URINA[k];
+      const ini=m.index+m[1].length;
+      let v;
+      if(m[3]){ if(!(CLI_TXTLAB.includes(k)||["nit","hem_u","prot","cet","bac","leu_u","glic_u"].includes(k)))continue; v=m[3]; }
+      else{
+        v=m[4].replace(/\s/g,"");
+        if(k==="leu"&&/^\d{1,3}(\.\d{3})+$/.test(v))v=v.replace(/\./g,"");
+        if(k==="plq"){const n=+v.replace(/\./g,"");if(/^\d{1,3}(\.\d{3})+$/.test(v)||n>=1000)v=String(Math.round(n/1000));}
+        if(CLI_TXTLAB.includes(k)&&m[5])v=v+" "+m[5];
+      }
+      if(vals[k]==null)vals[k]=v;
+      for(let i=ini;i<re.lastIndex&&i<usado.length;i++)usado[i]=true;
+    }
+    let r="";for(let i=0;i<seg.length;i++)if(!usado[i])r+=seg[i];
+    r=r.replace(/\b(gaso|gasometria|arterial|venosa|art|ven|eas|urina|urinaria|labs?|exames?|hemograma|bioquimica|coagulograma|resultados?|de|e|do|da)\b/g," ").replace(/[,;/:()\[\]\-=]+/g," ").replace(/\s+/g," ").trim();
+    if(/[a-z0-9]{3,}/.test(r))sobra.push(r);
+  });
+  return {vals,sobra:sobra.join("; ")};
 }
 const CLI_KB=[
 {id:"dt",nome:"Dor torácica",area:"Cardio",
@@ -2263,6 +2345,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const [evoEd,setEvoEd]=useState(null);
   const [evoEdT,setEvoEdT]=useState("");
   const [labF,setLabF]=useState(null);
+  const [pasteF,setPasteF]=useState(null);
   const [imgF,setImgF]=useState(null);
   const [lb,setLb]=useState(null);
   const [subindo,setSubindo]=useState(false);
@@ -2396,7 +2479,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const ciclaHip=k=>upPac(pac.id,{hip:pac.hip.map(h=>h.k!==k?h:{...h,estado:h.estado==="investigando"?"confirmada":h.estado==="confirmada"?"descartada":"investigando"})});
   const addPend=()=>{if(!pendT.trim())return;upPac(pac.id,{pend:[...pac.pend,{id:uid(),t:pendT.trim(),feito:false,res:""}]});setPendT("");};
   const upPend=(id,patch)=>upPac(pac.id,{pend:pac.pend.map(x=>x.id!==id?x:{...x,...patch})});
-  const abrirPac=id=>{setDxF(null);setResumoTxt(null);setPacId(id);setExpDx(null);setPtab("resumo");setLabF(null);setImgF(null);setEvoEd(null);try{window.scrollTo({top:0,behavior:"smooth"});}catch{}};
+  const abrirPac=id=>{setPasteF(null);setDxF(null);setResumoTxt(null);setPacId(id);setExpDx(null);setPtab("resumo");setLabF(null);setImgF(null);setEvoEd(null);try{window.scrollTo({top:0,behavior:"smooth"});}catch{}};
   const vitTxt=v=>[v.pa&&"PA "+v.pa,v.fc&&"FC "+v.fc,v.fr&&"FR "+v.fr,v.sat&&"SpO2 "+v.sat+"%",v.tax&&"Tax "+v.tax,v.gli&&"Glic "+v.gli,v.mental&&"estado mental alterado"].filter(Boolean).join(" · ");
   const addEvo=()=>{if(!evoT.trim())return;const h=dQuando||agoraISO();upPac(pac.id,{evo:[{id:uid(),h,tipo:dTipo,t:evoT.trim(),vit:dVit?vitTxt(pac.vit):""},...(pac.evo||[])]});setEvoT("");setDQuando("");setDVit(false);};
   const salvarEvoEd=()=>{if(!evoEdT.trim())return;upPac(pac.id,{evo:pac.evo.map(e=>e.id!==evoEd?e:{...e,t:evoEdT.trim()})});setEvoEd(null);};
@@ -2842,7 +2925,28 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
             </Card>)}
 
             {exSub==="lab"&&(<Card>
-              <Titulo k="Resultados" t="Laboratório" dir={!labF&&<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>setLabF({id:null,h:agoraISO(),vals:{},outros:""})}>Nova coleta</button>}/>
+              <Titulo k="Resultados" t="Laboratório" dir={!labF&&!pasteF&&<span style={{display:"flex",gap:8}}><button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>setPasteF({texto:"",h:agoraISO()})}>Colar resultados</button><button style={{...btnS,padding:"9px 16px",fontSize:12}} onClick={()=>setLabF({id:null,h:agoraISO(),vals:{},outros:""})}>Digitar</button></span>}/>
+              {pasteF&&(()=>{
+                const r=cliParseLab(pasteF.texto); const ks=Object.keys(r.vals); const n=ks.length;
+                const regis=()=>{if(!n)return;upPac(pac.id,{lab:[...(pac.lab||[]),{id:uid(),h:pasteF.h||agoraISO(),vals:r.vals,outros:pasteF.sobra===false?"":r.sobra}]});setPasteF(null);setToast(n+" valores registrados.");};
+                const itens=CLI_LAB.flatMap(([g,as])=>as.filter(a=>r.vals[a[0]]!=null));
+                return (<div style={{padding:16,borderRadius:16,background:"rgba(var(--cli-rgb),.05)",marginBottom:18}}>
+                  <div style={{...lab,marginBottom:6}}>Cole os resultados (uma linha ou várias)</div>
+                  <textarea autoFocus style={{...inp,minHeight:110,resize:"vertical",lineHeight:1.5}} value={pasteF.texto} onChange={e=>setPasteF({...pasteF,texto:e.target.value})} placeholder={"Hb 9,4 Ht 28 Leuc 12.300 Plaq 250.000 Ur 80 Cr 1,9 Na 131 K 5,8 PCR 142 Lac 3,1 Trop 0,04\\nGaso: pH 7,28 pCO2 31 HCO3 14 BE -10 pO2 78\\nEAS: densidade 1020 leucócitos 25 nitrito positivo"}/>
+                  <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",margin:"10px 0"}}><span style={lab}>Coleta em</span><input type="datetime-local" style={{...inp,width:"100%",maxWidth:260,padding:"8px 10px",fontSize:13,boxSizing:"border-box"}} value={pasteF.h} onChange={e=>setPasteF({...pasteF,h:e.target.value})}/></div>
+                  {n>0&&(<div style={{marginTop:6}}>
+                    <div style={{...lab,marginBottom:8}}>Reconhecido ({n})</div>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{itens.map(a=>{const f=flagLab(a,r.vals[a[0]],pac.sexo);return <span key={a[0]} style={{padding:"6px 11px",borderRadius:12,fontSize:13,background:f?"rgba(168,50,50,.13)":"#fff",border:"1px solid "+(f?"rgba(168,50,50,.4)":"rgba(var(--cli-rgb),.18)"),color:f?"#A83232":T.ink,fontWeight:f?700:500}}>{a[1]} {r.vals[a[0]]}{f?" "+f:""}</span>;})}</div>
+                  </div>)}
+                  {r.sobra&&<label style={{display:"flex",gap:8,alignItems:"flex-start",fontSize:13,lineHeight:1.5,marginTop:12}}><input type="checkbox" checked={pasteF.sobra!==false} onChange={e=>setPasteF({...pasteF,sobra:e.target.checked})} style={{width:"auto",marginTop:3}}/><span>Não reconhecido, guardar em “Outros”: <b>{r.sobra}</b></span></label>}
+                  {pasteF.texto.trim()&&n===0&&<div style={{fontSize:13,marginTop:10,opacity:.75}}>Nenhum valor reconhecido ainda. Use o nome do exame seguido do valor, por exemplo “Hb 9,4”.</div>}
+                  <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
+                    <button style={{...btnP,opacity:n?1:.4}} disabled={!n} onClick={regis}>Registrar coleta</button>
+                    <button style={btnS} disabled={!n} onClick={()=>{setLabF({id:null,h:pasteF.h,vals:{...r.vals},outros:pasteF.sobra===false?"":r.sobra});setPasteF(null);}}>Revisar no formulário</button>
+                    <button style={btnS} onClick={()=>setPasteF(null)}>Cancelar</button>
+                  </div>
+                  <div style={{fontSize:12,opacity:.6,marginTop:10,lineHeight:1.5}}>Reconhece nomes comuns (Hb, Leuc, Plaq, Ur, Cr, Na, K, PCR, Lac, Trop, pH, pCO2, HCO3, BE e outros). Para urina, comece a linha com “EAS”. Sempre confira os valores antes de registrar.</div>
+                </div>);})()}
               {labF&&(<div style={{padding:16,borderRadius:16,background:"rgba(var(--cli-rgb),.05)",marginBottom:18}}>
                 <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginBottom:6}}><span style={lab}>Coleta em</span><input type="datetime-local" style={{...inp,width:"100%",maxWidth:260,padding:"8px 10px",fontSize:13,boxSizing:"border-box"}} value={labF.h} onChange={e=>setLabF({...labF,h:e.target.value})}/></div>
                 <div style={{fontSize:12,opacity:.6,marginBottom:4}}>Preencha só o que veio. As setas indicam valores fora da faixa de adulto; a referência muda por laboratório.</div>
@@ -2861,7 +2965,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
                   {labF.id&&<button style={{...btnS,borderColor:"rgba(168,50,50,.4)",color:"#A83232"}} onClick={excluirLab}>Excluir coleta</button>}
                 </div>
               </div>)}
-              {labsOrd.length===0&&!labF&&<Vazio>Nenhuma coleta registrada. Toque em “Nova coleta” para lançar hemograma, bioquímica, troponina, gasometria e o que mais vier.</Vazio>}
+              {labsOrd.length===0&&!labF&&<Vazio>Nenhuma coleta registrada. Toque em “Colar resultados” e cole a linha do laboratório, da gasometria ou do EAS; o app separa cada valor.</Vazio>}
               {labsOrd.length>0&&(()=>{
                 const linhas=CLI_LAB.flatMap(([g,as])=>as.filter(a=>labsOrd.some(l=>l.vals[a[0]])));
                 const th={padding:"8px 10px",fontSize:11,fontWeight:700,textAlign:"center",whiteSpace:"nowrap",borderBottom:"1px solid rgba(var(--cli-rgb),.15)",cursor:"pointer",lineHeight:1.35};
@@ -3250,6 +3354,9 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [fcN,setFcN]=useState(null);
   const [gstat,setGstat]=useLS("v5_idi_gram",{areas:{},items:{}},userId);
   const [gm,setGm]=useState(null);
+  const [meus,setMeus]=useLS("v5_idi_meuserro",[],userId);
+  const [ef,setEf]=useState({area:"",txt:"",fonte:""});
+  const [efMsg,setEfMsg]=useState("");
   const [conh,setConh]=useLS("v5_idi_conh",{},userId);
   const [leit,setLeit]=useLS("v5_idi_leit",[],userId);
   const [lts,setLts]=useState({});
@@ -3483,28 +3590,52 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const leeches=vocSel.filter(v=>(v.er||0)>=3&&(v.er||0)*2>=(v.ok||0)).sort((a,b)=>(b.er||0)-(a.er||0)).slice(0,6);
   const artFraco=piorArt&&pctArt(piorArt)<85?piorArt:null;
   const nDif=dificG.length+(artFraco?1:0)+Math.min(dificeis.length,4)+leeches.length;
-  const iniciarGram=af=>{
+  const nomeAreaG=k=>(gAreas.find(a=>a[0]===k)||[])[1]||k;
+  const meusSel=meus.filter(m=>m.lang===sel);
+  const meusItens=meusSel.map(m=>({id:"me:"+m.id,lang:sel,area:m.area,own:true,...gItemErro(m,nomeAreaG(m.area))}));
+  const stIt=id=>((gstat.items||{})[id])||{};
+  const mAtivo=m=>(stIt("me:"+m.id).nv||0)<3;
+  const fracos=gAreas.map(([k,nome])=>{const x=gA(k),t=gTot(k);const falha=t>=3?(x.er+x.aut*.5)/t:0;const erros=meusSel.filter(m=>m.area===k&&mAtivo(m)).length;const dom=meusSel.filter(m=>m.area===k&&!mAtivo(m)).length;return {k,nome,t,pct:gPct(k),falha,erros,dom,score:erros+falha*5};}).filter(x=>x.score>=1).sort((a,b)=>b.score-a.score).slice(0,3);
+  const voltamHoje=[...gItens,...meusItens].filter(x=>{const st=stIt(x.id);return st.prox&&st.prox<=hoje;}).length;
+  const salvarErros=()=>{
+    if(!ef.area){setEfMsg("Escolha o assunto.");return;}
+    const novos=[]; let ign=0;
+    ef.txt.split("\n").map(x=>x.trim()).filter(Boolean).forEach(l=>{
+      const pt=l.split(/\s*(?:=>|->|→|\|)\s*/);
+      if(pt.length<2||!pt[0]||!pt[1]||pt[0]===pt[1]){ign++;return;}
+      novos.push({id:uid(),lang:sel,area:ef.area,errada:pt[0],certa:pt[1],fonte:ef.fonte.trim(),data:hoje});
+    });
+    if(!novos.length){setEfMsg("Use uma linha por erro: frase errada => frase correta.");return;}
+    setMeus([...novos,...meus]); setEf({...ef,txt:""});
+    setEfMsg(novos.length+(novos.length>1?" erros registrados":" erro registrado")+(ign?" · "+ign+" linha"+(ign>1?"s":"")+" ignorada"+(ign>1?"s":""):"")+".");
+  };
+  const iniciarGram=(af,fr)=>{
     const stI=gstat.items||{};
     const q={};
-    gItens.filter(x=>!af||x.area===af).forEach(x=>{
+    [...gItens,...meusItens].filter(x=>(!af||x.area===af)&&(!fr||fr.includes(x.area))).forEach(x=>{
       const st=stI[x.id];
-      const base=!st?2:((st.er||0)+(st.aut||0)*.5>(st.ok||0)?3:1);
-      (q[x.area]=q[x.area]||[]).push({x,k:base+Math.random()*1.5});
+      const devido=!st||!st.prox||st.prox<=hoje;
+      const falha=st&&((st.er||0)+(st.aut||0)*.5>(st.ok||0));
+      const base=!devido?0.3:(!st?2:(falha?3:1.5));
+      (q[x.area]=q[x.area]||[]).push({x,k:base+(devido&&x.own?1.2:0)+Math.random()*1.5});
     });
     Object.values(q).forEach(a=>a.sort((u,v)=>v.k-u.k));
-    const ord=Object.keys(q).sort(()=>Math.random()-.5);
+    const ord=fr?fr.filter(a=>q[a]):Object.keys(q).sort(()=>Math.random()-.5);
     const N=af?8:10; const fila=[];
     while(fila.length<N&&ord.some(a=>q[a].length)){
       for(const a of ord){if(fila.length>=N)break;const it=q[a].shift();if(it)fila.push(it.x.id);}
     }
     if(!fila.length)return;
-    setGm({fila,i:0,tent:0,resp:"",fb:null,dica:false,ok:0,aut:0,er:0,rep:{},fim:false,af:af||null});
+    setGm({fila,i:0,tent:0,resp:"",fb:null,dica:false,ok:0,aut:0,er:0,rep:{},fim:false,af:af||null,fr:fr||null,tit:fr?"Pontos fracos":null});
   };
-  const gCur=gm&&!gm.fim?GRAM_ITENS.find(x=>x.id===gm.fila[gm.i]):null;
+  const gCur=gm&&!gm.fim?[...GRAM_ITENS,...meusItens].find(x=>x.id===gm.fila[gm.i]):null;
   const gGravar=res=>{
     if(!gCur)return;
     const k=sel+":"+gCur.area; const a=gA(gCur.area); const it=(gstat.items||{})[gCur.id]||{ok:0,aut:0,er:0};
-    setGstat({areas:{...(gstat.areas||{}),[k]:{...a,[res]:(a[res]||0)+1}},items:{...(gstat.items||{}),[gCur.id]:{...it,[res]:(it[res]||0)+1,ult:hoje}}});
+    const devido=!it.prox||it.prox<=hoje; const nv0=it.nv||0;
+    const nv=res==="er"?Math.max(0,nv0-2):(res==="ok"&&devido?Math.min(nv0+1,GLAD.length):nv0);
+    const prox=res==="ok"?(devido?addDays(hoje,GLAD[Math.min(nv0,GLAD.length-1)]):it.prox):addDays(hoje,1);
+    setGstat({areas:{...(gstat.areas||{}),[k]:{...a,[res]:(a[res]||0)+1}},items:{...(gstat.items||{}),[gCur.id]:{...it,[res]:(it[res]||0)+1,ult:hoje,nv,prox}}});
     const dia=rv[hoje]||{}; const c=dia[sel+"g"]||{ok:0,er:0};
     setRv({...rv,[hoje]:{...dia,[sel+"g"]:{ok:c.ok+(res==="er"?0:1),er:c.er+(res==="er"?1:0)}}});
   };
@@ -4106,10 +4237,10 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               <div style={lab}>Sessão concluída</div>
               <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{gm.ok}<small style={{fontSize:"45%",opacity:.45}}> / {gm.ok+gm.aut+gm.er}</small></div>
               <Vazio>de primeira{gm.aut>0?` · ${gm.aut} autocorrigida${gm.aut>1?"s":""}`:""}{gm.er>0?` · ${gm.er} para revisar`:""}.</Vazio>
-              <div style={{marginTop:20,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}><button style={btnP} onClick={()=>iniciarGram(gm.af||undefined)}>Outra sessão</button><button style={btnS} onClick={()=>setGm(null)}>Fechar</button></div>
+              <div style={{marginTop:20,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}><button style={btnP} onClick={()=>iniciarGram(gm.af||undefined,gm.fr||undefined)}>Outra sessão</button><button style={btnS} onClick={()=>setGm(null)}>Fechar</button></div>
             </div>):gCur?(<>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                <span style={{...lab,display:"inline-flex",alignItems:"center",gap:7}}><i style={{width:8,height:8,borderRadius:"50%",background:L(sel).cor}}/>{gm.af?(gAreas.find(a=>a[0]===gm.af)||[])[1]:"Sessão mista"}</span>
+                <span style={{...lab,display:"inline-flex",alignItems:"center",gap:7}}><i style={{width:8,height:8,borderRadius:"50%",background:L(sel).cor}}/>{gm.af?(gAreas.find(a=>a[0]===gm.af)||[])[1]:(gm.tit||"Sessão mista")}</span>
                 <span style={lab}>{Math.min(gm.i+1,gm.fila.length)} / {gm.fila.length}</span>
               </div>
               <div style={{height:4,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden",marginBottom:26}}><div style={{width:(gm.i/gm.fila.length*100)+"%",height:"100%",background:T.ink,transition:"width .3s"}}/></div>
@@ -4134,6 +4265,37 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           </Card>
         ):(<>
           <Card>
+            <Titulo k="O que precisa de treino" t="Pontos fracos"/>
+            {fracos.length===0?<Vazio>Sem ponto fraco claro ainda. Registre seus erros abaixo ou faça uma sessão mista: o app passa a mostrar onde você perde.</Vazio>:(<>
+              {fracos.map((d,n)=>(
+                <div key={d.k} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 0",borderTop:n===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:14.5,fontWeight:600}}>{d.nome}</div>
+                    <div style={{...lab,fontSize:9.5,marginTop:6}}>{d.erros>0?d.erros+(d.erros>1?" erros seus em aberto":" erro seu em aberto"):""}{d.erros>0&&d.t>=3?" · ":""}{d.t>=3?Math.round(d.falha*100)+"% de falha nos exercícios":""}{d.dom>0?" · "+d.dom+" já dominado"+(d.dom>1?"s":""):""}</div>
+                  </div>
+                  <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>iniciarGram(d.k)}>Treinar</button>
+                </div>))}
+              <div style={{marginTop:14}}><button style={btnP} onClick={()=>iniciarGram(undefined,fracos.map(d=>d.k))}>Treinar pontos fracos</button></div>
+            </>)}
+            <div style={{...lab,fontSize:9.5,marginTop:14,lineHeight:1.6}}>{voltamHoje>0?voltamHoje+(voltamHoje>1?" exercícios voltam":" exercício volta")+" hoje para manter o que você já domina":"Nada vencido hoje"}. Dominar não tira o exercício da fila: ele volta em 1, 3, 7, 21, 60 e 150 dias, e um erro devolve para o começo.</div>
+          </Card>
+          <Card>
+            <Titulo k="Meus erros" t="Registrar em linha"/>
+            <div style={{fontSize:13.5,lineHeight:1.6,opacity:.8,maxWidth:600,marginBottom:12}}>Uma linha por erro: <b>frase errada =&gt; frase correta</b>. O app troca só o trecho errado por uma lacuna e devolve a frase no treino, até você acertar sem ajuda.</div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>{gAreas.map(([k,nome])=><button key={k} onClick={()=>setEf({...ef,area:k})} aria-pressed={ef.area===k} style={{...(ef.area===k?btnP:btnS),padding:"8px 14px",fontSize:12.5}}>{nome.replace(/ \(.*\)/,"")}</button>)}</div>
+            <textarea style={{...inp,minHeight:90,resize:"vertical",lineHeight:1.5}} value={ef.txt} onChange={e=>setEf({...ef,txt:e.target.value})} placeholder={sel==="de"?"Ich helfe dich => Ich helfe dir":"Je lui vois => Je la vois"}/>
+            <input style={{...inp,marginTop:10}} value={ef.fonte} onChange={e=>setEf({...ef,fonte:e.target.value})} placeholder="De onde veio (opcional): lição, redação, conversa…"/>
+            <div style={{marginTop:12,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}><button style={{...btnP,opacity:ef.txt.trim()?1:.4}} disabled={!ef.txt.trim()} onClick={salvarErros}>Salvar erros</button>{efMsg&&<span style={{fontSize:13,opacity:.8}}>{efMsg}</span>}</div>
+            {meusSel.length>0&&<div style={{marginTop:18}}>
+              <div style={{...lab,marginBottom:8}}>{meusSel.length} registrados · {meusSel.filter(m=>!mAtivo(m)).length} dominados</div>
+              {meusSel.slice(0,5).map(m=>(
+                <div key={m.id} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"8px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)",fontSize:13.5,lineHeight:1.5}}>
+                  <div style={{flex:1,minWidth:0,wordBreak:"break-word"}}><span style={{textDecoration:"line-through",opacity:.5}}>{m.errada}</span><br/>{m.certa}<div style={{...lab,fontSize:9,marginTop:3}}>{nomeAreaG(m.area).replace(/ \(.*\)/,"")}{!mAtivo(m)?" · dominado, volta em "+(stIt("me:"+m.id).prox||"—"):""}</div></div>
+                  <button aria-label="Apagar erro" onClick={()=>setMeus(meus.filter(x=>x.id!==m.id))} style={{background:"none",border:"none",cursor:"pointer",opacity:.4,fontSize:16,padding:4}}>×</button>
+                </div>))}
+            </div>}
+          </Card>
+          <Card>
             <Titulo k="Intercalação" t="Gramática mista"/>
             <div style={{fontSize:14,lineHeight:1.6,opacity:.8,maxWidth:560}}>10 frases de áreas misturadas, para você decidir qual regra se aplica (é essa a habilidade da prova). No primeiro erro o app só <b>marca o trecho</b> e pede nova tentativa; no segundo mostra a resposta e a explicação. O que errar volta para a fila e alimenta suas dificuldades.</div>
             <div style={{marginTop:18}}><button style={btnP} onClick={()=>iniciarGram()}>Começar sessão mista</button></div>
@@ -4145,7 +4307,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:14.5,fontWeight:600}}>{nome}</div>
                   <div style={{height:5,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",marginTop:7,overflow:"hidden"}}><div style={{width:(pc||0)+"%",height:"100%",background:pc!==null&&pc<60?IDI_RED:T.ink,transition:"width .4s"}}/></div>
-                  <div style={{...lab,fontSize:9.5,marginTop:6}}>{t?`${pc}% · ${t} respostas`:"ainda não treinada"} · {total} exercícios</div>
+                  <div style={{...lab,fontSize:9.5,marginTop:6}}>{t?`${pc}% · ${t} respostas`:"ainda não treinada"} · {total+meusSel.filter(m=>m.area===k).length} exercícios{meusSel.filter(m=>m.area===k&&mAtivo(m)).length>0?` · ${meusSel.filter(m=>m.area===k&&mAtivo(m)).length} erro(s) seu(s) em aberto`:""}</div>
                 </div>
                 <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>iniciarGram(k)}>Treinar</button>
               </div>);})}
