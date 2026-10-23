@@ -1921,12 +1921,14 @@ const CLI_MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","
 // ── Clínica: anexos (IndexedDB, só neste aparelho) e exames laboratoriais ──
 const CLI_ACERTO=[["acertei","Acertei de primeira"],["lista","Estava na minha lista"],["nao","Não pensei nisso"]];
 const CLI_FALHA=[["conhecimento","Faltou conhecimento"],["raciocinio","Sabia, mas não lembrei ou ancorei"],["conduta","Conduta ou tempo"],["sistema","Fora do meu controle"]];
+const CLI_CERT=[["confirmado","Confirmado"],["provavel","Provável"],["sindromico","Só sindrômico (sem etiologia)"]];
 const CLI_DTIPO=["Evolução","Reavaliação","Medicação","Intercorrência","Contato"];
 const CLI_IMGT=["ECG","RX","TC","USG","RM","Outro"];
 const CLI_LAB=[
   ["Hemograma",[["hb","Hb","g/dL",[12,17.5]],["ht","Ht","%",[36,52]],["leu","Leucócitos","/mm³",[4000,11000]],["bast","Bastões","%",[0,5]],["plq","Plaquetas","mil/mm³",[150,450]]]],
-  ["Bioquímica",[["ur","Ureia","mg/dL",[15,45]],["cr","Creatinina","mg/dL",[0.6,1.3]],["na","Na","mEq/L",[135,145]],["k","K","mEq/L",[3.5,5.1]],["mg","Mg","mg/dL",[1.6,2.6]],["glic","Glicemia","mg/dL",[70,140]],["tgo","TGO","U/L",[0,40]],["tgp","TGP","U/L",[0,41]],["bt","Bilirrubina total","mg/dL",[0,1.2]],["lip","Lipase","U/L",[0,60]]]],
+  ["Bioquímica",[["ur","Ureia","mg/dL",[15,45]],["cr","Creatinina","mg/dL",[0.6,1.3]],["na","Na","mEq/L",[135,145]],["cl","Cl","mEq/L",[98,107]],["k","K","mEq/L",[3.5,5.1]],["mg","Mg","mg/dL",[1.6,2.6]],["glic","Glicemia","mg/dL",[70,140]],["tgo","TGO","U/L",[0,40]],["tgp","TGP","U/L",[0,41]],["bt","Bilirrubina total","mg/dL",[0,1.2]],["lip","Lipase","U/L",[0,60]]]],
   ["Cardíaco e inflamatório",[["trop","Troponina","valor + unidade",null],["ckmb","CK-MB","valor + unidade",null],["bnp","BNP / NT-proBNP","valor + unidade",null],["dd","D-dímero","valor + unidade",null],["pcr","PCR","mg/L",[0,5]],["lac","Lactato","mmol/L",[0.5,2]],["inr","INR","",[0.8,1.2]]]],
+  ["Urina (EAS)",[["den","Densidade","",null],["phu","pH urinário","",null],["leu_u","Leucócitos","/campo ou +",null],["hem_u","Hemácias","/campo ou +",null],["nit","Nitrito","pos/neg",null],["prot","Proteína","",null],["glic_u","Glicose","",null],["cet","Cetonas","",null],["bac","Bactérias","",null]]],
   ["Gasometria",[["ph","pH","",[7.35,7.45]],["pco2","pCO2","mmHg",[35,45]],["hco3","HCO3","mEq/L",[22,26]],["po2","pO2","mmHg",[80,100]],["be","BE","mEq/L",[-2,2]]]]
 ];
 const refLab=(a,sexo)=>a[0]==="hb"?(sexo==="F"?[12,16]:sexo==="M"?[13,17.5]:a[3]):a[3];
@@ -1978,6 +1980,137 @@ function MedLightbox({lb,onClose}){
         {!u&&<span style={{color:"#fff",fontSize:14}}>Arquivo não encontrado neste aparelho.</span>}
       </div>
     </div>);
+}
+const cliNrm=t=>String(t||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const cliNum=v=>{const n=parseFloat(String(v==null?"":v).replace(",","."));return isNaN(n)?null:n;};
+const CLI_PALAV={
+  dt:["toraci","peito","precordi","opressao","aperto no peito","irradia","sudorese","atrito pericardico"],
+  dp:["dispne","falta de ar","sibil","tosse","desconforto respirat","hipoxi","pneumo","derrame pleural","estertor","creptac","roncos","taquipne","tiragem"],
+  da:["abdom","barriga","epigastr","colica","nausea","vomit","diarre","hipogastr","suprapubic","flanco","pancreat","colecist","apendic","descompressao","murphy","blumberg","defesa abdominal","melena","hematemese"],
+  cf:["cefale","dor de cabeca","rigidez de nuca","fotofobia","meningism"],
+  sc:["sincop","desmai","apagou","perda de consciencia","lipotim"],
+  dn:["avc","deficit","fraqueza","paresia","hemipar","afasia","disartria","rima","formigamento","rebaixamento","isquemia cerebral","hemorragia cerebral","hipoestesia","babinski","convuls"],
+  fs:["febre","calafrio","sepse","infec","itu","urinari","disuria","celulite","febril","bacteri","leucocituria"],
+  pa:["palpita","taquicard","arritm","batedeira","fibrilacao","flutter","taquiarritmia"],
+  tv:["tontura","vertigem","labirint","rodando","desequilibrio","nistagmo"]
+};
+function cliUlt(p,k){const l=[...(p.lab||[])].sort((a,b)=>a.h.localeCompare(b.h)).filter(x=>x.vals&&x.vals[k]!=null&&x.vals[k]!=="").pop();return l?String(l.vals[k]):"";}
+function cliSugSind(p){
+  const sc={},why={};
+  const add=(id,pt,r)=>{sc[id]=(sc[id]||0)+pt;why[id]=why[id]||[];if(!why[id].includes(r))why[id].push(r);};
+  const casa=(txt,peso,orig)=>{const t=cliNrm(txt);if(!t)return;Object.keys(CLI_PALAV).forEach(id=>{const h=CLI_PALAV[id].find(w=>{const re=new RegExp("(^|[^a-z])("+w+")","g");let m;while((m=re.exec(t))){const ini=m.index+m[1].length;const ant=t.slice(Math.max(0,ini-30),ini).split(/[.;,\n]/).pop();if(!/(^|[^a-z])(sem|nega|negou|nao|ausenc\w*|afebril)([^a-z]|$)/.test(ant))return true;}return false;});if(h)add(id,peso,orig+": “"+h+"”");});};
+  casa(p.queixa,3,"queixa");
+  const q=p.quadro||{};casa(q.hda,3,"história");casa(q.ef,3,"exame físico");casa(q.ant,1,"antecedentes");
+  (p.img||[]).forEach(e=>casa((e.regiao||"")+" "+(e.laudo||""),2,"laudo de "+e.tipo));
+  (p.lab||[]).forEach(l=>casa(l.outros,2,"exame"));
+  const v=p.vit||{};
+  const sys=cliNum(String(v.pa||"").split("/")[0]),fc=cliNum(v.fc),fr=cliNum(v.fr),sat=cliNum(v.sat),tax=cliNum(v.tax),gli=cliNum(v.gli);
+  if(tax!=null&&tax>=38)add("fs",3,"febre");
+  if(sat!=null&&sat<92)add("dp",3,"SpO2 < 92%");
+  if(fr!=null&&fr>=22){add("dp",2,"FR ≥ 22");add("fs",1,"FR ≥ 22");}
+  if(fc!=null&&fc>120){add("pa",3,"FC > 120");add("fs",1,"FC > 120");}
+  if(fc!=null&&fc<50){add("pa",2,"FC < 50");add("sc",2,"FC < 50");}
+  if(sys!=null&&sys<90){add("sc",2,"PAS < 90");add("fs",2,"PAS < 90");add("dt",1,"PAS < 90");}
+  if(v.mental){add("dn",2,"estado mental alterado");add("fs",1,"estado mental alterado");}
+  if(gli!=null&&gli<70)add("dn",2,"glicemia < 70 (hipoglicemia pode simular déficit)");
+  const u=k=>cliNum(cliUlt(p,k));
+  if((u("leu")!=null&&u("leu")>11000)||(u("bast")!=null&&u("bast")>5))add("fs",2,"leucocitose ou desvio à esquerda");
+  if(u("pcr")!=null&&u("pcr")>5)add("fs",1,"PCR elevada");
+  if(u("lac")!=null&&u("lac")>=2)add("fs",2,"lactato elevado");
+  if(cliUlt(p,"trop"))add("dt",2,"troponina lançada");
+  if(u("k")!=null&&(u("k")<3.5||u("k")>5.5))add("pa",2,"potássio alterado");
+  if(u("ph")!=null&&u("ph")<7.35&&u("pco2")!=null&&u("pco2")>45)add("dp",2,"acidose respiratória na gasometria");
+  if(/pos|\+|reag|presente/.test(cliNrm(cliUlt(p,"nit"))))add("fs",2,"nitrito positivo");
+  const lu=cliUlt(p,"leu_u");if(/\+|numer|muit|incont/.test(cliNrm(lu))||(cliNum(lu)!=null&&cliNum(lu)>=10))add("fs",2,"leucocitúria");
+  return Object.keys(sc).filter(id=>sc[id]>=2).sort((a,b)=>sc[b]-sc[a]).slice(0,4).map(id=>({id,sc:sc[id],why:why[id].slice(0,3)}));
+}
+function cliLeitura(p){
+  const out=[];const push=(n,t)=>out.push({n,t});
+  const ord=[...(p.lab||[])].sort((a,b)=>a.h.localeCompare(b.h));
+  const serie=k=>ord.filter(l=>l.vals&&cliNum(l.vals[k])!=null).map(l=>({h:l.h,v:cliNum(l.vals[k])}));
+  const ult=k=>{const x=serie(k);return x.length?x[x.length-1].v:null;};
+  const ph=ult("ph"),pco2=ult("pco2"),hco3=ult("hco3"),na=ult("na"),cl=ult("cl");
+  if(ph!=null&&(pco2!=null||hco3!=null)){
+    const ac=ph<7.35,al=ph>7.45,hiC=pco2!=null&&pco2>45,loC=pco2!=null&&pco2<35,loB=hco3!=null&&hco3<22,hiB=hco3!=null&&hco3>26;
+    let d="";
+    if(ac){d=loB&&hiC?"acidose mista (metabólica e respiratória).":loB?"acidose metabólica.":hiC?"acidose respiratória.":"acidemia; faltam pCO2 ou HCO3 para definir o componente.";}
+    else if(al){d=hiB&&loC?"alcalose mista.":hiB?"alcalose metabólica.":loC?"alcalose respiratória.":"alcalemia; faltam pCO2 ou HCO3 para definir o componente.";}
+    else d=(loB||hiB||hiC||loC)?"pH normal com pCO2 ou HCO3 alterados: distúrbio compensado ou misto.":"sem distúrbio ácido-base evidente.";
+    push(ac||al?"alerta":"info","Gasometria: "+d);
+    if(ac&&loB&&pco2!=null){const esp=1.5*hco3+8;push(pco2>esp+2?"alerta":"info","Compensação (Winter): pCO2 esperado ~"+esp.toFixed(0)+" (±2), medido "+pco2+(pco2>esp+2?": acidose respiratória associada.":pco2<esp-2?": alcalose respiratória associada.":": dentro do esperado."));}
+    if(ac&&loB){if(na!=null&&cl!=null){const ag=na-cl-hco3;push(ag>12?"alerta":"info","Ânion gap "+ag.toFixed(0)+" (ref. ~8–12; corrigir pela albumina). "+(ag>12?"Elevado: pensar em lactato, cetoacidose, uremia e tóxicos.":"Normal: acidose hiperclorêmica (diarreia, perda de bicarbonato, acidose tubular)."));}else push("info","Ânion gap não calculado: informe Na e Cl.");}
+  }
+  const cr=serie("cr");
+  if(cr.length){
+    const at=cr[cr.length-1],ant=cr.slice(0,-1);let lra=false;
+    if(ant.length){
+      const mn=Math.min(...ant.map(x=>x.v));const rec=ant.filter(x=>new Date(at.h+":00")-new Date(x.h+":00")<=48*3600e3);
+      const dMin=rec.length?at.v-Math.min(...rec.map(x=>x.v)):0;
+      if(dMin>=0.3||at.v>=1.5*mn){lra=true;const r=at.v/mn;push("alerta","Creatinina "+at.v+" (menor valor na permanência: "+mn+"). Critério de LRA (KDIGO) por creatinina"+(r>=3?", estágio 3":r>=2?", estágio 2":", estágio 1")+". Avaliar diurese, volemia, nefrotóxicos e obstrução.");}
+    }
+    if(!lra&&at.v>1.3)push("info","Creatinina "+at.v+" elevada"+(ant.length?", sem piora significativa na permanência.":" e sem basal para comparar: pode ser aguda ou crônica. Perguntar valor prévio."));
+  }
+  const ur=ult("ur"),crU=ult("cr");
+  if(ur!=null&&crU!=null&&crU>0&&ur/crU>50)push("info","Relação ureia/creatinina "+(ur/crU).toFixed(0)+" (>50): padrão pré-renal. Sem desidratação, lembrar de sangramento digestivo e corticoide.");
+  const k=ult("k");
+  if(k!=null){if(k>=6)push("alerta","K "+k+": hipercalemia grave. ECG e tratamento imediato conforme protocolo.");else if(k>5.5)push("alerta","K "+k+": hipercalemia. Fazer ECG e checar hemólise, função renal e medicações.");else if(k<2.5)push("alerta","K "+k+": hipocalemia grave. Repor com monitorização e checar Mg.");else if(k<3.5)push("info","K "+k+": hipocalemia. Repor e checar Mg.");}
+  if(na!=null){if(na<125)push("alerta","Na "+na+": hiponatremia grave. Ver sintomas, osmolaridade e volemia; correção lenta.");else if(na<135)push("info","Na "+na+": hiponatremia. Classificar por osmolaridade e volemia.");else if(na>150)push("alerta","Na "+na+": hipernatremia. Estimar o déficit de água e corrigir devagar.");else if(na>145)push("info","Na "+na+": hipernatremia leve.");}
+  const hb=serie("hb");
+  if(hb.length){
+    const a=hb[hb.length-1];
+    if(a.v<7)push("alerta","Hb "+a.v+": anemia grave. Procurar sangramento e avaliar transfusão conforme protocolo.");
+    else if(a.v<(p.sexo==="M"?13:12))push("info","Hb "+a.v+": anemia. Ver VCM, reticulócitos e sinais de sangramento.");
+    if(hb.length>1){const mx=Math.max(...hb.slice(0,-1).map(x=>x.v));if(mx-a.v>=2)push("alerta","Hb caiu "+(mx-a.v).toFixed(1)+" g/dL na permanência: investigar sangramento (ou hemodiluição).");}
+  }
+  const leu=ult("leu"),bast=ult("bast"),plq=ult("plq"),pcr=ult("pcr"),lac=ult("lac"),inr=ult("inr"),gli=ult("glic");
+  if(leu!=null){if(leu>11000)push("info","Leucócitos "+leu+": leucocitose"+(bast!=null&&bast>10?" com desvio à esquerda (bastões "+bast+"%), favorece infecção bacteriana.":".")+" Lembrar de corticoide e estresse.");else if(leu<4000)push("info","Leucócitos "+leu+": leucopenia. Ver neutrófilos e medicações.");}
+  if(plq!=null){if(plq<50)push("alerta","Plaquetas "+plq+" mil: plaquetopenia grave.");else if(plq<150)push("info","Plaquetas "+plq+" mil: plaquetopenia. Pensar em sepse, drogas e hepatopatia.");}
+  if(lac!=null&&lac>=2)push("alerta","Lactato "+lac+(lac>=4?": grave, hipoperfusão importante.":": elevado, pensar em hipoperfusão. Repetir após a ressuscitação."));
+  if(pcr!=null&&pcr>5)push("info","PCR "+pcr+" mg/L: inflamação ou infecção, inespecífica. Vale mais a tendência entre coletas.");
+  if(inr!=null&&inr>1.5)push("alerta","INR "+inr+": coagulopatia. Anticoagulante, hepatopatia ou sepse.");
+  if(gli!=null){if(gli<70)push("alerta","Glicemia "+gli+": hipoglicemia.");else if(gli>=250)push("alerta","Glicemia "+gli+": hiperglicemia importante. Checar cetonas, gasometria e osmolaridade.");}
+  const tgo=ult("tgo"),tgp=ult("tgp"),lip=ult("lip");
+  if((tgo!=null&&tgo>120)||(tgp!=null&&tgp>123))push("info","Transaminases acima de 3x o limite superior: lesão hepatocelular importante a investigar.");
+  if(lip!=null&&lip>180)push("info","Lipase "+lip+" (>3x o limite): compatível com pancreatite aguda se houver dor típica.");
+  const tr=ord.filter(l=>l.vals&&l.vals.trop);
+  if(tr.length===1)push("info","Troponina lançada: interpretar pelo ensaio do seu laboratório e repetir para ver o delta.");
+  if(tr.length>1)push("info","Troponina em "+tr.length+" coletas ("+tr.map(l=>l.vals.trop).join(" → ")+"): o que pesa é o delta e o intervalo, no contexto da dor.");
+  const pos=t=>/pos|\+|reag|presente|numer|muit|incont/.test(cliNrm(t));
+  const nit=cliUlt(p,"nit"),leuU=cliUlt(p,"leu_u");
+  const leuAlt=pos(leuU)||(cliNum(leuU)!=null&&cliNum(leuU)>=10);
+  if(pos(nit)||leuAlt)push("info","EAS: "+(pos(nit)?"nitrito positivo":"")+(pos(nit)&&leuAlt?" e ":"")+(leuAlt?"leucocitúria":"")+". Sugere ITU se houver sintomas urinários; colher urocultura antes do antibiótico. Sem sintomas pode ser bacteriúria assintomática.");
+  if(pos(cliUlt(p,"hem_u")))push("info","EAS: hemácias presentes. Pensar em litíase, ITU, trauma e causa glomerular.");
+  if(pos(cliUlt(p,"prot")))push("info","EAS: proteinúria. Interpretar com o contexto (febre, esforço, doença renal).");
+  if(pos(cliUlt(p,"glic_u")))push("info","EAS: glicosúria. Checar glicemia e uso de iSGLT2.");
+  if(pos(cliUlt(p,"cet")))push("info","EAS: cetonúria. Pensar em jejum prolongado ou cetoacidose; checar gasometria e glicemia.");
+  const den=cliNum(cliUlt(p,"den"));if(den!=null&&den>=1030)push("info","EAS: urina concentrada (densidade "+den+"). Compatível com desidratação.");
+  return out;
+}
+function cliResumo(p){
+  const L=[];const dm=iso=>iso.slice(8,10)+"/"+iso.slice(5,7)+" "+iso.slice(11);
+  L.push("Paciente: "+(p.idade?p.idade+" anos":"idade não informada")+(p.sexo?", "+(p.sexo==="F"?"feminino":"masculino"):"")+". Queixa: "+p.queixa+". Entrada em "+dm(p.entrada)+".");
+  const v=p.vit||{};
+  const vt=[v.pa&&"PA "+v.pa,v.fc&&"FC "+v.fc,v.fr&&"FR "+v.fr,v.sat&&"SpO2 "+v.sat+"%",v.tax&&"Tax "+v.tax,v.gli&&"Glicemia "+v.gli,v.mental&&"estado mental alterado"].filter(Boolean).join(", ");
+  const qd=p.quadro||{};
+  if(qd.hda)L.push("História: "+qd.hda.replace(/\n/g," "));
+  if(qd.ant)L.push("Antecedentes e medicações: "+qd.ant.replace(/\n/g," "));
+  if(qd.ef)L.push("Exame físico: "+qd.ef.replace(/\n/g," "));
+  if(vt)L.push("Sinais vitais: "+vt+".");
+  const kbx=CLI_KB.find(x=>x.id===p.sind);
+  if(kbx){L.push("Síndrome em análise: "+kbx.nome+(p.sinais.length?". Achados marcados: "+p.sinais.map(k=>(kbx.sinais.find(x=>x[0]===k)||[0,k])[1]).join("; "):"")+".");}
+  if(p.hip&&p.hip.length)L.push("Hipóteses: "+p.hip.map(h=>h.nome+" ("+h.estado+")").join("; ")+".");
+  if(p.dx)L.push("Diagnóstico fechado: "+p.dx.nome+" ("+p.dx.certeza+")"+(p.dx.base?". Base: "+p.dx.base.replace(/\n/g," "):"")+".");
+  [...(p.lab||[])].sort((a,b)=>a.h.localeCompare(b.h)).forEach(l=>{
+    const it=CLI_LAB.flatMap(([g,as])=>as.filter(a=>l.vals[a[0]]).map(a=>a[1]+" "+l.vals[a[0]]+(a[3]&&a[2]?" "+a[2]:"")+flagLab(a,l.vals[a[0]],p.sexo)));
+    L.push("Laboratório "+dm(l.h)+": "+[...it,l.outros].filter(Boolean).join("; ")+".");
+  });
+  [...(p.img||[])].sort((a,b)=>a.h.localeCompare(b.h)).forEach(e=>{
+    L.push((e.tipo==="ECG"?"ECG":"Imagem "+e.tipo)+(e.regiao?" ("+e.regiao+")":"")+" "+dm(e.h)+": "+(e.laudo||"sem laudo digitado")+(e.files.length?" [há "+e.files.length+" arquivo(s) no app; anexe a imagem na conversa]":"")+".");
+  });
+  const ev=[...(p.evo||[])].sort((a,b)=>b.h.localeCompare(a.h)).slice(0,5).reverse();
+  if(ev.length)L.push("Diário recente:\n"+ev.map(e=>"- "+dm(e.h)+" ["+(e.tipo||"Evolução")+"] "+e.t.replace(/\n/g," ")).join("\n"));
+  L.push("\nPedido: interprete os exames e o quadro, diga quais síndromes e diferenciais considerar, o que ainda falta pedir ou perguntar, e comente conduta e armadilhas, separando o que é diretriz do que é inferência.");
+  return L.join("\n");
 }
 const CLI_KB=[
 {id:"dt",nome:"Dor torácica",area:"Cardio",
@@ -2120,6 +2253,8 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const [encDesf,setEncDesf]=useState("");
   const [tickS,setTickS]=useState(0);
   const [anaSub,setAnaSub]=useState("falhas");
+  const [dxF,setDxF]=useState(null);
+  const [resumoTxt,setResumoTxt]=useState(null);
   const [ptab,setPtab]=useState("resumo");
   const [exSub,setExSub]=useState("lab");
   const [dTipo,setDTipo]=useState("Evolução");
@@ -2231,7 +2366,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const addPac=()=>{
     if(!np.queixa.trim()&&!np.leito.trim())return;
     const n={id:uid(),leito:np.leito.trim()||"s/ id",idade:np.idade,sexo:np.sexo,queixa:np.queixa.trim()||"(sem queixa)",entrada:agoraISO(),sit:"aguardando-ex",vit:{pa:"",fc:"",fr:"",sat:"",tax:"",gli:"",mental:false},sind:"",sinais:[],hip:[],pend:[],evo:[],conduta:""};
-    setPacs([n,...pacs]); setNp({leito:"",idade:"",sexo:"",queixa:""}); setNpAberto(false); setPacId(n.id); setExpDx(null); setPtab("resumo"); setLabF(null); setImgF(null);
+    setPacs([n,...pacs]); setNp({leito:"",idade:"",sexo:"",queixa:""}); setNpAberto(false); setPacId(n.id); setExpDx(null); setPtab("resumo"); setLabF(null); setImgF(null); setDxF(null);
   };
   const alertasVit=v=>{
     const out=[]; const sys=parseInt(String(v.pa||"").split("/")[0],10); const fc=parseFloat(v.fc),fr=parseFloat(v.fr),sat=parseFloat(v.sat),tax=parseFloat(String(v.tax||"").replace(",",".")),gli=parseFloat(v.gli);
@@ -2244,12 +2379,24 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const dxNm=rankDx.filter(d=>d.nm).sort((a,b)=>b.sc-a.sc||a.i-b.i);
   const dxOut=rankDx.filter(d=>!d.nm).sort((a,b)=>b.sc-a.sc||a.i-b.i);
   const maxSc=Math.max(1,...rankDx.map(d=>d.sc));
+  const escolherSind=id=>{
+    const st={...(pac.sinaisStash||{})}; if(pac.sind)st[pac.sind]=pac.sinais;
+    if(pac.sind===id){upPac(pac.id,{sind:"",sinais:[],sinaisStash:st});return;}
+    upPac(pac.id,{sind:id,sinais:st[id]||[],sinaisStash:st});
+  };
+  const sug=pac?cliSugSind(pac):[];
+  const leit=pac?cliLeitura(pac):[];
+  const copiarResumo=async()=>{
+    const t=resumoTxt; if(t==null)return;
+    try{await navigator.clipboard.writeText(t);setToast("Resumo copiado. Cole na conversa comigo.");}
+    catch{try{const el=document.getElementById("cli-resumo");el.select();document.execCommand("copy");setToast("Resumo copiado. Cole na conversa comigo.");}catch{setToast("Selecione o texto e copie manualmente.");}}
+  };
   const toggleSinal=k=>upPac(pac.id,{sinais:pac.sinais.includes(k)?pac.sinais.filter(x=>x!==k):[...pac.sinais,k]});
   const addHip=d=>{if(pac.hip.some(h=>h.k===d.key))return;upPac(pac.id,{hip:[...pac.hip,{k:d.key,nome:d.n,estado:"investigando"}]});};
   const ciclaHip=k=>upPac(pac.id,{hip:pac.hip.map(h=>h.k!==k?h:{...h,estado:h.estado==="investigando"?"confirmada":h.estado==="confirmada"?"descartada":"investigando"})});
   const addPend=()=>{if(!pendT.trim())return;upPac(pac.id,{pend:[...pac.pend,{id:uid(),t:pendT.trim(),feito:false,res:""}]});setPendT("");};
   const upPend=(id,patch)=>upPac(pac.id,{pend:pac.pend.map(x=>x.id!==id?x:{...x,...patch})});
-  const abrirPac=id=>{setPacId(id);setExpDx(null);setPtab("resumo");setLabF(null);setImgF(null);setEvoEd(null);try{window.scrollTo({top:0,behavior:"smooth"});}catch{}};
+  const abrirPac=id=>{setDxF(null);setResumoTxt(null);setPacId(id);setExpDx(null);setPtab("resumo");setLabF(null);setImgF(null);setEvoEd(null);try{window.scrollTo({top:0,behavior:"smooth"});}catch{}};
   const vitTxt=v=>[v.pa&&"PA "+v.pa,v.fc&&"FC "+v.fc,v.fr&&"FR "+v.fr,v.sat&&"SpO2 "+v.sat+"%",v.tax&&"Tax "+v.tax,v.gli&&"Glic "+v.gli,v.mental&&"estado mental alterado"].filter(Boolean).join(" · ");
   const addEvo=()=>{if(!evoT.trim())return;const h=dQuando||agoraISO();upPac(pac.id,{evo:[{id:uid(),h,tipo:dTipo,t:evoT.trim(),vit:dVit?vitTxt(pac.vit):""},...(pac.evo||[])]});setEvoT("");setDQuando("");setDVit(false);};
   const salvarEvoEd=()=>{if(!evoEdT.trim())return;upPac(pac.id,{evo:pac.evo.map(e=>e.id!==evoEd?e:{...e,t:evoEdT.trim()})});setEvoEd(null);};
@@ -2299,12 +2446,36 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
     }).join("\n");
     const imgTxt=[...(pac.img||[])].sort((a,b)=>a.h.localeCompare(b.h)).map(e=>"- "+e.tipo+(e.regiao?" "+e.regiao:"")+" ("+dm(e.h)+")"+(e.laudo?": "+e.laudo:"")).join("\n");
     const evoTxt=[...(pac.evo||[])].sort((a,b)=>a.h.localeCompare(b.h)).map(e=>dm(e.h)+" "+e.h.slice(11)+(e.tipo&&e.tipo!=="Evolução"?" ["+e.tipo+"]":"")+" "+e.t+(e.vit?" ("+e.vit+")":"")).join("\n");
-    const hist=[vitTxt(v),sinaisTxt&&"Achados: "+sinaisTxt,hipTxt&&"Hipóteses: "+hipTxt,pendTxt&&"Pendências:\n"+pendTxt,labTxt&&"Laboratório:\n"+labTxt,imgTxt&&"Imagem:\n"+imgTxt,evoTxt&&"Diário:\n"+evoTxt].filter(Boolean).join("\n");
-    const caso={id:uid(),data:(pac.entrada||hoje).slice(0,10),local:"UPA",idade:pac.idade,sexo:pac.sexo,queixa:pac.queixa,area:kbx?kbx.area:"Outros",hist,conduta:pac.conduta,desf:encDesf,aprend:"",duvida:"",criada:hoje,duvidaOk:false,resolucao:"",hipIni:pac.hip.map(h=>h.nome).join("; "),dxFinal:(pac.hip.find(h=>h.estado==="confirmada")||{}).nome||""};
+    const dxTxt=pac.dx?"Diagnóstico: "+pac.dx.nome+" ("+((CLI_CERT.find(c=>c[0]===pac.dx.certeza)||[0,""])[1].toLowerCase())+")"+(pac.dx.cid?" CID "+pac.dx.cid:"")+(pac.dx.base?"\nBase: "+pac.dx.base:"")+(pac.dx.falta?"\nFalta: "+pac.dx.falta:""):"";
+    const qd=pac.quadro||{};
+    const hist=[vitTxt(v),qd.hda&&"História: "+qd.hda,qd.ant&&"Antecedentes: "+qd.ant,qd.ef&&"Exame físico: "+qd.ef,sinaisTxt&&"Achados: "+sinaisTxt,hipTxt&&"Hipóteses: "+hipTxt,dxTxt,pendTxt&&"Pendências:\n"+pendTxt,labTxt&&"Laboratório:\n"+labTxt,imgTxt&&"Imagem:\n"+imgTxt,evoTxt&&"Diário:\n"+evoTxt].filter(Boolean).join("\n");
+    const caso={id:uid(),data:(pac.entrada||hoje).slice(0,10),local:"UPA",idade:pac.idade,sexo:pac.sexo,queixa:pac.queixa,area:kbx?kbx.area:"Outros",hist,conduta:pac.conduta,desf:encDesf,aprend:"",duvida:"",criada:hoje,duvidaOk:false,resolucao:"",hipIni:pac.hip.map(h=>h.nome).join("; "),dxFinal:pac.dx?pac.dx.nome:((pac.hip.find(h=>h.estado==="confirmada")||{}).nome||""),dxCerteza:pac.dx?pac.dx.certeza:"",dxCid:pac.dx?pac.dx.cid:"",tDx:pac.dx?Math.max(0,Math.round((new Date(pac.dx.h+":00")-new Date(pac.entrada+":00"))/60000)):null};
     limparArq(pac);
     setCasos([caso,...casos]); setPacs(pacs.filter(x=>x.id!==pac.id)); setPacId(null); setEncDesf("");
     editarCaso(caso); setToast("Caso salvo no diário. Complete o que você aprendeu.");
   };
+  const abrirDx=()=>{
+    const kbx=CLI_KB.find(x=>x.id===pac.sind);
+    const sinTxt=kbx?pac.sinais.map(k=>(kbx.sinais.find(x=>x[0]===k)||[0,k])[1]).join("; "):"";
+    const exTxt=(pac.pend||[]).filter(x=>x.feito&&x.res).map(x=>x.t+": "+x.res).join("; ");
+    const imTxt=(pac.img||[]).filter(e=>e.laudo).map(e=>e.tipo+(e.regiao?" "+e.regiao:"")+": "+e.laudo).join("; ");
+    const q0=pac.quadro||{};
+    const base=[q0.ef&&"Exame físico: "+q0.ef,sinTxt&&"Achados: "+sinTxt,exTxt&&"Exames: "+exTxt,imTxt&&"Imagem: "+imTxt].filter(Boolean).join("\n");
+    const a=pac.dx;
+    setDxF(a?{nome:a.nome,k:a.k||"",certeza:a.certeza,cid:a.cid||"",base:a.base||"",falta:a.falta||""}:{nome:"",k:"",certeza:"provavel",cid:"",base,falta:""});
+    try{window.scrollTo({top:0,behavior:"smooth"});}catch{}
+  };
+  const salvarDx=()=>{
+    if(!dxF.nome.trim())return;
+    const nome=dxF.nome.trim(); const h=agoraISO(); const mesmo=pac.dx&&pac.dx.nome===nome;
+    const est=dxF.certeza==="confirmado"?"confirmada":"investigando";
+    let hip=pac.hip;
+    if(dxF.k){hip=hip.some(x=>x.k===dxF.k)?hip.map(x=>x.k!==dxF.k?x:{...x,estado:est}):[...hip,{k:dxF.k,nome,estado:est}];}
+    const cl=(CLI_CERT.find(c=>c[0]===dxF.certeza)||[0,""])[1].toLowerCase();
+    const evo=[{id:uid(),h,tipo:"Evolução",t:"Diagnóstico "+(pac.dx?"revisto":"fechado")+": "+nome+" ("+cl+")"+(dxF.falta.trim()?"\nFalta: "+dxF.falta.trim():""),vit:""},...(pac.evo||[])];
+    upPac(pac.id,{dx:{...dxF,nome,h:mesmo?pac.dx.h:h},hip,evo}); setDxF(null);
+  };
+  const kbDxDe=k=>{if(!k)return null;const [sid,i]=k.split(":");const sx2=CLI_KB.find(x=>x.id===sid);return sx2?sx2.dx[+i]||null:null;};
   const dxCard=d=>{
     const aberto=expDx===(pac.id+d.key); const jaHip=pac.hip.some(h=>h.k===d.key);
     const pct=pac.sinais.length&&d.sc>0?Math.round(d.sc/maxSc*100):0;
@@ -2476,6 +2647,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
                 <div style={{fontSize:15,fontWeight:600,marginTop:8,lineHeight:1.35}}>{x.queixa}</div>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>
                   <Chip cor="rgba(224,122,95,.22)">{(CLI_SIT.find(c=>c[0]===x.sit)||[0,"—"])[1]}</Chip>
+                  {x.dx&&<Chip cor={x.dx.certeza==="confirmado"?"rgba(60,130,90,.3)":"rgba(224,170,60,.35)"}>Dx · {x.dx.nome}</Chip>}
                   {abertas>0&&<Chip>{abertas} pendência{abertas>1?"s":""}</Chip>}
                   {al.flags.slice(0,3).map(f=><Chip key={f} cor="rgba(168,50,50,.16)">{f}</Chip>)}
                   {al.q!==null&&al.q>=2&&<Chip cor="rgba(168,50,50,.28)">qSOFA {al.q}</Chip>}
@@ -2515,9 +2687,22 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
           </div>
           {ptab==="rac"&&(<>
           <Card>
+            <Titulo k="Achados do paciente" t="Quadro clínico"/>
+            {[["hda","História da doença atual","Início, evolução, sintomas associados, fatores de piora e melhora"],["ant","Antecedentes e medicações","Comorbidades, medicações em uso, alergias"],["ef","Exame físico","Ausculta, abdome, neurológico, perfusão, achados positivos e negativos importantes"]].map(([k,l,ph])=>(
+              <div key={k} style={{marginTop:k==="hda"?0:14}}><div style={{...lab,marginBottom:6}}>{l}</div><textarea style={{...inp,minHeight:k==="ant"?56:84,resize:"vertical",lineHeight:1.5}} value={(pac.quadro||{})[k]||""} onChange={e=>upPac(pac.id,{quadro:{...(pac.quadro||{}),[k]:e.target.value}})} placeholder={ph}/></div>))}
+            <div style={{fontSize:12,opacity:.6,marginTop:10,lineHeight:1.5}}>O que você escrever aqui alimenta as síndromes sugeridas logo abaixo. Termos negados (“sem febre”, “nega dispneia”) não contam a favor.</div>
+          </Card>
+          <Card>
             <Titulo k="Apoio ao raciocínio" t="O que pode ser?"/>
-            <div style={{...lab,marginBottom:8}}>Síndrome</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>{CLI_KB.map(k=><button key={k.id} style={pill(pac.sind===k.id)} onClick={()=>upPac(pac.id,{sind:pac.sind===k.id?"":k.id,sinais:pac.sind===k.id?[]:pac.sinais})}>{k.nome}</button>)}</div>
+            <div style={{...lab,marginBottom:8}}>Síndromes possíveis (queixa, sinais vitais e exames)</div>
+            {sug.length===0?<Vazio>Nada na queixa nem nos dados bate com as síndromes da base. Preencha sinais vitais e exames para eu sugerir, ou escolha abaixo.</Vazio>:sug.map(g=>{const k=CLI_KB.find(x=>x.id===g.id);const on=pac.sind===g.id;return (
+              <button key={g.id} onClick={()=>escolherSind(g.id)} style={{display:"block",width:"100%",textAlign:"left",padding:"12px 14px",borderRadius:16,marginBottom:8,cursor:"pointer",border:"1px solid "+(on?T.ink:"rgba(var(--cli-rgb),.2)"),background:on?T.ink:"#fff",color:on?T.sheet:T.ink,fontFamily:"'DM Sans',sans-serif"}}>
+                <div style={{fontSize:14.5,fontWeight:700}}>{k.nome}</div>
+                <div style={{fontSize:12,opacity:.75,marginTop:3,lineHeight:1.45}}>{g.why.join(" · ")}</div>
+              </button>);})}
+            <div style={{fontSize:12,opacity:.6,lineHeight:1.5,margin:"4px 0 14px"}}>A sugestão vem de palavras da queixa e dos laudos e de valores alterados. Não é probabilidade. A base tem 9 síndromes, então releia o quadro.</div>
+            <div style={{...lab,marginBottom:8}}>Todas as síndromes da base</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>{CLI_KB.map(k=><button key={k.id} style={pill(pac.sind===k.id)} onClick={()=>escolherSind(k.id)}>{k.nome}</button>)}</div>
             {!sx?<Vazio>Escolha a síndrome que mais se parece com a queixa. Depois marque os achados e o app ordena os diagnósticos pelo que combina, mantendo sempre à vista os que não podem ser perdidos.</Vazio>:(<>
               <div style={{...lab,margin:"16px 0 8px"}}>Achados presentes ({pac.sinais.length})</div>
               <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{sx.sinais.map(([k,l])=>{const on=pac.sinais.includes(k);return <button key={k} onClick={()=>toggleSinal(k)} style={{padding:"8px 13px",borderRadius:14,border:"1px solid "+(on?T.ink:"rgba(var(--cli-rgb),.22)"),background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontSize:12.5,lineHeight:1.35,cursor:"pointer",textAlign:"left",fontFamily:"'DM Sans',sans-serif"}}>{l}</button>;})}</div>
@@ -2543,6 +2728,38 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
           </>)}
 
           {ptab==="resumo"&&(<>
+          <Card>
+            <Titulo k="Conclusão" t="Diagnóstico" dir={!dxF&&<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={abrirDx}>{pac.dx?"Rever":"Fechar diagnóstico"}</button>}/>
+            {dxF?(<div style={{padding:16,borderRadius:16,background:"rgba(var(--cli-rgb),.05)"}}>
+              {(()=>{const cand=[...pac.hip.filter(h=>h.estado!=="descartada").map(h=>({k:h.k,nome:h.nome})),...[...dxNm,...dxOut].filter(d=>d.sc>0).slice(0,3).map(d=>({k:d.key,nome:d.n}))].filter((c,i,a)=>a.findIndex(y=>y.k===c.k)===i);
+                return cand.length>0&&<><div style={{...lab,marginBottom:8}}>Escolher entre as hipóteses e os mais compatíveis</div><div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>{cand.map(c=><button key={c.k} style={pill(dxF.k===c.k)} onClick={()=>setDxF({...dxF,k:c.k,nome:c.nome})}>{c.nome}</button>)}</div></>;})()}
+              <div style={{...lab,marginBottom:6}}>Diagnóstico</div>
+              <input style={inp} value={dxF.nome} onChange={e=>setDxF({...dxF,nome:e.target.value,k:dxF.nome===e.target.value?dxF.k:""})} placeholder="Ou escreva livremente"/>
+              <div style={{...lab,margin:"14px 0 8px"}}>Grau de certeza</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_CERT.map(([k,l])=><button key={k} style={pill(dxF.certeza===k)} onClick={()=>setDxF({...dxF,certeza:k})}>{l}</button>)}</div>
+              <div style={{...lab,margin:"14px 0 6px"}}>CID-10 (opcional)</div>
+              <input style={{...inp,maxWidth:160}} value={dxF.cid} onChange={e=>setDxF({...dxF,cid:e.target.value})} placeholder="Ex: I21.4"/>
+              <div style={{...lab,margin:"14px 0 6px"}}>O que sustenta</div>
+              <textarea style={{...inp,minHeight:90,resize:"vertical",lineHeight:1.5}} value={dxF.base} onChange={e=>setDxF({...dxF,base:e.target.value})} placeholder="Achados, exames e imagem que apoiam o diagnóstico"/>
+              <div style={{...lab,margin:"14px 0 6px"}}>O que ainda falta</div>
+              <input style={inp} value={dxF.falta} onChange={e=>setDxF({...dxF,falta:e.target.value})} placeholder="Exame ou resposta que confirmaria ou mudaria isso"/>
+              <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
+                <button style={{...btnP,opacity:dxF.nome.trim()?1:.4}} disabled={!dxF.nome.trim()} onClick={salvarDx}>Salvar diagnóstico</button>
+                <button style={btnS} onClick={()=>setDxF(null)}>Cancelar</button>
+              </div>
+            </div>):pac.dx?(()=>{const d=kbDxDe(pac.dx.k);const mins=Math.max(0,Math.round((new Date(pac.dx.h+":00")-new Date(pac.entrada+":00"))/60000));return (<>
+              <div style={{...serif,fontSize:isMobile?26:32,lineHeight:1.2}}>{pac.dx.nome}</div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}><Chip cor={pac.dx.certeza==="confirmado"?"rgba(60,130,90,.3)":"rgba(224,170,60,.35)"}>{(CLI_CERT.find(c=>c[0]===pac.dx.certeza)||[0,""])[1]}</Chip>{pac.dx.cid&&<Chip>CID {pac.dx.cid}</Chip>}<Chip>fechado em {fmtDur(mins)} da entrada</Chip></div>
+              {pac.dx.base&&<div style={{fontSize:13.5,lineHeight:1.6,marginTop:12,whiteSpace:"pre-wrap"}}><b style={{...lab,marginRight:6}}>sustenta</b>{pac.dx.base}</div>}
+              {pac.dx.falta&&<div style={{fontSize:13.5,lineHeight:1.6,marginTop:8}}><b style={{...lab,marginRight:6}}>falta</b>{pac.dx.falta}</div>}
+              {d&&<div style={{marginTop:14,padding:"12px 14px",borderRadius:14,background:"rgba(224,122,95,.1)",fontSize:13.5,lineHeight:1.6}}>
+                <div style={{...lab,marginBottom:4}}>Conduta inicial de referência (geral, sem doses)</div>{d.cd}
+                {pac.dx.certeza!=="confirmado"&&<><div style={{...lab,margin:"10px 0 4px"}}>Para confirmar ou descartar</div>{d.ex}</>}
+                <div style={{marginTop:10}}><button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={()=>upPac(pac.id,{conduta:(pac.conduta?pac.conduta+"\n":"")+d.cd})}>Copiar para a conduta</button></div>
+              </div>}
+            </>);})():<Vazio>Ainda em aberto. Quando o quadro permitir, feche com o grau de certeza e o que sustenta. Pode rever a qualquer momento, e cada mudança fica registrada no diário. O tempo até o diagnóstico entra na sua análise.</Vazio>}
+          </Card>
+
           <Card>
             <Titulo k="Raciocínio" t="Hipóteses"/>
             {pac.hip.length===0?<Vazio>Nenhuma ainda. Use a aba Raciocínio para pensar nos diferenciais e marcar as hipóteses.</Vazio>:<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{pac.hip.map(h=><button key={h.k} onClick={()=>ciclaHip(h.k)} style={{border:"none",borderRadius:999,padding:"8px 14px",fontSize:13,fontWeight:600,cursor:"pointer",background:corEstado[h.estado],color:T.ink,textDecoration:h.estado==="descartada"?"line-through":"none",fontFamily:"'DM Sans',sans-serif"}}>{h.nome} · {h.estado}</button>)}</div>}
@@ -2573,6 +2790,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
 
           <Card>
             <Titulo k="Fechar" t="Encerrar atendimento"/>
+            {!pac.dx&&<div style={{fontSize:13,lineHeight:1.5,marginBottom:14,padding:"10px 12px",borderRadius:12,background:"rgba(224,170,60,.18)"}}>Diagnóstico ainda não fechado. Se fechar agora, ele vai junto para o caso e entra na análise. <button onClick={abrirDx} style={{background:"none",border:"none",padding:0,cursor:"pointer",fontWeight:700,textDecoration:"underline",textUnderlineOffset:3,color:T.ink,fontFamily:"'DM Sans',sans-serif"}}>Fechar diagnóstico</button></div>}
             <div style={{...lab,marginBottom:8}}>Desfecho</div>
             <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_DESF.map(d=><button key={d} style={pill(encDesf===d)} onClick={()=>setEncDesf(encDesf===d?"":d)}>{d}</button>)}</div>
             <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap"}}>
@@ -2615,7 +2833,13 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
           </Card>)}
 
           {ptab==="ex"&&(<>
-            <div style={{display:"flex",gap:8,marginBottom:14}}>{[["lab","Laboratório"+((pac.lab||[]).length?" · "+pac.lab.length:"")],["img","Imagem"+((pac.img||[]).length?" · "+pac.img.length:"")]].map(([k,l])=><button key={k} style={pill(exSub===k)} onClick={()=>setExSub(k)}>{l}</button>)}</div>
+            <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center",flexWrap:"wrap"}}><span style={{display:"contents"}}>{[["lab","Laboratório"+((pac.lab||[]).length?" · "+pac.lab.length:"")],["img","Imagem"+((pac.img||[]).length?" · "+pac.img.length:"")]].map(([k,l])=><button key={k} style={pill(exSub===k)} onClick={()=>setExSub(k)}>{l}</button>)}</span><span style={{flex:1}}/><button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setResumoTxt(resumoTxt==null?cliResumo(pac):null)}>{resumoTxt==null?"Copiar para interpretar":"Fechar resumo"}</button></div>
+            {resumoTxt!=null&&(<Card>
+              <Titulo k="Para colar na conversa" t="Resumo para interpretar"/>
+              <textarea id="cli-resumo" readOnly style={{...inp,minHeight:220,resize:"vertical",lineHeight:1.5,fontSize:13}} value={resumoTxt}/>
+              <div style={{display:"flex",gap:10,marginTop:12,flexWrap:"wrap"}}><button style={btnP} onClick={copiarResumo}>Copiar texto</button></div>
+              <div style={{fontSize:12,opacity:.6,marginTop:10,lineHeight:1.5}}>O texto não leva nome nem leito, só idade, sexo e os dados clínicos. Imagens e PDFs não vão junto: anexe a foto do ECG ou do exame na conversa. Você escolhe o que enviar.</div>
+            </Card>)}
 
             {exSub==="lab"&&(<Card>
               <Titulo k="Resultados" t="Laboratório" dir={!labF&&<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>setLabF({id:null,h:agoraISO(),vals:{},outros:""})}>Nova coleta</button>}/>
@@ -2645,13 +2869,18 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
                   <div style={{overflowX:"auto",margin:"0 -6px"}}><table style={{borderCollapse:"collapse",fontSize:13.5,minWidth:"100%"}}>
                     <thead><tr><th style={{...th,textAlign:"left",position:"sticky",left:0,background:"#fff",cursor:"default",zIndex:1}}/>{labsOrd.map(l=><th key={l.id} style={th} onClick={()=>setLabF({id:l.id,h:l.h,vals:{...l.vals},outros:l.outros||""})} title="Editar coleta">{l.h.slice(8,10)}/{l.h.slice(5,7)}<br/><span style={{fontWeight:500,opacity:.6}}>{l.h.slice(11)}</span></th>)}</tr></thead>
                     <tbody>{linhas.map(a=>(<tr key={a[0]}>
-                      <td style={{padding:"8px 10px",position:"sticky",left:0,background:"#fff",borderBottom:"1px solid rgba(var(--cli-rgb),.07)",fontWeight:600,whiteSpace:"nowrap",zIndex:1}}>{a[1]}<span style={{fontWeight:400,opacity:.5,fontSize:10.5}}> {a[2]&&a[2].indexOf(" ")<0?a[2]:""}</span></td>
+                      <td style={{padding:"8px 10px",position:"sticky",left:0,background:"#fff",borderBottom:"1px solid rgba(var(--cli-rgb),.07)",fontWeight:600,whiteSpace:"nowrap",zIndex:1}}>{a[1]}<span style={{fontWeight:400,opacity:.5,fontSize:10.5}}> {a[3]&&a[2]?a[2]:""}</span></td>
                       {labsOrd.map(l=>{const v=l.vals[a[0]];const f=v?flagLab(a,v,pac.sexo):"";return <td key={l.id} style={{padding:"8px 10px",textAlign:"center",whiteSpace:"nowrap",borderBottom:"1px solid rgba(var(--cli-rgb),.07)",background:f?"rgba(168,50,50,.1)":"transparent",color:f?"#A83232":T.ink,fontWeight:f?700:400}}>{v?v+(f?" "+f:""):"·"}</td>;})}
                     </tr>))}</tbody>
                   </table></div>
                   {labsOrd.filter(l=>l.outros).map(l=><div key={l.id} style={{fontSize:13.5,lineHeight:1.55,marginTop:12}}><span style={lab}>{l.h.slice(8,10)}/{l.h.slice(5,7)} {l.h.slice(11)}</span> {l.outros}</div>)}
                   <div style={{fontSize:12,opacity:.6,marginTop:12}}>Toque na data de uma coluna para editar ou excluir a coleta.</div>
                 </>);})()}
+            </Card>)}
+            {exSub==="lab"&&leit.length>0&&(<Card>
+              <Titulo k="Regras simples sobre os valores lançados" t="Leitura automática"/>
+              {leit.map((x,n)=>(<div key={n} style={{display:"flex",gap:10,padding:"9px 0",borderTop:n===0?"none":"1px solid rgba(var(--cli-rgb),.08)",fontSize:13.5,lineHeight:1.55}}><span style={{width:6,borderRadius:99,background:x.n==="alerta"?"rgba(168,50,50,.7)":"rgba(var(--cli-rgb),.25)",flexShrink:0}}/><span>{x.t}</span></div>))}
+              <div style={{fontSize:12,opacity:.6,marginTop:12,lineHeight:1.5}}>Não substitui o laudo nem o raciocínio clínico, e as faixas são de adulto. ECG, imagem e o contexto do paciente eu interpreto na conversa, pelo botão “Copiar para interpretar”.</div>
             </Card>)}
 
             {exSub==="img"&&(<Card>
@@ -2756,7 +2985,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
               <div style={{fontSize:16,fontWeight:600,lineHeight:1.35}}>{c.queixa}</div>
               {c.hist&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,opacity:.8,whiteSpace:"pre-wrap"}}>{c.hist}</div>}
               {c.conduta&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,whiteSpace:"pre-wrap"}}><b style={{...lab,marginRight:6}}>conduta</b>{c.conduta}</div>}
-              {(c.dxFinal||c.acerto||c.falha)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:10,fontSize:13.5}}>{c.dxFinal&&<span><b style={{...lab,marginRight:6}}>dx final</b>{c.dxFinal}</span>}{c.acerto&&<Chip cor={c.acerto==="acertei"?"rgba(60,130,90,.25)":c.acerto==="lista"?"rgba(224,170,60,.3)":"rgba(168,50,50,.2)"}>{(CLI_ACERTO.find(x=>x[0]===c.acerto)||[0,""])[1]}</Chip>}{c.falha&&<Chip>{(CLI_FALHA.find(x=>x[0]===c.falha)||[0,""])[1]}</Chip>}</div>}
+              {(c.dxFinal||c.acerto||c.falha)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:10,fontSize:13.5}}>{c.dxFinal&&<span><b style={{...lab,marginRight:6}}>dx final</b>{c.dxFinal}</span>}{c.dxCerteza&&<Chip>{(CLI_CERT.find(x=>x[0]===c.dxCerteza)||[0,""])[1].split(" (")[0]}</Chip>}{c.dxCid&&<Chip>CID {c.dxCid}</Chip>}{c.tDx!=null&&<Chip>dx em {fmtDur(c.tDx)}</Chip>}{c.acerto&&<Chip cor={c.acerto==="acertei"?"rgba(60,130,90,.25)":c.acerto==="lista"?"rgba(224,170,60,.3)":"rgba(168,50,50,.2)"}>{(CLI_ACERTO.find(x=>x[0]===c.acerto)||[0,""])[1]}</Chip>}{c.falha&&<Chip>{(CLI_FALHA.find(x=>x[0]===c.falha)||[0,""])[1]}</Chip>}</div>}
               {c.hipIni&&<div style={{fontSize:12.5,lineHeight:1.5,marginTop:6,opacity:.7}}><b style={{...lab,marginRight:6}}>hipóteses</b>{c.hipIni}</div>}
               {c.seguimento&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8}}><b style={{...lab,marginRight:6}}>depois</b>{c.seguimento}</div>}
               {c.lacuna&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,padding:"10px 12px",borderRadius:12,background:c.lacunaOk?"rgba(60,130,90,.12)":"rgba(168,50,50,.08)"}}><b style={{...lab,marginRight:6}}>faltou{c.lacunaOk?" (estudado)":""}</b>{c.lacuna}</div>}
@@ -2867,6 +3096,16 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
               <div style={{fontSize:12,opacity:.6,marginTop:12,lineHeight:1.5}}>Verde: acertou de primeira. Amarelo: estava na lista de hipóteses. Vermelho: não pensou. Com poucos casos por área isso é só um sinal.</div>
             </>)}
           </Card>
+          {(()=>{const l=casos.filter(c=>c.tDx!=null&&c.tDx>=0).map(c=>c.tDx).sort((a,b)=>a-b);if(!l.length)return null;const med=l[Math.floor(l.length/2)];return (
+            <Card>
+              <Titulo k="Rapidez" t="Tempo até fechar o diagnóstico"/>
+              <div style={{display:"flex",gap:24,flexWrap:"wrap"}}>
+                <div><div style={{...serif,fontSize:isMobile?34:42,lineHeight:1}}>{fmtDur(med)}</div><div style={lab}>mediana</div></div>
+                <div><div style={{...serif,fontSize:isMobile?34:42,lineHeight:1,opacity:.5}}>{fmtDur(Math.round(l.reduce((t,x)=>t+x,0)/l.length))}</div><div style={lab}>média</div></div>
+                <div><div style={{...serif,fontSize:isMobile?34:42,lineHeight:1,opacity:.5}}>{l.length}</div><div style={lab}>casos</div></div>
+              </div>
+              <div style={{fontSize:12,opacity:.6,marginTop:10,lineHeight:1.5}}>Da entrada na sala até o diagnóstico fechado no app. Não é o tempo de porta do serviço.</div>
+            </Card>);})()}
           <Card>
             <Titulo k="O que pesou nos casos" t="Tipo de falha"/>
             {falhasC.every(f=>f.n===0)?<Vazio>Marque “O que pesou” na análise de cada caso. Separar falta de conhecimento de falha de raciocínio muda o que você deve fazer: estudar ou treinar o processo.</Vazio>:falhasC.map(f=>(
