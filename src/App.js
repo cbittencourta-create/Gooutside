@@ -1919,6 +1919,8 @@ const CLI_MESES=["janeiro","fevereiro","março","abril","maio","junho","julho","
 
 // ── Apoio ao raciocínio clínico (sala amarela). Lembrete de diagnósticos diferenciais e condutas iniciais; doses ficam de fora de propósito. ──
 // ── Clínica: anexos (IndexedDB, só neste aparelho) e exames laboratoriais ──
+const CLI_ACERTO=[["acertei","Acertei de primeira"],["lista","Estava na minha lista"],["nao","Não pensei nisso"]];
+const CLI_FALHA=[["conhecimento","Faltou conhecimento"],["raciocinio","Sabia, mas não lembrei ou ancorei"],["conduta","Conduta ou tempo"],["sistema","Fora do meu controle"]];
 const CLI_DTIPO=["Evolução","Reavaliação","Medicação","Intercorrência","Contato"];
 const CLI_IMGT=["ECG","RX","TC","USG","RM","Outro"];
 const CLI_LAB=[
@@ -2090,7 +2092,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const [cfgM,setCfgM]=useLS("v5_med_cfg",{novosDia:8},userId);
   const [plt]=useLS("v4_plt",[],userId);
   const [sub,setSub]=useState("hoje");
-  const fcInit={data:hoje,local:"UPA",idade:"",sexo:"",queixa:"",area:"Cardio",hist:"",conduta:"",desf:"",aprend:"",duvida:""};
+  const fcInit={data:hoje,local:"UPA",idade:"",sexo:"",queixa:"",area:"Cardio",hist:"",conduta:"",desf:"",aprend:"",duvida:"",dxFinal:"",acerto:"",falha:"",lacuna:"",seguimento:"",gosto:0};
   const [fc,setFc]=useState(fcInit);
   const [editId,setEditId]=useState(null);
   const [filtro,setFiltro]=useState({area:"",local:"",q:""});
@@ -2117,6 +2119,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   const [evoT,setEvoT]=useState("");
   const [encDesf,setEncDesf]=useState("");
   const [tickS,setTickS]=useState(0);
+  const [anaSub,setAnaSub]=useState("falhas");
   const [ptab,setPtab]=useState("resumo");
   const [exSub,setExSub]=useState("lab");
   const [dTipo,setDTipo]=useState("Evolução");
@@ -2175,7 +2178,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
     else{setCasos([{id:uid(),...base,criada:hoje,duvidaOk:false,resolucao:""},...casos]);setToast("Caso salvo.");}
     setFc({...fcInit,local:fc.local,area:fc.area});
   };
-  const editarCaso=c=>{setFc({data:c.data||hoje,local:c.local||"UPA",idade:c.idade||"",sexo:c.sexo||"",queixa:c.queixa||"",area:c.area||"Outros",hist:c.hist||"",conduta:c.conduta||"",desf:c.desf||"",aprend:c.aprend||"",duvida:c.duvida||""});setEditId(c.id);setSub("casos");try{window.scrollTo({top:0,behavior:"smooth"});}catch{}};
+  const editarCaso=c=>{setFc({data:c.data||hoje,local:c.local||"UPA",idade:c.idade||"",sexo:c.sexo||"",queixa:c.queixa||"",area:c.area||"Outros",hist:c.hist||"",conduta:c.conduta||"",desf:c.desf||"",aprend:c.aprend||"",duvida:c.duvida||"",dxFinal:c.dxFinal||"",acerto:c.acerto||"",falha:c.falha||"",lacuna:c.lacuna||"",seguimento:c.seguimento||"",gosto:c.gosto||0});setEditId(c.id);setSub("casos");try{window.scrollTo({top:0,behavior:"smooth"});}catch{}};
   const casosFilt=casos.filter(c=>(!filtro.area||c.area===filtro.area)&&(!filtro.local||c.local===filtro.local)&&(!filtro.q||[c.queixa,c.hist,c.conduta,c.aprend,c.duvida].join(" ").toLowerCase().includes(filtro.q.toLowerCase()))).sort((a,b)=>(b.data||"").localeCompare(a.data||"")||String(b.id).localeCompare(String(a.id)));
   const novoCard=(frente,verso,area,casoId)=>({id:uid(),frente:frente.trim(),verso:verso.trim(),area:area||"Outros",casoId:casoId||"",criada:hoje,box:0,prox:hoje,ok:0,er:0});
   const abrirCardDe=c=>setCardDe({id:c.id,frente:"Caso: "+c.queixa+". Qual o ponto-chave?",verso:c.aprend||"",area:c.area||"Outros"});
@@ -2297,7 +2300,7 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
     const imgTxt=[...(pac.img||[])].sort((a,b)=>a.h.localeCompare(b.h)).map(e=>"- "+e.tipo+(e.regiao?" "+e.regiao:"")+" ("+dm(e.h)+")"+(e.laudo?": "+e.laudo:"")).join("\n");
     const evoTxt=[...(pac.evo||[])].sort((a,b)=>a.h.localeCompare(b.h)).map(e=>dm(e.h)+" "+e.h.slice(11)+(e.tipo&&e.tipo!=="Evolução"?" ["+e.tipo+"]":"")+" "+e.t+(e.vit?" ("+e.vit+")":"")).join("\n");
     const hist=[vitTxt(v),sinaisTxt&&"Achados: "+sinaisTxt,hipTxt&&"Hipóteses: "+hipTxt,pendTxt&&"Pendências:\n"+pendTxt,labTxt&&"Laboratório:\n"+labTxt,imgTxt&&"Imagem:\n"+imgTxt,evoTxt&&"Diário:\n"+evoTxt].filter(Boolean).join("\n");
-    const caso={id:uid(),data:(pac.entrada||hoje).slice(0,10),local:"UPA",idade:pac.idade,sexo:pac.sexo,queixa:pac.queixa,area:kbx?kbx.area:"Outros",hist,conduta:pac.conduta,desf:encDesf,aprend:"",duvida:"",criada:hoje,duvidaOk:false,resolucao:""};
+    const caso={id:uid(),data:(pac.entrada||hoje).slice(0,10),local:"UPA",idade:pac.idade,sexo:pac.sexo,queixa:pac.queixa,area:kbx?kbx.area:"Outros",hist,conduta:pac.conduta,desf:encDesf,aprend:"",duvida:"",criada:hoje,duvidaOk:false,resolucao:"",hipIni:pac.hip.map(h=>h.nome).join("; "),dxFinal:(pac.hip.find(h=>h.estado==="confirmada")||{}).nome||""};
     limparArq(pac);
     setCasos([caso,...casos]); setPacs(pacs.filter(x=>x.id!==pac.id)); setPacId(null); setEncDesf("");
     editarCaso(caso); setToast("Caso salvo no diário. Complete o que você aprendeu.");
@@ -2325,7 +2328,22 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
       </div>);
   };
   const corEstado={investigando:"rgba(var(--cli-rgb),.1)",confirmada:"rgba(60,130,90,.25)",descartada:"rgba(168,50,50,.14)"};
-  const subs=[["hoje","Hoje"],["sala","Sala amarela"+(pacs.length?" · "+pacs.length:"")],["casos","Casos"],["rev","Revisão"+(totHoje?" · "+totHoje:"")],["cond","Condutas"]];
+  // ── análise ──
+  const casosAn=casos.filter(c=>c.acerto);
+  const cntAc=k=>casosAn.filter(c=>c.acerto===k).length;
+  const anaArea=CLI_AREAS.map(a=>{const l=casosAn.filter(c=>c.area===a);return {a,n:l.length,ac:l.filter(c=>c.acerto==="acertei").length,li:l.filter(c=>c.acerto==="lista").length,nao:l.filter(c=>c.acerto==="nao").length};}).filter(x=>x.n>0).sort((x,y)=>(y.nao+y.li*.5)/y.n-(x.nao+x.li*.5)/x.n||y.n-x.n);
+  const falhasC=CLI_FALHA.map(([k,l])=>({k,l,n:casos.filter(c=>c.falha===k).length}));
+  const maxFalha=Math.max(1,...falhasC.map(f=>f.n));
+  const lacAb=casos.filter(c=>c.lacuna&&c.lacuna.trim()&&!c.lacunaOk);
+  const lacFeitas=casos.filter(c=>c.lacuna&&c.lacuna.trim()&&c.lacunaOk).length;
+  const lacArea=CLI_AREAS.map(a=>({a,n:lacAb.filter(c=>c.area===a).length})).filter(x=>x.n>0).sort((x,y)=>y.n-x.n);
+  const gostoArea=CLI_AREAS.map(a=>{const l=casos.filter(c=>c.area===a&&c.gosto);return {a,n:l.length,m:l.length?l.reduce((t,c)=>t+c.gosto,0)/l.length:0,tot:casos.filter(c=>c.area===a).length};}).filter(x=>x.n>0).sort((x,y)=>y.m-x.m||y.n-x.n);
+  const dxTop=(()=>{const m={};casos.forEach(c=>{const t=(c.dxFinal||"").trim();if(!t)return;const k=t.toLowerCase();m[k]=m[k]||{nome:t,n:0};m[k].n++;});return Object.values(m).sort((a,b)=>b.n-a.n).slice(0,8);})();
+  const areaDist=CLI_AREAS.map(a=>({a,n:casos.filter(c=>c.area===a).length})).filter(x=>x.n>0).sort((x,y)=>y.n-x.n);
+  const faixaDist=[["< 18",0,17],["18–39",18,39],["40–64",40,64],["≥ 65",65,200]].map(([l,a,b])=>({l,n:casos.filter(c=>{const i=parseInt(c.idade,10);return !isNaN(i)&&i>=a&&i<=b;}).length}));
+  const marcarLacuna=(id,ok)=>setCasos(casos.map(c=>c.id!==id?c:{...c,lacunaOk:ok}));
+  const barraH=(v,max,cor)=><div style={{height:8,borderRadius:99,background:"rgba(var(--cli-rgb),.08)",overflow:"hidden",flex:1}}><div style={{width:(max?Math.max(3,v/max*100):0)+"%",height:"100%",background:cor||T.ink,borderRadius:99}}/></div>;
+  const subs=[["hoje","Hoje"],["sala","Sala amarela"+(pacs.length?" · "+pacs.length:"")],["casos","Casos"],["rev","Revisão"+(totHoje?" · "+totHoje:"")],["ana","Análise"+(lacAb.length?" · "+lacAb.length:"")],["cond","Condutas"]];
   const tiles=[
     {l:"Casos no mês",v:String(casosMes.length),u:"registrados",s:"petroleo",z:1.5,x:20,y:30,to:"casos"},
     {l:"Cartões hoje",v:String(totHoje),u:novasLib.length?`${due.length} rev. + ${novasLib.length} novos`:"para revisar",s:"tulipa",z:1.4,x:40,y:20,to:"rev"},
@@ -2699,6 +2717,22 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
           <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Conduta</div><textarea style={{...inp,minHeight:70,resize:"vertical",lineHeight:1.5}} value={fc.conduta} onChange={e=>setFc({...fc,conduta:e.target.value})} placeholder="O que foi feito"/></div>
           <div style={{...lab,margin:"16px 0 8px"}}>Desfecho</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_DESF.map(d=><button key={d} style={pill(fc.desf===d)} onClick={()=>setFc({...fc,desf:fc.desf===d?"":d})}>{d}</button>)}</div>
+          <div style={{marginTop:22,padding:16,borderRadius:16,background:"rgba(var(--cli-rgb),.05)"}}>
+            <div style={{...lab,color:"#B5533C",marginBottom:10}}>Análise do caso (para achar suas falhas)</div>
+            {editId&&(casos.find(c=>c.id===editId)||{}).hipIni&&<div style={{fontSize:13,lineHeight:1.5,marginBottom:12,opacity:.8}}><b style={{...lab,marginRight:6}}>hipóteses que levantei</b>{(casos.find(c=>c.id===editId)||{}).hipIni}</div>}
+            <div style={{...lab,marginBottom:6}}>Diagnóstico final</div>
+            <input style={inp} value={fc.dxFinal} onChange={e=>setFc({...fc,dxFinal:e.target.value})} placeholder="O que o paciente realmente teve (ou o mais provável)"/>
+            <div style={{...lab,margin:"14px 0 8px"}}>Meu raciocínio inicial</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_ACERTO.map(([k,l])=><button key={k} style={pill(fc.acerto===k)} onClick={()=>setFc({...fc,acerto:fc.acerto===k?"":k})}>{l}</button>)}</div>
+            <div style={{...lab,margin:"14px 0 8px"}}>O que pesou</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{CLI_FALHA.map(([k,l])=><button key={k} style={pill(fc.falha===k)} onClick={()=>setFc({...fc,falha:fc.falha===k?"":k})}>{l}</button>)}</div>
+            <div style={{...lab,margin:"14px 0 6px"}}>O que me faltou saber</div>
+            <input style={inp} value={fc.lacuna} onChange={e=>setFc({...fc,lacuna:e.target.value})} placeholder="O tema ou conhecimento que eu precisava ter e não tinha"/>
+            <div style={{...lab,margin:"14px 0 6px"}}>O que aconteceu depois</div>
+            <input style={inp} value={fc.seguimento} onChange={e=>setFc({...fc,seguimento:e.target.value})} placeholder="Evolução, retorno, resultado do exame que faltava"/>
+            <div style={{...lab,margin:"14px 0 8px"}}>O quanto esse caso me atraiu</div>
+            <div style={{display:"flex",gap:8,alignItems:"center"}}>{[1,2,3,4,5].map(n=><button key={n} aria-label={n+" de 5"} onClick={()=>setFc({...fc,gosto:fc.gosto===n?0:n})} style={{width:40,height:40,borderRadius:99,border:"1px solid "+(fc.gosto>=n?T.ink:"rgba(var(--cli-rgb),.25)"),background:fc.gosto>=n?T.ink:"transparent",color:fc.gosto>=n?T.sheet:T.ink,fontSize:14,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}}>{n}</button>)}<span style={{...lab,marginLeft:6}}>{fc.gosto?["","nada","pouco","médio","muito","adorei"][fc.gosto]:"opcional"}</span></div>
+          </div>
           <div style={{marginTop:16}}><div style={{...lab,marginBottom:6}}>O que aprendi</div><textarea style={{...inp,minHeight:70,resize:"vertical",lineHeight:1.5}} value={fc.aprend} onChange={e=>setFc({...fc,aprend:e.target.value})} placeholder="O ponto-chave que você quer lembrar (vira cartão depois)"/></div>
           <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Dúvida para estudar</div><input style={inp} value={fc.duvida} onChange={e=>setFc({...fc,duvida:e.target.value})} placeholder="O que ficou sem resposta?"/></div>
           <div style={{display:"flex",gap:10,marginTop:18,flexWrap:"wrap"}}>
@@ -2722,6 +2756,10 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
               <div style={{fontSize:16,fontWeight:600,lineHeight:1.35}}>{c.queixa}</div>
               {c.hist&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,opacity:.8,whiteSpace:"pre-wrap"}}>{c.hist}</div>}
               {c.conduta&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,whiteSpace:"pre-wrap"}}><b style={{...lab,marginRight:6}}>conduta</b>{c.conduta}</div>}
+              {(c.dxFinal||c.acerto||c.falha)&&<div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center",marginTop:10,fontSize:13.5}}>{c.dxFinal&&<span><b style={{...lab,marginRight:6}}>dx final</b>{c.dxFinal}</span>}{c.acerto&&<Chip cor={c.acerto==="acertei"?"rgba(60,130,90,.25)":c.acerto==="lista"?"rgba(224,170,60,.3)":"rgba(168,50,50,.2)"}>{(CLI_ACERTO.find(x=>x[0]===c.acerto)||[0,""])[1]}</Chip>}{c.falha&&<Chip>{(CLI_FALHA.find(x=>x[0]===c.falha)||[0,""])[1]}</Chip>}</div>}
+              {c.hipIni&&<div style={{fontSize:12.5,lineHeight:1.5,marginTop:6,opacity:.7}}><b style={{...lab,marginRight:6}}>hipóteses</b>{c.hipIni}</div>}
+              {c.seguimento&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8}}><b style={{...lab,marginRight:6}}>depois</b>{c.seguimento}</div>}
+              {c.lacuna&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,padding:"10px 12px",borderRadius:12,background:c.lacunaOk?"rgba(60,130,90,.12)":"rgba(168,50,50,.08)"}}><b style={{...lab,marginRight:6}}>faltou{c.lacunaOk?" (estudado)":""}</b>{c.lacuna}</div>}
               {c.aprend&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8,padding:"10px 12px",borderRadius:12,background:"rgba(224,122,95,.12)",whiteSpace:"pre-wrap"}}><b style={{...lab,marginRight:6}}>aprendi</b>{c.aprend}</div>}
               {c.duvida&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:8}}><b style={{...lab,marginRight:6}}>dúvida{c.duvidaOk?" resolvida":""}</b>{c.duvida}{c.duvidaOk&&c.resolucao&&<div style={{opacity:.75,marginTop:4,whiteSpace:"pre-wrap"}}>→ {c.resolucao}</div>}</div>}
               {cardDe&&cardDe.id===c.id?(
@@ -2800,6 +2838,94 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
               </div>))}
             {cards.length>25&&<div style={{...lab,marginTop:10}}>+ {cards.length-25} cartões</div>}
           </Card>}
+        </>)}
+      </>)}
+
+      {sub==="ana"&&(<>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>{[["falhas","Meu raciocínio"],["estudar","O que estudar"+(lacAb.length?" · "+lacAb.length:"")],["perfil","Perfil e interesses"]].map(([k,l])=><button key={k} style={pill(anaSub===k)} onClick={()=>setAnaSub(k)}>{l}</button>)}</div>
+
+        {anaSub==="falhas"&&(<>
+          <Card>
+            <Titulo k="Hipótese inicial contra diagnóstico final" t="Meu raciocínio"/>
+            {casosAn.length===0?<Vazio>Ainda sem casos analisados. Ao fechar um caso, preencha “Meu raciocínio inicial” na seção “Análise do caso”. Com uns 15 a 20 casos o padrão começa a aparecer.</Vazio>:(<>
+              <div style={{fontSize:13.5,opacity:.75,marginBottom:10}}>{casosAn.length} de {casos.length} casos analisados</div>
+              <div style={{display:"flex",height:22,borderRadius:99,overflow:"hidden",background:"rgba(var(--cli-rgb),.08)"}}>
+                {[["acertei","rgba(60,130,90,.65)"],["lista","rgba(224,170,60,.75)"],["nao","rgba(168,50,50,.7)"]].map(([k,cor])=>cntAc(k)>0&&<div key={k} style={{width:cntAc(k)/casosAn.length*100+"%",background:cor}}/>)}
+              </div>
+              <div style={{display:"flex",gap:14,flexWrap:"wrap",marginTop:10,fontSize:13}}>{CLI_ACERTO.map(([k,l])=><span key={k}><b>{cntAc(k)}</b> {l.toLowerCase()} ({Math.round(cntAc(k)/casosAn.length*100)}%)</span>)}</div>
+              {anaArea.length>0&&<>
+                <div style={{...lab,margin:"22px 0 10px"}}>Por área (mais difíceis primeiro)</div>
+                {anaArea.map(x=>(
+                  <div key={x.a} style={{display:"flex",alignItems:"center",gap:12,padding:"7px 0",fontSize:13.5}}>
+                    <span style={{width:92,flexShrink:0,fontWeight:600}}>{x.a}</span>
+                    <div style={{display:"flex",height:12,borderRadius:99,overflow:"hidden",background:"rgba(var(--cli-rgb),.08)",flex:1}}>
+                      {x.ac>0&&<div style={{width:x.ac/x.n*100+"%",background:"rgba(60,130,90,.65)"}}/>}{x.li>0&&<div style={{width:x.li/x.n*100+"%",background:"rgba(224,170,60,.75)"}}/>}{x.nao>0&&<div style={{width:x.nao/x.n*100+"%",background:"rgba(168,50,50,.7)"}}/>}
+                    </div>
+                    <span style={{...lab,width:34,textAlign:"right"}}>{x.n}</span>
+                  </div>))}
+              </>}
+              <div style={{fontSize:12,opacity:.6,marginTop:12,lineHeight:1.5}}>Verde: acertou de primeira. Amarelo: estava na lista de hipóteses. Vermelho: não pensou. Com poucos casos por área isso é só um sinal.</div>
+            </>)}
+          </Card>
+          <Card>
+            <Titulo k="O que pesou nos casos" t="Tipo de falha"/>
+            {falhasC.every(f=>f.n===0)?<Vazio>Marque “O que pesou” na análise de cada caso. Separar falta de conhecimento de falha de raciocínio muda o que você deve fazer: estudar ou treinar o processo.</Vazio>:falhasC.map(f=>(
+              <div key={f.k} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",fontSize:13.5}}>
+                <span style={{width:isMobile?130:230,flexShrink:0,lineHeight:1.3}}>{f.l}</span>{barraH(f.n,maxFalha,f.k==="conhecimento"?CLI_ACC:T.ink)}<span style={{...lab,width:24,textAlign:"right"}}>{f.n}</span>
+              </div>))}
+          </Card>
+        </>)}
+
+        {anaSub==="estudar"&&(<>
+          <Card>
+            <Titulo k="Lacunas dos seus casos" t="O que estudar"/>
+            <div style={{display:"flex",gap:18,flexWrap:"wrap",marginBottom:lacAb.length?14:0}}>
+              <div><div style={{...serif,fontSize:isMobile?36:44,lineHeight:1}}>{lacAb.length}</div><div style={lab}>em aberto</div></div>
+              <div><div style={{...serif,fontSize:isMobile?36:44,lineHeight:1,opacity:.5}}>{lacFeitas}</div><div style={lab}>estudadas</div></div>
+            </div>
+            {lacArea.length>0&&<div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:6}}>{lacArea.map(x=><Chip key={x.a} cor="rgba(224,122,95,.22)">{x.a} · {x.n}</Chip>)}</div>}
+            {lacAb.length===0&&<Vazio>Nenhuma lacuna em aberto. Quando um caso expuser algo que você não sabia, escreva em “O que me faltou saber” e ele aparece aqui.</Vazio>}
+          </Card>
+          {lacAb.map(c=>(
+            <Card key={c.id}>
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:8}}><Chip>{c.area}</Chip>{c.falha&&<Chip>{(CLI_FALHA.find(x=>x[0]===c.falha)||[0,""])[1]}</Chip>}<span style={{...lab,fontSize:9.5}}>{fmtData(c.data)}</span></div>
+              <div style={{fontSize:16,fontWeight:600,lineHeight:1.4}}>{c.lacuna}</div>
+              <div style={{fontSize:13,opacity:.65,marginTop:6,lineHeight:1.5}}>Caso: {c.queixa}{c.dxFinal?" · dx final: "+c.dxFinal:""}</div>
+              {cardDe&&cardDe.id===c.id?(
+                <div style={{marginTop:12,padding:14,borderRadius:16,background:"rgba(var(--cli-rgb),.05)"}}>
+                  <div style={{...lab,marginBottom:6}}>Frente (pergunta)</div><input style={inp} value={cardDe.frente} onChange={e=>setCardDe({...cardDe,frente:e.target.value})}/>
+                  <div style={{...lab,margin:"10px 0 6px"}}>Verso (resposta)</div><textarea style={{...inp,minHeight:64,resize:"vertical",lineHeight:1.5}} value={cardDe.verso} onChange={e=>setCardDe({...cardDe,verso:e.target.value})} placeholder="O que você aprendeu ao estudar"/>
+                  <div style={{display:"flex",gap:10,marginTop:12}}><button style={{...btnP,opacity:cardDe.frente.trim()&&cardDe.verso.trim()?1:.4}} disabled={!(cardDe.frente.trim()&&cardDe.verso.trim())} onClick={()=>{salvarCardDe();marcarLacuna(c.id,true);}}>Criar cartão e marcar estudada</button><button style={btnS} onClick={()=>setCardDe(null)}>Cancelar</button></div>
+                </div>
+              ):(
+                <div style={{display:"flex",gap:8,marginTop:12,flexWrap:"wrap"}}>
+                  <button style={{...btnP,padding:"8px 16px",fontSize:12.5}} onClick={()=>setCardDe({id:c.id,frente:c.lacuna.trim().replace(/\?*$/,"")+"?",verso:"",area:c.area||"Outros"})}>Estudei: virar cartão</button>
+                  <button style={{...btnS,padding:"8px 16px",fontSize:12.5}} onClick={()=>marcarLacuna(c.id,true)}>Marcar estudada</button>
+                  <button style={{...btnS,padding:"8px 16px",fontSize:12.5}} onClick={()=>editarCaso(c)}>Abrir caso</button>
+                </div>)}
+            </Card>))}
+        </>)}
+
+        {anaSub==="perfil"&&(<>
+          <Card>
+            <Titulo k="Só dos seus casos" t="O que eu vejo"/>
+            {casos.length===0?<Vazio>Registre casos para montar o seu perfil.</Vazio>:(<>
+              <div style={{...lab,marginBottom:8}}>Diagnósticos finais mais frequentes</div>
+              {dxTop.length===0?<Vazio>Preencha “Diagnóstico final” nos casos.</Vazio>:dxTop.map(d=>(
+                <div key={d.nome} style={{display:"flex",alignItems:"center",gap:12,padding:"6px 0",fontSize:13.5}}><span style={{width:isMobile?150:260,flexShrink:0,lineHeight:1.3}}>{d.nome}</span>{barraH(d.n,dxTop[0].n)}<span style={{...lab,width:24,textAlign:"right"}}>{d.n}</span></div>))}
+              <div style={{...lab,margin:"22px 0 8px"}}>Por área</div>
+              {areaDist.map(d=>(<div key={d.a} style={{display:"flex",alignItems:"center",gap:12,padding:"6px 0",fontSize:13.5}}><span style={{width:isMobile?92:150,flexShrink:0}}>{d.a}</span>{barraH(d.n,areaDist[0].n)}<span style={{...lab,width:24,textAlign:"right"}}>{d.n}</span></div>))}
+              <div style={{...lab,margin:"22px 0 8px"}}>Por faixa etária</div>
+              {faixaDist.map(d=>(<div key={d.l} style={{display:"flex",alignItems:"center",gap:12,padding:"6px 0",fontSize:13.5}}><span style={{width:isMobile?92:150,flexShrink:0}}>{d.l}</span>{barraH(d.n,Math.max(1,...faixaDist.map(x=>x.n)))}<span style={{...lab,width:24,textAlign:"right"}}>{d.n}</span></div>))}
+              <div style={{fontSize:12,opacity:.6,marginTop:12,lineHeight:1.5}}>É o que passa por você, não a epidemiologia do serviço. Serve de prior pessoal e cresce com os casos.</div>
+            </>)}
+          </Card>
+          <Card>
+            <Titulo k="Para pensar na residência" t="O que me atrai"/>
+            {gostoArea.length===0?<Vazio>Dê uma nota de 1 a 5 em “O quanto esse caso me atraiu” ao fechar cada caso. A média por área mostra onde o seu interesse aparece, sem você precisar decidir agora.</Vazio>:gostoArea.map(x=>(
+              <div key={x.a} style={{display:"flex",alignItems:"center",gap:12,padding:"8px 0",fontSize:13.5}}><span style={{width:92,flexShrink:0,fontWeight:600}}>{x.a}</span>{barraH(x.m,5,CLI_ACC)}<span style={{...lab,width:78,textAlign:"right"}}>{x.m.toFixed(1)} · {x.n} caso{x.n>1?"s":""}</span></div>))}
+            {gostoArea.length>0&&<div style={{fontSize:12,opacity:.6,marginTop:10,lineHeight:1.5}}>Média das notas por área. Poucas notas ainda é impressão, não conclusão.</div>}
+          </Card>
         </>)}
       </>)}
 
