@@ -3459,6 +3459,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [sub,setSub]=useState("hoje");
   const [editL,setEditL]=useState(null);
   const [fL,setFL]=useState(null);
+  const [edLog,setEdLog]=useState(null);
+  const [verTodosLog,setVerTodosLog]=useState(false);
   const [fp,setFp]=useState({lang:"",tipo:"ouvir",min:"",nota:"",data:"",ref:""});
   const [fw,setFw]=useState({lang:"",termo:"",trad:"",ex:"",art:"",plural:"",tipo:"palavra",minha:"",tema:"",vars:""});
   const [plt]=useLS("v4_plt",[],userId);
@@ -4035,16 +4037,53 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const Pick=({val,set,opts})=>(
     <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{opts.map(([id,l,cor])=>{const on=val===id;return (
       <button key={id} onClick={()=>set(id)} style={{height:36,padding:"0 14px",borderRadius:999,border:"1px solid "+(on?(cor||T.ink):"rgba(var(--idi-rgb),.22)"),background:on?(cor||T.ink):"transparent",color:on?(cor?T.ink:T.sheet):T.ink,fontSize:12.5,fontWeight:on?700:500,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",display:"inline-flex",alignItems:"center",gap:6}}>{cor&&!on&&<i style={{width:7,height:7,borderRadius:"50%",background:cor}}/>}{l}</button>);})}</div>);
-  const Hist=({lista,cor})=>lista.map(s=>(
-    <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)"}}>
-      <i style={{width:10,height:10,borderRadius:"50%",background:L(s.lang).cor,flexShrink:0}}/>
-      <div style={{flex:1,minWidth:0}}>
-        <div style={{fontSize:14.5,fontWeight:600}}>{L(s.lang).nome} · {(IDI_TIPOS.find(t=>t[0]===s.tipo)||[0,s.tipo])[1]}</div>
-        <div style={{...lab,fontSize:9.5,marginTop:3,whiteSpace:s.ref?"normal":"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{fd(s.data)}{s.ref?" · "+s.ref:""}{s.nota?" · "+s.nota:""}</div>
+  const abrirEdLog=x=>setEdLog({id:x.id,tipo:x.tipo,min:String(x.min),data:x.data,nota:x.nota||"",ref:x.ref||""});
+  const salvarEdLog=()=>{
+    if(!edLog)return; const min=+edLog.min; if(!(min>0))return;
+    setLog(log.map(x=>{
+      if(x.id!==edLog.id)return x;
+      const novo={...x,tipo:edLog.tipo,min,data:edLog.data||x.data,nota:edLog.nota.trim()};
+      if(IDI_LIVROS.includes(edLog.tipo)&&edLog.ref.trim())novo.ref=edLog.ref.trim(); else delete novo.ref;
+      return novo;
+    }));
+    setEdLog(null);
+  };
+  const apagarLog=x=>{if(window.confirm("Apagar este registro?")){setLog(log.filter(y=>y.id!==x.id));if(edLog&&edLog.id===x.id)setEdLog(null);}};
+  const Hist=({lista})=>lista.map(x=>{
+    const ed=edLog&&edLog.id===x.id;
+    const tiposEd=IDI_TIPOS.filter(t=>x.lang==="de"||!IDI_LIVROS.includes(t[0]));
+    return (
+    <div key={x.id} style={{borderTop:"1px solid rgba(var(--idi-rgb),.08)"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0"}}>
+        <i style={{width:10,height:10,borderRadius:"50%",background:L(x.lang).cor,flexShrink:0}}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:14.5,fontWeight:600}}>{L(x.lang).nome} · {tipoNome(x.tipo)}</div>
+          <div style={{...lab,fontSize:9.5,marginTop:3,whiteSpace:x.ref?"normal":"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{fd(x.data)}{x.ref?" · "+x.ref:""}{x.nota?" · "+x.nota:""}</div>
+        </div>
+        <span style={{...serif,fontSize:22}}>{x.min}<small style={{fontSize:"55%",opacity:.55}}> min</small></span>
+        <button onClick={()=>ed?setEdLog(null):abrirEdLog(x)} aria-label="editar" title="Editar" style={{background:"none",border:"none",cursor:"pointer",fontSize:16,color:"rgba(var(--idi-rgb),.55)",padding:"4px 6px"}}>{ed?"×":"✎"}</button>
+        {!ed&&<button onClick={()=>apagarLog(x)} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>🗑</button>}
       </div>
-      <span style={{...serif,fontSize:22}}>{s.min}<small style={{fontSize:"55%",opacity:.55}}> min</small></span>
-      <button onClick={()=>setLog(log.filter(x=>x.id!==s.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
-    </div>));
+      {ed&&(
+        <div style={{margin:"0 0 14px",padding:"16px 14px",borderRadius:16,background:"rgba(var(--idi-rgb),.05)"}}>
+          <div style={{...lab,marginBottom:8}}>Atividade</div>
+          <Pick val={edLog.tipo} set={v=>setEdLog({...edLog,tipo:v})} opts={tiposEd.map(([i,n])=>[i,n])}/>
+          {IDI_LIVROS.includes(edLog.tipo)&&<div style={{marginTop:14}}>
+            <div style={{...lab,marginBottom:6}}>Capítulo, página e exercício</div>
+            <input style={inp} value={edLog.ref} onChange={e=>setEdLog({...edLog,ref:e.target.value})} placeholder="Ex.: Kapitel 9, S. 112, Üb. 3"/>
+          </div>}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:14}}>
+            <div><div style={{...lab,marginBottom:6}}>Minutos</div><input style={inp} type="number" min="1" value={edLog.min} onChange={e=>setEdLog({...edLog,min:e.target.value})} aria-label="Minutos"/></div>
+            <div><div style={{...lab,marginBottom:6}}>Data</div><input style={{...inp,width:"100%",boxSizing:"border-box"}} type="date" value={edLog.data} onChange={e=>setEdLog({...edLog,data:e.target.value})} aria-label="Data"/></div>
+          </div>
+          <div style={{marginTop:14}}><div style={{...lab,marginBottom:6}}>Anotação</div><input style={inp} value={edLog.nota} onChange={e=>setEdLog({...edLog,nota:e.target.value})} aria-label="Anotação"/></div>
+          <div style={{display:"flex",gap:10,marginTop:16,flexWrap:"wrap",alignItems:"center"}}>
+            <button style={{...btnP,opacity:+edLog.min>0?1:.4}} disabled={!(+edLog.min>0)} onClick={salvarEdLog}>Salvar</button>
+            <button style={btnS} onClick={()=>setEdLog(null)}>Cancelar</button>
+            <button onClick={()=>apagarLog(x)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12.5,textDecoration:"underline",textUnderlineOffset:3,color:IDI_RED,marginLeft:"auto"}}>apagar</button>
+          </div>
+        </div>)}
+    </div>);});
   const tiles=[
     {l:"Palavras hoje",v:String(totHoje),u:novasLib.length?`${due.length} rev. + ${novasLib.length} novas`:"para revisar",s:T.tiles[0],z:1.5,x:20,y:30,to:"palavras"},
     {l:"Horas na semana",v:hSem.toFixed(1).replace(".0",""),u:"h de "+metaTot+"h",s:T.tiles[1],z:1.4,x:40,y:20,to:"pratica"},
@@ -4275,7 +4314,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         </Card>
         <Card>
           <Titulo k="Recentes" t="Últimas práticas"/>
-          {logSel.length===0?<Vazio>Nada registrado ainda. Use “Praticar” para lançar seu primeiro estudo.</Vazio>:<Hist lista={logSel.slice(0,5)}/>}
+          {logSel.length===0?<Vazio>Nada registrado ainda. Use “Praticar” para lançar seu primeiro estudo.</Vazio>:Hist({lista:logSel.slice(0,5)})}
         </Card>
       </>)}
 
@@ -4354,7 +4393,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         </Card>}
         <Card>
           <Titulo k="Histórico" t="Registros recentes"/>
-          {logSel.length===0?<Vazio>Nenhum registro ainda.</Vazio>:<Hist lista={logSel.slice(0,12)}/>}
+          {logSel.length===0?<Vazio>Nenhum registro ainda.</Vazio>:Hist({lista:verTodosLog?logSel:logSel.slice(0,12)})}
+          {logSel.length>12&&<div style={{marginTop:12}}><button style={btnS} onClick={()=>setVerTodosLog(!verTodosLog)}>{verTodosLog?"mostrar menos":"ver todos ("+logSel.length+")"}</button></div>}
         </Card>
       </>)}
 
