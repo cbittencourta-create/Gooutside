@@ -1979,6 +1979,48 @@ async function gAnalisarErros(lista,lang,areas,stats){
   const prompt="Você é professor de "+idioma+" (nível A2) acompanhando uma aluna brasileira que quer ficar fluente e também precisa de um certificado de proficiência. Estes são os erros que ela registrou (assunto: errada => certa):\n"+linhas+"\n\nDesempenho nos exercícios do app: "+(stats||"sem dados ainda")+".\n\nResponda em português do Brasil, direto, em no máximo 200 palavras, nesta ordem: 1) Padrão dos erros (a causa comum, não a lista). 2) Onde voltar (o ponto gramatical a revisar; se houver capítulo, lição ou página na fonte, cite). 3) O que treinar nesta semana (3 itens concretos). Sem elogios e sem rodeios.";
   return (await iaChamar(prompt,null,false)).trim();
 }
+async function gConversar(hist,lang,areas,erros,stats){
+  const ck=iaKey(IA_KC), gk=iaKey(IA_KG);
+  if(!ck&&!gk)throw new Error("SEM_CHAVE");
+  const idioma=lang==="de"?"alemão":"francês";
+  const nome=k=>(areas.find(a=>a[0]===k)||[])[1]||k;
+  const linhas=erros.map(m=>nome(m.area)+" | "+m.errada+" => "+m.certa+" | "+(m.dom?"dominado":"em aberto")+(m.fonte?" | "+m.fonte:"")).join("\n")||"(nenhum erro registrado ainda)";
+  const system="Você é professor particular de "+idioma+" (nível A2) de uma aluna brasileira, médica, que quer ficar fluente e também precisa de um certificado de proficiência. Ela está conversando com você sobre os erros que registrou no app. Regras: responda em português do Brasil, com exemplos em "+idioma+"; seja direto e curto (até uns 150 palavras, a menos que ela peça mais); explique o porquê da regra, não só a resposta, e dê 2 ou 3 exemplos; quando fizer sentido, termine pedindo que ela mesma escreva uma frase para você corrigir (memória ativa); se ela pedir exercícios, dê frases com lacuna e só mostre as respostas depois que ela responder; use somente os dados abaixo e não invente erros que ela não registrou; sem elogios vazios.\n\nERROS REGISTRADOS (assunto | errada => certa | estado | fonte):\n"+linhas+"\n\nDESEMPENHO NOS EXERCÍCIOS DO APP: "+(stats||"sem dados ainda")+".";
+  let h=hist.slice(); while(h.length&&h[0].r!=="u")h.shift();
+  if(ck){
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":ck,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-5-5",max_tokens:1500,system,messages:h.map(m=>({role:m.r==="u"?"user":"assistant",content:m.t}))})});
+    const data=await resp.json();
+    if(data.error)throw new Error(data.error.message||"erro na API");
+    return (data.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("").trim();
+  }
+  const resp=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+gk,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({systemInstruction:{parts:[{text:system}]},contents:h.map(m=>({role:m.r==="u"?"user":"model",parts:[{text:m.t}]})),generationConfig:{temperature:0.4}})});
+  const data=await resp.json();
+  if(data.error)throw new Error(data.error.message||"erro na API");
+  const c=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0];
+  return ((c&&c.text)||"").trim();
+}
+const FR_TIPOS=[["artigo_caso","Artigo e caso"],["gramatica","Gramática"],["ortografia","Ortografia"],["coesao","Coesão"],["coerencia","Coerência"],["vocabulario","Vocabulário"]];
+const frTipoNome=t=>(FR_TIPOS.find(x=>x[0]===t)||[0,t])[1];
+function iaJson(txt){
+  const t=String(txt||"").replace(/```json|```/g,"").trim();
+  const i0=t.search(/[[{]/); const e=t.lastIndexOf(t[i0]==="["?"]":"}");
+  return JSON.parse(i0>=0?t.slice(i0,e+1):t);
+}
+async function gCorrigirFrase(lang,areas,n,texto,trad){
+  const idioma=lang==="de"?"alemão":"francês";
+  const chaves=areas.map(a=>a[0]).join(", ");
+  const prompt="Você é professor de "+idioma+" (nível A2) de uma aluna brasileira. Tarefa dada a ela: escrever 1 ou 2 frases em "+idioma+" usando o substantivo «"+n.art+" "+n.termo+"» ("+trad+") com o artigo correto, podendo mudar o caso se a frase pedir (ex.: der vira den no Akkusativ). Texto dela: «"+texto+"». Corrija com precisão e sem condescendência. Responda SOMENTE com JSON: {\"usou\":true ou false (usou esse substantivo),\"artigoOk\":true ou false (artigo e forma do substantivo corretos para o caso em que ele aparece),\"correta\":\"versão corrigida, mantendo ao máximo o sentido e as palavras dela\",\"erros\":[{\"tipo\":\"artigo_caso|gramatica|ortografia|coesao|coerencia|vocabulario\",\"area\":\"uma destas chaves: "+chaves+"\",\"trecho\":\"trecho dela\",\"correcao\":\"trecho corrigido\",\"porque\":\"explicação curta em português, citando a regra\"}],\"comentario\":\"uma frase em português com o que ela fez bem ou o próximo passo\"}. Tipos: artigo_caso = artigo, caso, gênero, plural; gramatica = conjugação, ordem das palavras, preposições, tempos; ortografia = escrita das palavras, maiúsculas dos substantivos, acentos e trema; coesao = ligação entre as frases (conectores, pronomes); coerencia = sentido e lógica; vocabulario = palavra inadequada. Se estiver tudo certo, erros vazio e correta igual ao texto dela.";
+  const obj=iaJson(await iaChamar(prompt,null,true));
+  const ok=new Set(areas.map(a=>a[0])), tp=new Set(FR_TIPOS.map(x=>x[0]));
+  const erros=(Array.isArray(obj.erros)?obj.erros:[]).filter(e=>e&&typeof e.porque==="string").map(e=>({tipo:tp.has(e.tipo)?e.tipo:"gramatica",area:ok.has(e.area)?e.area:"outro",trecho:String(e.trecho||""),correcao:String(e.correcao||""),porque:e.porque}));
+  return {usou:obj.usou!==false,artigoOk:obj.artigoOk!==false,correta:typeof obj.correta==="string"&&obj.correta.trim()?obj.correta.trim():texto,erros,comentario:typeof obj.comentario==="string"?obj.comentario:""};
+}
+async function gAnaliseFrases(lang,itens){
+  const idioma=lang==="de"?"alemão":"francês";
+  const linhas=itens.map((x,i)=>(i+1)+". Substantivo "+x.art+" "+x.termo+"\n   Ela escreveu: "+x.frase+"\n   Corrigido: "+x.correta+"\n   Erros: "+(x.erros.length?x.erros.map(e=>frTipoNome(e.tipo)+" («"+e.trecho+"» → «"+e.correcao+"»: "+e.porque+")").join("; "):"nenhum")).join("\n");
+  const prompt="Você é professor de "+idioma+" (nível A2) de uma aluna brasileira que quer fluência e um certificado. Ela acabou uma sessão escrevendo frases com substantivos. Dados da sessão:\n"+linhas+"\n\nFaça uma análise geral, em português do Brasil, sem markdown e sem elogios vazios, em até 230 palavras, com estes quatro títulos em linhas separadas, cada um seguido de 1 a 2 frases citando exemplos dela: Gramática. Ortografia. Coesão. Coerência. Depois a linha Prioridades: com 3 itens curtos e concretos para a próxima sessão. Em Coesão e Coerência avalie como as frases dela se ligam e fazem sentido; se ela escreveu só uma frase por vez, diga isso e como melhorar.";
+  return (await iaChamar(prompt,null,false)).trim();
+}
 const GRAM_ITENS=Object.entries(GRAM_RAW).flatMap(([lang,txt])=>{
   const cnt={};
   return txt.trim().split("\n").filter(Boolean).map(l=>{
@@ -3367,6 +3409,35 @@ function ClinicaApp({userId,isMobile,onMenu,onTrocar}){
   );
 }
 
+const IDI_EXAMES={de:["Goethe-Zertifikat","Telc","ÖSD","TestDaF","Outro"],fr:["DELF","DALF","TCF","TEF","Outro"]};
+const HORAS_NIV=[150,200];
+function smartAval(m,hoje){
+  const iN=NIVEIS.indexOf(m.nivel), iA=NIVEIS.indexOf(m.alvo);
+  const n=Math.max(0,iA-iN);
+  const dias=m.prova?Math.ceil((new Date(m.prova+"T12:00:00")-new Date(hoje+"T12:00:00"))/86400000):null;
+  const sem=dias!==null?dias/7:null;
+  const hs=+m.metaSem||0, mf=+m.metaFala||0, me=+m.metaEscr||0;
+  const nec=[n*HORAS_NIV[0],n*HORAS_NIV[1]];
+  let A;
+  if(n===0)A={ok:true,txt:"Você já está no nível-alvo: a meta é manter e ganhar fluência."};
+  else if(dias===null)A={ok:false,txt:"Defina o prazo para checar se a meta é atingível."};
+  else if(dias<0)A={ok:false,txt:"O prazo já passou. Escolha uma nova data."};
+  else{
+    const disp=Math.round(sem*hs), porSem=Math.ceil(((nec[0]+nec[1])/2)/Math.max(sem,1)*10)/10;
+    if(hs<=0)A={ok:false,txt:"Defina as horas por semana. Para esse prazo você precisa de cerca de "+String(porSem).replace(".",",")+" h/semana."};
+    else if(disp>=nec[1])A={ok:true,txt:"Atingível: cerca de "+disp+" h até o prazo para um trajeto de "+nec[0]+" a "+nec[1]+" h."};
+    else if(disp>=nec[0])A={ok:true,txt:"Apertado, mas possível: cerca de "+disp+" h até o prazo para "+nec[0]+" a "+nec[1]+" h. Qualquer semana perdida pesa."};
+    else A={ok:false,txt:"Pouco realista: cerca de "+disp+" h até o prazo para "+nec[0]+" a "+nec[1]+" h. Você precisaria de cerca de "+String(porSem).replace(".",",")+" h/semana, ou de um prazo mais longo."};
+  }
+  const S={ok:!!m.exame&&n>0,txt:!m.exame?"Escolha o exame (ou \"Outro\").":(n>0?"Exame e nível-alvo definidos.":"O nível-alvo precisa ser maior que o atual.")};
+  const M={ok:hs>0&&(mf>0||me>0),txt:hs<=0?"Defina as horas por semana.":((mf>0||me>0)?"Horas e produção medidas por semana.":"Defina também minutos de fala ou de escrita por semana: é o que mede fluência.")};
+  const R={ok:(m.porque||"").trim().length>=10,txt:(m.porque||"").trim().length>=10?"Motivo registrado.":"Escreva por que essa meta importa para você."};
+  const T={ok:dias!==null&&dias>=0,txt:dias===null?"Defina o prazo.":(dias<0?"Prazo vencido.":"Faltam "+dias+(dias===1?" dia":" dias")+" (cerca de "+Math.max(1,Math.round(dias/7))+" semanas).")};
+  const itens=[["S","Específico",S],["M","Mensurável",M],["A","Atingível",A],["R","Relevante",R],["T","Temporal",T]];
+  const frase=(m.exame&&m.exame!=="Outro"?m.exame+" ":"")+m.alvo;
+  const txtFrase=n>0&&m.prova?"Chegar ao "+frase+" até "+m.prova.split("-").reverse().join("/")+", com "+hs+" h por semana"+(mf>0?", sendo "+mf+" min de fala":"")+(me>0?(mf>0?" e ":", sendo ")+me+" min de escrita":"")+".":"";
+  return {itens,n:itens.filter(x=>x[2].ok).length,frase:txtFrase,dias};
+}
 function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [cfg,setCfg]=useLS("v5_idi_cfg",IDI_LANGS,userId);
   const [log,setLog]=useLS("v5_idi_log",[],userId);
@@ -3402,6 +3473,14 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [ana,setAna]=useState({load:false,txt:"",msg:""});
   const [gk,setGk]=useState("");
   const [,setKT]=useState(0);
+  const [chatAll,setChatAll]=useLS("v5_idi_chat",{},userId);
+  const [frases,setFrases]=useLS("v5_idi_frases",[],userId);
+  const [fq,setFq]=useState(null);
+  const [chatIn,setChatIn]=useState("");
+  const [chatLoad,setChatLoad]=useState(false);
+  const [chatErr,setChatErr]=useState("");
+  const chatRef=useRef(null);
+  useEffect(()=>{const e=chatRef.current;if(e)e.scrollTop=e.scrollHeight;},[chatAll,chatLoad]);
   const [conh,setConh]=useLS("v5_idi_conh",{},userId);
   const [leit,setLeit]=useLS("v5_idi_leit",[],userId);
   const [lts,setLts]=useState({});
@@ -3575,7 +3654,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const pr=n=>{const x=sbst[modo==="plural"?n.k+"|p":n.k]||{ok:0,er:0};return x.er*2-x.ok*0.6+Math.random()*2.5;};
     const fila=[...pool].sort((a,b)=>pr(b)-pr(a)).slice(0,10);
     if(!fila.length)return;
-    setDicaEd(null);
+    setDicaEd(null); setFq(null);
     setDs({modo,fila,i:0,resp:null,ok:0,er:0,rep:{},fim:false,pin:"",hint:false});
   };
   const gravarStat=(n,ok,modo)=>{
@@ -3613,6 +3692,44 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const fila=(!r.ok&&!ds.rep[n.k])?[...ds.fila,n]:ds.fila; const p=ds.i+1;
     setDs({...ds,fila,i:p,resp:null,pin:"",hint:false,ok:ds.ok+(r.ok?1:0),er:ds.er+(r.ok?0:1),rep:r.ok?ds.rep:{...ds.rep,[n.k]:1},fim:p>=fila.length});
     setDicaEd(null);
+  };
+  // ── Frases com correção (memória ativa) ──
+  const iaNomeF=iaKey(IA_KC)?"Claude":(iaKey(IA_KG)?"Gemini":"");
+  const iniciarFrases=()=>{
+    const pr=n=>{const x=sbst[n.k]||{ok:0,er:0};return x.er*2-x.ok*0.6+Math.random()*2.5;};
+    const fila=[...poolAll].sort((a,b)=>pr(b)-pr(a)).slice(0,6);
+    if(!fila.length)return;
+    setDicaEd(null); setDs(null);
+    setFq({fila,i:0,texto:"",load:false,res:null,itens:[],fim:false,ana:null,msg:"",salvo:false});
+  };
+  const corrigirFrase=async()=>{
+    if(!fq||fq.load||fq.res)return;
+    const n=fq.fila[fq.i], t=fq.texto.trim(); if(t.length<3)return;
+    setFq({...fq,load:true,msg:""});
+    try{
+      const r=await gCorrigirFrase(sel,gAreas,n,t,n.trad);
+      gravarStat(n,{a:r.artigoOk&&r.usou,w:r.usou},"art");
+      setFrases([{id:uid(),lang:sel,data:hoje,termo:n.termo,art:n.art,frase:t,correta:r.correta,erros:r.erros,ok:r.erros.length===0},...frases].slice(0,300));
+      setFq({...fq,load:false,res:r});
+    }catch(err){
+      setFq({...fq,load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros.":"Não consegui corrigir ("+err.message+"). Seu texto continua aí, tente de novo."});
+    }
+  };
+  const proxFrase=()=>{
+    if(!fq||!fq.res)return;
+    const n=fq.fila[fq.i], r=fq.res;
+    const itens=[...fq.itens,{termo:n.termo,art:n.art,trad:n.trad,frase:fq.texto.trim(),correta:r.correta,erros:r.erros,ok:r.erros.length===0&&r.usou,usou:r.usou}];
+    const p=fq.i+1;
+    if(p>=fq.fila.length){
+      setFq({...fq,itens,fim:true,res:null,ana:{load:true,txt:"",msg:""}});
+      gAnaliseFrases(sel,itens).then(txt=>setFq(q=>q&&q.fim?{...q,ana:{load:false,txt,msg:""}}:q)).catch(err=>setFq(q=>q&&q.fim?{...q,ana:{load:false,txt:"",msg:"Não consegui gerar a análise ("+err.message+")."}}:q));
+    }else setFq({...fq,i:p,texto:"",res:null,itens,msg:""});
+  };
+  const enviarErrosFrases=()=>{
+    if(!fq||!fq.fim)return;
+    const novos=fq.itens.filter(x=>x.erros.length>0&&x.correta&&x.correta!==x.frase).map(x=>({id:uid(),lang:sel,area:(x.erros.find(e=>e.area&&e.area!=="outro")||x.erros[0]).area||"outro",errada:x.frase,certa:x.correta,fonte:"frases · "+x.art+" "+x.termo,data:hoje}));
+    if(!novos.length)return;
+    setMeus([...novos,...meus]); setFq({...fq,salvo:novos.length});
   };
   const salvarDica=(k,txt)=>{const x=sbst[k]||{ok:0,er:0};setSbst({...sbst,[k]:{...x,dica:txt.trim()}});setDicaEd(null);setDicaTxt("");};
   const addBanco=n=>{
@@ -3683,6 +3800,22 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     if(!novos.length){setFoto({...foto,msg:"Nada marcado para salvar."});return;}
     setMeus([...novos,...meus]); setFoto({load:false,msg:"",res:null,analise:""});
     setEfMsg(novos.length+(novos.length>1?" erros registrados da foto.":" erro registrado da foto."));
+  };
+  const chat=chatAll[sel]||[];
+  const enviarChat=async txt=>{
+    const t=(typeof txt==="string"?txt:chatIn).trim();
+    if(!t||chatLoad)return;
+    const antes=chat, hist=[...chat,{r:"u",t}];
+    setChatAll({...chatAll,[sel]:hist.slice(-40)}); setChatIn(""); setChatLoad(true); setChatErr("");
+    const st=gAreas.filter(([k])=>gTot(k)>0).map(([k,nome])=>nome.replace(/ \(.*\)/,"")+" "+gPct(k)+"% em "+gTot(k)).join("; ");
+    try{
+      const resp=await gConversar(hist.slice(-14),sel,gAreas,meusSel.slice(0,80).map(m=>({...m,dom:!mAtivo(m)})),st);
+      setChatAll({...chatAll,[sel]:[...hist,{r:"a",t:resp||"(sem resposta)"}].slice(-40)});
+    }catch(err){
+      setChatAll({...chatAll,[sel]:antes}); setChatIn(t);
+      setChatErr(err.message==="SEM_CHAVE"?"Cadastre uma chave acima.":"Não consegui responder ("+err.message+").");
+    }
+    setChatLoad(false);
   };
   const iniciarGram=(af,fr)=>{
     const stI=gstat.items||{};
@@ -3845,10 +3978,10 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setRs({...rs,fila,i:prox,show:false,resp:"",res:null,ok:rs.ok+(ok?1:0),er:rs.er+(ok?0:1),rep:ok?rs.rep:{...rs.rep,[id]:1},fim:prox>=fila.length});
   };
   const salvarMinha=(id,t)=>{ if(!t.trim())return; setVocab(vocab.map(v=>v.id!==id?v:{...v,minha:t.trim()})); };
-  const abrirEdit=l=>{setFL({nivel:l.nivel,alvo:l.alvo,prova:l.prova||"",metaSem:l.metaSem,novosDia:(l.novosDia===undefined||l.novosDia===null)?"":l.novosDia});setEditL(l.id);};
+  const abrirEdit=l=>{setFL({nivel:l.nivel,alvo:l.alvo,prova:l.prova||"",metaSem:l.metaSem,novosDia:(l.novosDia===undefined||l.novosDia===null)?"":l.novosDia,exame:l.exame||"",porque:l.porque||"",metaFala:l.metaFala||"",metaEscr:l.metaEscr||""});setEditL(l.id);setTimeout(()=>{const e=document.getElementById("idi-meta-form");if(e&&e.scrollIntoView)e.scrollIntoView({behavior:"smooth",block:"center"});},80);};
   const salvarEdit=()=>{
     const l=L(editL);
-    setCfg(cfg.map(x=>x.id!==editL?x:{...x,nivel:fL.nivel,alvo:fL.alvo,prova:fL.prova,metaSem:+fL.metaSem||0,novosDia:(fL.novosDia===""||fL.novosDia===undefined)?undefined:Math.max(0,+fL.novosDia||0)}));
+    setCfg(cfg.map(x=>x.id!==editL?x:{...x,nivel:fL.nivel,alvo:fL.alvo,prova:fL.prova,exame:fL.exame,porque:(fL.porque||"").trim(),metaFala:+fL.metaFala||0,metaEscr:+fL.metaEscr||0,metaSem:+fL.metaSem||0,novosDia:(fL.novosDia===""||fL.novosDia===undefined)?undefined:Math.max(0,+fL.novosDia||0)}));
     if(fL.nivel!==l.nivel)setMarcos([{id:uid(),lang:editL,data:hoje,titulo:"Nível "+fL.nivel,tipo:"nivel"},...marcos]);
     setEditL(null);
   };
@@ -3991,19 +4124,6 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
 
       <div className="idi-sheet" key={"s"+sel}><div className="idi-wrap">
 
-      {editL&&fL&&(
-        <Card>
-          <Titulo k="Configuração" t={L(editL).nome}/>
-          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr 1fr",gap:12,marginBottom:16}}>
-            <div><div style={{...lab,marginBottom:6}}>Nível atual</div><select style={inp} value={fL.nivel} onChange={e=>setFL({...fL,nivel:e.target.value})}>{NIVEIS.map(n=><option key={n}>{n}</option>)}</select></div>
-            <div><div style={{...lab,marginBottom:6}}>Meta de nível</div><select style={inp} value={fL.alvo} onChange={e=>setFL({...fL,alvo:e.target.value})}>{NIVEIS.map(n=><option key={n}>{n}</option>)}</select></div>
-            <div><div style={{...lab,marginBottom:6}}>Data da prova</div><input style={inp} type="date" value={fL.prova} onChange={e=>setFL({...fL,prova:e.target.value})}/></div>
-            <div><div style={{...lab,marginBottom:6}}>Meta (h/semana)</div><input style={inp} type="number" min="0" value={fL.metaSem} onChange={e=>setFL({...fL,metaSem:e.target.value})}/></div>
-            <div><div style={{...lab,marginBottom:6}}>Novas por dia</div><input style={inp} type="number" min="0" value={fL.novosDia} placeholder={String(sel===editL&&editL==="de"?10:6)} onChange={e=>setFL({...fL,novosDia:e.target.value})}/></div>
-          </div>
-          <div style={{display:"flex",gap:10}}><button style={btnP} onClick={salvarEdit}>Salvar</button><button style={btnS} onClick={()=>setEditL(null)}>Cancelar</button></div>
-        </Card>)}
-
       {/* ═ HOJE ═ */}
       {sub==="hoje"&&(<>
         <div className="idi-grid4">
@@ -4071,11 +4191,57 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                     <div style={{flex:1,height:6,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden"}}><div style={{width:Math.min(100,l.metaSem>0?mSem/l.metaSem*100:0)+"%",height:"100%",background:l.cor,borderRadius:99}}/></div>
                     <span style={{...lab,fontSize:10}}>{mSem.toFixed(1).replace(".0","")}/{l.metaSem}h semana</span>
                   </div>
+                  {[["falar","Fala",l.metaFala],["escrever","Escrita",l.metaEscr]].filter(x=>+x[2]>0).map(([tp,nm,mt])=>{const mn=log.filter(x=>x.lang===l.id&&x.data>=iniSem&&x.tipo===tp).reduce((a,x)=>a+(+x.min||0),0);return (
+                    <div key={tp} style={{display:"flex",alignItems:"center",gap:10,marginTop:10}}>
+                      <div style={{flex:1,height:6,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden"}}><div style={{width:Math.min(100,mn/mt*100)+"%",height:"100%",background:l.cor,borderRadius:99}}/></div>
+                      <span style={{...lab,fontSize:10}}>{nm} {mn}/{mt} min</span>
+                    </div>);})}
+                  {(()=>{const sm=smartAval(l,hoje);return (
+                    <div style={{marginTop:14}}>
+                      <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+                        {sm.itens.map(([k,nm,r])=><span key={k} title={nm+": "+r.txt} style={{width:24,height:24,borderRadius:"50%",display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:r.ok?T.ink:"transparent",color:r.ok?T.sheet:"rgba(var(--idi-rgb),.5)",border:"1.5px solid "+(r.ok?T.ink:"rgba(var(--idi-rgb),.25)")}}>{k}</span>)}
+                        <span style={{...lab,fontSize:9.5,marginLeft:4}}>meta SMART {sm.n}/5</span>
+                      </div>
+                      {sm.frase&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:10}}>{sm.frase}</div>}
+                      {l.porque&&<div style={{fontSize:12.5,lineHeight:1.5,marginTop:6,opacity:.7}}>Por quê: {l.porque}</div>}
+                    </div>);})()}
                   <div style={{display:"flex",alignItems:"center",gap:8,marginTop:14,flexWrap:"wrap"}}>
                     {iN<NIVEIS.length-1&&<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>subirNivel(l)}>Subi para {NIVEIS[iN+1]}</button>}
-                    <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>abrirEdit(l)}>Editar metas</button>
-                    {dp!==null&&dp>=0&&<span style={{...lab,marginLeft:"auto",color:T.ink,fontWeight:700}}>prova em {dp} {dp===1?"dia":"dias"}</span>}
+                    <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>editL===l.id?setEditL(null):abrirEdit(l)}>{editL===l.id?"Fechar":"Editar metas"}</button>
+                    {dp!==null&&dp>=0&&<span style={{...lab,marginLeft:"auto",color:T.ink,fontWeight:700}}>prazo em {dp} {dp===1?"dia":"dias"}</span>}
                   </div>
+                  {editL===l.id&&fL&&(()=>{
+                    const sm=smartAval({...fL,metaSem:fL.metaSem,metaFala:fL.metaFala,metaEscr:fL.metaEscr},hoje);
+                    const campo=(rot,el)=><div><div style={{...lab,marginBottom:6}}>{rot}</div>{el}</div>;
+                    return (
+                    <div id="idi-meta-form" style={{marginTop:16,padding:"18px 16px",borderRadius:18,background:"rgba(var(--idi-rgb),.05)"}}>
+                      <div style={{...lab,marginBottom:12}}>Editar meta · {l.nome}</div>
+                      <div style={{...lab,fontSize:9.5,marginBottom:8,opacity:.7}}>S · Específico</div>
+                      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:12,marginBottom:16}}>
+                        {campo("Exame",<select style={inp} value={fL.exame} onChange={e=>setFL({...fL,exame:e.target.value})}><option value="">Escolha…</option>{(IDI_EXAMES[l.id]||["Outro"]).map(x=><option key={x} value={x}>{x}</option>)}</select>)}
+                        {campo("Nível atual",<select style={inp} value={fL.nivel} onChange={e=>setFL({...fL,nivel:e.target.value})}>{NIVEIS.map(n=><option key={n}>{n}</option>)}</select>)}
+                        {campo("Nível-alvo",<select style={inp} value={fL.alvo} onChange={e=>setFL({...fL,alvo:e.target.value})}>{NIVEIS.map(n=><option key={n}>{n}</option>)}</select>)}
+                      </div>
+                      <div style={{...lab,fontSize:9.5,marginBottom:8,opacity:.7}}>M · Mensurável (por semana)</div>
+                      <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"1fr 1fr 1fr 1fr",gap:12,marginBottom:16}}>
+                        {campo("Horas",<input style={inp} type="number" min="0" step="0.5" value={fL.metaSem} onChange={e=>setFL({...fL,metaSem:e.target.value})}/>)}
+                        {campo("Min de fala",<input style={inp} type="number" min="0" value={fL.metaFala} onChange={e=>setFL({...fL,metaFala:e.target.value})}/>)}
+                        {campo("Min de escrita",<input style={inp} type="number" min="0" value={fL.metaEscr} onChange={e=>setFL({...fL,metaEscr:e.target.value})}/>)}
+                        {campo("Palavras novas/dia",<input style={inp} type="number" min="0" value={fL.novosDia} placeholder={String(l.id==="de"?10:6)} onChange={e=>setFL({...fL,novosDia:e.target.value})}/>)}
+                      </div>
+                      <div style={{...lab,fontSize:9.5,marginBottom:8,opacity:.7}}>R · Relevante</div>
+                      <textarea style={{...inp,minHeight:64,resize:"vertical",lineHeight:1.5,marginBottom:16}} value={fL.porque} onChange={e=>setFL({...fL,porque:e.target.value})} placeholder="Por que isso importa? Ex.: preciso do certificado e quero conversar com pacientes e colegas sem tradutor."/>
+                      <div style={{...lab,fontSize:9.5,marginBottom:8,opacity:.7}}>T · Temporal</div>
+                      <div style={{marginBottom:16}}>{campo("Prazo (data da prova ou sua data-limite)",<input style={{...inp,width:"100%",maxWidth:260,boxSizing:"border-box"}} type="date" value={fL.prova} onChange={e=>setFL({...fL,prova:e.target.value})}/>)}</div>
+                      <div style={{...lab,fontSize:9.5,marginBottom:8,opacity:.7}}>A · Atingível</div>
+                      <div style={{fontSize:13.5,lineHeight:1.55,marginBottom:6}}>{sm.itens[2][2].txt}</div>
+                      <div style={{...lab,fontSize:9,marginBottom:14,lineHeight:1.6,opacity:.6}}>Estimativa de {HORAS_NIV[0]} a {HORAS_NIV[1]} h por nível (ensino orientado, referência CEFR). O seu ritmo pode variar.</div>
+                      <div style={{borderTop:"1px solid rgba(var(--idi-rgb),.1)",paddingTop:12,marginBottom:14}}>
+                        {sm.itens.map(([k,nm,r])=><div key={k} style={{display:"flex",gap:10,alignItems:"flex-start",padding:"4px 0",fontSize:13,lineHeight:1.5}}><b style={{width:16,color:r.ok?"#2F7A52":IDI_RED}}>{r.ok?"✓":"○"}</b><span><b>{nm}.</b> {r.txt}</span></div>)}
+                        {sm.frase&&<div style={{marginTop:10,fontSize:13.5,lineHeight:1.55,fontWeight:600}}>{sm.frase}</div>}
+                      </div>
+                      <div style={{display:"flex",gap:10}}><button style={btnP} onClick={salvarEdit}>Salvar meta</button><button style={btnS} onClick={()=>setEditL(null)}>Cancelar</button></div>
+                    </div>);})()}
                 </div>);})}
           </Card>
           <Card>
@@ -4408,6 +4574,24 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 </div>))}
             </div>}
           </Card>
+          {iaNome&&<Card>
+            <Titulo k="Conversa" t="Fale sobre seus erros"/>
+            <div style={{fontSize:13.5,lineHeight:1.6,opacity:.8,maxWidth:600,marginBottom:12}}>O {iaNome} já conhece seus erros registrados e seu desempenho. Pergunte por que erra, peça explicação com exemplos ou escreva uma frase para ele corrigir.</div>
+            {chat.length===0&&!chatLoad&&<div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:12}}>
+              {["Qual é o meu padrão de erro?","Onde devo voltar no livro?","Dê 5 frases com lacuna sobre meu pior assunto","Explique meu erro mais frequente com exemplos"].map(q=><button key={q} style={{...btnS,padding:"8px 14px",fontSize:12.5,textAlign:"left"}} onClick={()=>enviarChat(q)}>{q}</button>)}
+            </div>}
+            {(chat.length>0||chatLoad)&&<div ref={chatRef} style={{maxHeight:420,overflowY:"auto",padding:"4px 2px",marginBottom:12,display:"flex",flexDirection:"column",gap:10}}>
+              {chat.map((m,i)=>(
+                <div key={i} style={{alignSelf:m.r==="u"?"flex-end":"flex-start",maxWidth:"88%",padding:"10px 14px",borderRadius:16,fontSize:14,lineHeight:1.6,whiteSpace:"pre-wrap",wordBreak:"break-word",background:m.r==="u"?T.ink:"rgba(var(--idi-rgb),.07)",color:m.r==="u"?T.sheet:"inherit"}}>{m.t}</div>))}
+              {chatLoad&&<div style={{alignSelf:"flex-start",padding:"10px 14px",borderRadius:16,fontSize:13,opacity:.6,background:"rgba(var(--idi-rgb),.07)"}}>pensando…</div>}
+            </div>}
+            {chatErr&&<div style={{marginBottom:10,fontSize:13,color:IDI_RED}}>{chatErr}</div>}
+            <textarea style={{...inp,minHeight:64,resize:"vertical",lineHeight:1.5}} value={chatIn} onChange={e=>setChatIn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();enviarChat();}}} placeholder="Escreva sua pergunta ou uma frase em alemão…" aria-label="Mensagem"/>
+            <div style={{marginTop:10,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+              <button style={{...btnP,opacity:(chatIn.trim()&&!chatLoad)?1:.4}} disabled={!chatIn.trim()||chatLoad} onClick={()=>enviarChat()}>Enviar</button>
+              {chat.length>0&&<button onClick={()=>{setChatAll({...chatAll,[sel]:[]});setChatErr("");}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)",padding:0}}>limpar conversa</button>}
+            </div>
+          </Card>}
           <Card>
             <Titulo k="Intercalação" t="Gramática mista"/>
             <div style={{fontSize:14,lineHeight:1.6,opacity:.8,maxWidth:560}}>10 frases de áreas misturadas, para você decidir qual regra se aplica (é essa a habilidade da prova). No primeiro erro o app só <b>marca o trecho</b> e pede nova tentativa; no segundo mostra a resposta e a explicação. O que errar volta para a fila e alimenta suas dificuldades.</div>
@@ -4568,16 +4752,83 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
 
       {sub==="subst"&&(<>
         <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"34px 28px"}}>
-          {!ds&&(<>
+          {!ds&&!fq&&(<>
             <div style={lab}>Treino</div>
             <div style={{...serif,fontSize:isMobile?34:44,margin:"10px 0 8px",lineHeight:1.05}}>Escreva o artigo<br/>e o substantivo</div>
             <div style={{display:"flex",justifyContent:"center",gap:8,margin:"14px 0 20px"}}>{ARTS.map(a=><span key={a} style={{background:ART_BG[a],color:ART_COR[a],fontWeight:700,fontSize:15,padding:"8px 16px",borderRadius:999}}>{a}</span>)}</div>
             <div style={{display:"flex",justifyContent:"center",gap:10,flexWrap:"wrap"}}>
-              <button style={btnP} onClick={()=>iniciarDrill("art")}>Escrever artigo + palavra</button>
+              <button style={{...btnP,opacity:iaNomeF?1:.4}} disabled={!iaNomeF} onClick={iniciarFrases}>Escrever frases</button>
+              <button style={btnS} onClick={()=>iniciarDrill("art")}>Escrever artigo + palavra</button>
               <button style={btnS} onClick={()=>iniciarDrill("plural")}>Treinar plurais</button>
             </div>
+            <div style={{fontSize:13,lineHeight:1.55,opacity:.7,maxWidth:480,margin:"14px auto 0"}}>{iaNomeF?"Você recebe o artigo e o substantivo, escreve 1 ou 2 frases e o "+iaNomeF+" corrige na hora. No fim, uma análise de gramática, ortografia, coesão e coerência.":"Para escrever frases com correção, cadastre uma chave em Gramática › Registrar erros."}</div>
             <div style={{...lab,marginTop:18}}>{poolAll.length} substantivos · {meusN.length} seus · o que você erra volta mais vezes</div>
           </>)}
+          {fq&&!fq.fim&&(()=>{const n=fq.fila[fq.i];const r=fq.res;return (<>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+              <span style={lab}>Escrever frases</span>
+              <span style={lab}>{fq.i+1} / {fq.fila.length}</span>
+            </div>
+            <div style={{height:4,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden",marginBottom:26}}><div style={{width:(fq.i/fq.fila.length*100)+"%",height:"100%",background:T.ink,transition:"width .3s"}}/></div>
+            <div style={{...serif,fontSize:isMobile?46:60,lineHeight:1.05,wordBreak:"break-word"}}><NomeN lang={sel} art={n.art} termo={n.termo}/></div>
+            <div style={{fontSize:14,opacity:.6,marginTop:8}}>{n.trad}</div>
+            {!r&&<div style={{maxWidth:520,margin:"24px auto 0",textAlign:"left"}}>
+              <div style={{fontSize:13,lineHeight:1.55,opacity:.75,marginBottom:10,textAlign:"center"}}>Escreva 1 ou 2 frases com <b>{n.art} {n.termo}</b>. Ligue as duas com um conector ({sel==="de"?"weil, aber, deshalb, dann":"parce que, mais, donc, puis"}) ou um pronome.</div>
+              <textarea autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} disabled={fq.load} style={{...inp,minHeight:96,resize:"vertical",lineHeight:1.5,fontSize:16}} value={fq.texto} onChange={e=>setFq({...fq,texto:e.target.value})} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();corrigirFrase();}}} aria-label="Sua frase" placeholder={sel==="de"?"Ex.: Der Tisch ist neu, deshalb …":"Ex.: La table est neuve, donc …"}/>
+              <div style={{display:"flex",justifyContent:"center",gap:6,flexWrap:"wrap",marginTop:10}}>{G.chars.map(c=><button key={c} onClick={()=>setFq({...fq,texto:fq.texto+c})} style={{width:38,height:38,borderRadius:12,border:"1px solid rgba(var(--idi-rgb),.2)",background:"transparent",cursor:"pointer",fontSize:16,color:"inherit"}}>{c}</button>)}</div>
+              {fq.msg&&<div style={{marginTop:12,fontSize:13,color:IDI_RED,textAlign:"center"}}>{fq.msg}</div>}
+              <div style={{display:"flex",justifyContent:"center",marginTop:16}}><button style={{...btnP,opacity:(fq.texto.trim().length>=3&&!fq.load)?1:.4}} disabled={fq.texto.trim().length<3||fq.load} onClick={corrigirFrase}>{fq.load?"Corrigindo…":"Corrigir"}</button></div>
+            </div>}
+            {r&&<div style={{marginTop:22,textAlign:"left",maxWidth:560,marginLeft:"auto",marginRight:"auto"}}>
+              <div style={{padding:"14px 16px",borderRadius:18,background:(r.erros.length===0&&r.usou)?"#E3EFDB":"#F8E0D9",marginBottom:12}}>
+                <div style={{fontWeight:700,fontSize:15,color:(r.erros.length===0&&r.usou)?"#3C7030":"#B23F2A"}}>{!r.usou?"✗ Você não usou "+n.art+" "+n.termo:(r.erros.length===0?"✓ Sem erros":"✗ "+r.erros.length+(r.erros.length===1?" ponto para corrigir":" pontos para corrigir"))}</div>
+                <div style={{fontSize:13,marginTop:8,opacity:.8}}>Você escreveu: <i>{fq.texto.trim()}</i></div>
+                <div style={{fontSize:15,marginTop:8,lineHeight:1.5,fontWeight:600}}>{r.correta}</div>
+              </div>
+              {r.erros.map((e,i)=>(
+                <div key={i} style={{padding:"10px 0",borderTop:"1px solid rgba(var(--idi-rgb),.1)",fontSize:13.5,lineHeight:1.55}}>
+                  <span style={{...lab,fontSize:9.5,padding:"3px 8px",borderRadius:99,background:"rgba(var(--idi-rgb),.08)",marginRight:8}}>{frTipoNome(e.tipo)}</span>
+                  {e.trecho&&<><span style={{textDecoration:"line-through",opacity:.55}}>{e.trecho}</span> → <b>{e.correcao}</b></>}
+                  <div style={{marginTop:4,opacity:.8}}>{e.porque}</div>
+                </div>))}
+              {r.comentario&&<div style={{fontSize:13.5,marginTop:10,padding:"10px 14px",borderRadius:14,background:"#FBF1D8",lineHeight:1.5}}>{r.comentario}</div>}
+              <div style={{textAlign:"center",marginTop:18}}><button style={btnP} onClick={proxFrase}>{fq.i+1>=fq.fila.length?"Finalizar e ver análise":"Próxima"}</button></div>
+            </div>}
+            <div style={{marginTop:18}}><button onClick={()=>setFq(null)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)"}}>sair do treino</button></div>
+          </>);})()}
+          {fq&&fq.fim&&(()=>{
+            const cont=FR_TIPOS.map(([k,nm])=>({k,nm,n:fq.itens.reduce((a,x)=>a+x.erros.filter(e=>e.tipo===k).length,0)}));
+            const mx=Math.max(1,...cont.map(c=>c.n)); const limpas=fq.itens.filter(x=>x.ok).length;
+            return (<div style={{textAlign:"left",maxWidth:600,marginLeft:"auto",marginRight:"auto"}}>
+              <div style={{textAlign:"center"}}>
+                <div style={lab}>Sessão concluída</div>
+                <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{limpas}<small style={{fontSize:"45%",opacity:.45}}> / {fq.itens.length}</small></div>
+                <Vazio>frases sem nenhum erro.</Vazio>
+              </div>
+              <div style={{...lab,margin:"20px 0 10px"}}>Onde você errou</div>
+              {cont.map(c=>(
+                <div key={c.k} style={{display:"grid",gridTemplateColumns:"110px 1fr 24px",alignItems:"center",gap:10,padding:"5px 0"}}>
+                  <span style={{fontSize:13}}>{c.nm}</span>
+                  <div style={{height:8,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden"}}><div style={{width:(c.n/mx*100)+"%",height:"100%",background:c.n>0?IDI_RED:T.ink,borderRadius:99}}/></div>
+                  <span style={{...lab,textAlign:"right"}}>{c.n}</span>
+                </div>))}
+              <div style={{...lab,margin:"20px 0 8px"}}>Análise geral</div>
+              {fq.ana&&fq.ana.load&&<div style={{fontSize:13.5,opacity:.65}}>Analisando suas frases…</div>}
+              {fq.ana&&fq.ana.msg&&<div style={{fontSize:13,color:IDI_RED}}>{fq.ana.msg}</div>}
+              {fq.ana&&fq.ana.txt&&<div style={{padding:"14px 16px",borderRadius:16,background:"rgba(var(--idi-rgb),.07)",fontSize:14,lineHeight:1.65,whiteSpace:"pre-wrap"}}>{fq.ana.txt}</div>}
+              <div style={{...lab,margin:"20px 0 8px"}}>Suas frases</div>
+              {fq.itens.map((x,i)=>(
+                <div key={i} style={{padding:"10px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)",fontSize:13.5,lineHeight:1.55}}>
+                  <div style={{...lab,fontSize:9.5,marginBottom:4}}>{x.art} {x.termo}</div>
+                  <div style={{textDecoration:x.ok?"none":"line-through",opacity:x.ok?1:.55}}>{x.frase}</div>
+                  {!x.ok&&<div style={{fontWeight:600}}>{x.correta}</div>}
+                </div>))}
+              <div style={{display:"flex",justifyContent:"center",gap:10,marginTop:20,flexWrap:"wrap"}}>
+                {fq.itens.some(x=>x.erros.length>0)&&(fq.salvo?<span style={{...lab,alignSelf:"center"}}>{fq.salvo} {fq.salvo===1?"erro enviado":"erros enviados"} para o treino de gramática ✓</span>:<button style={btnS} onClick={enviarErrosFrases}>Mandar erros para o treino de gramática</button>)}
+                <button style={btnP} onClick={iniciarFrases}>Nova rodada</button>
+                <button style={btnS} onClick={()=>setFq(null)}>Fechar</button>
+              </div>
+            </div>);})()}
           {ds&&ds.fim&&(<>
             <div style={lab}>Rodada concluída</div>
             <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{ds.ok}<small style={{fontSize:"45%",opacity:.45}}> / {ds.ok+ds.er}</small></div>
@@ -4658,6 +4909,18 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               </div>))}
           </Card>
         </div>
+
+        {(()=>{const rec=frases.filter(f=>f.lang===sel&&f.data>=ult30); if(!rec.length)return null; const cont=FR_TIPOS.map(([k,nm])=>({k,nm,n:rec.reduce((a,f)=>a+(f.erros||[]).filter(e=>e.tipo===k).length,0)})); const mx=Math.max(1,...cont.map(c=>c.n)); const limpas=rec.filter(f=>f.ok).length; return (
+          <Card>
+            <Titulo k="Últimos 30 dias" t="Seus defeitos de escrita" dir={<div style={{textAlign:"right"}}><div style={lab}>frases sem erro</div><div style={{...serif,fontSize:isMobile?28:34,marginTop:4}}>{Math.round(limpas/rec.length*100)}%</div></div>}/>
+            {cont.map(c=>(
+              <div key={c.k} style={{display:"grid",gridTemplateColumns:"110px 1fr 28px",alignItems:"center",gap:10,padding:"6px 0"}}>
+                <span style={{fontSize:13.5}}>{c.nm}</span>
+                <div style={{height:9,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden"}}><div style={{width:(c.n/mx*100)+"%",height:"100%",background:c.n>0?IDI_RED:T.ink,borderRadius:99}}/></div>
+                <span style={{...lab,textAlign:"right"}}>{c.n}</span>
+              </div>))}
+            <div style={{...lab,fontSize:9.5,marginTop:10}}>{rec.length} {rec.length===1?"frase corrigida":"frases corrigidas"}</div>
+          </Card>);})()}
 
         <Card>
           <Titulo k="Atalhos que funcionam" t="Regras de terminação"/>
