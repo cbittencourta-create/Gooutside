@@ -1312,7 +1312,8 @@ function EstudosApp({userId,isMobile,onMenu,onTrocar}){
 const IDI_INK="#2A1E14", IDI_CREAM="#F6EBD3", IDI_PAPER="#FCF6E8", IDI_GOLD="#D9A441", IDI_BLUE="#6F86D6", IDI_RED="#C4503A";
 const NIVEIS=["A1","A2","B1","B2","C1","C2"];
 const HAB=[["ouvir","Ouvir"],["falar","Falar"],["ler","Ler"],["escrever","Escrever"],["gramatica","Gramática"],["vocab","Vocabulário"]];
-const IDI_TIPOS=[...HAB,["aula","Aula"]];
+const IDI_TIPOS=[...HAB,["aula","Aula"],["kursbuch","Livro - Kursbuch"],["ubungsbuch","Livro - Übungsbuch"]];
+const IDI_LIVROS=["kursbuch","ubungsbuch"];
 const LEIT=[1,3,7,14,30,60];
 const IDI_LANGS=[
   {id:"de",nome:"Alemão",cod:"DE",cor:IDI_GOLD,nivel:"B1",alvo:"B2",prova:"",metaSem:4},
@@ -3458,7 +3459,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [sub,setSub]=useState("hoje");
   const [editL,setEditL]=useState(null);
   const [fL,setFL]=useState(null);
-  const [fp,setFp]=useState({lang:"",tipo:"ouvir",min:"",nota:"",data:""});
+  const [fp,setFp]=useState({lang:"",tipo:"ouvir",min:"",nota:"",data:"",ref:""});
   const [fw,setFw]=useState({lang:"",termo:"",trad:"",ex:"",art:"",plural:"",tipo:"palavra",minha:"",tema:"",vars:""});
   const [plt]=useLS("v4_plt",[],userId);
   const [ii,setIi]=useLS("v5_idi_ii",{},userId);
@@ -3614,8 +3615,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const addPratica=()=>{
     const min=+fp.min; const lang=defLang;
     if(!(min>0)||!lang)return;
-    setLog([{id:uid(),lang,tipo:fp.tipo,min,nota:fp.nota.trim(),data:fp.data||hoje},...log]);
-    setFp({...fp,min:"",nota:""});
+    setLog([{id:uid(),lang,tipo:fp.tipo,min,nota:fp.nota.trim(),data:fp.data||hoje,...(IDI_LIVROS.includes(fp.tipo)&&fp.ref.trim()?{ref:fp.ref.trim()}:{})},...log]);
+    setFp({...fp,min:"",nota:"",ref:""});
   };
   const addPalavra=()=>{
     const lang=defLang; let termo=fw.termo.trim(); const trad=fw.trad.trim();
@@ -3995,8 +3996,10 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const avsDe=id=>aval.filter(a=>a.lang===id).sort((a,b)=>b.data.localeCompare(a.data));
   const decorrido=cron?(cron.acc||0)+(cron.ini?Date.now()-cron.ini:0):0;
   const tipoNome=t=>(IDI_TIPOS.find(x=>x[0]===t)||[0,t])[1];
+  const tiposSel=IDI_TIPOS.filter(t=>sel==="de"||!IDI_LIVROS.includes(t[0]));
+  const ultRef=t=>logSel.find(x=>x.tipo===t&&x.ref);
   const fmtT=ms=>{const t=Math.max(0,Math.floor(ms/1000));const h=Math.floor(t/3600),m=Math.floor(t%3600/60),x=t%60;return (h?h+":":"")+String(m).padStart(2,"0")+":"+String(x).padStart(2,"0");};
-  const iniciarCron=()=>setCron({lang:sel,tipo:fp.tipo,acc:0,ini:Date.now(),meta:metaC});
+  const iniciarCron=()=>{setCron({lang:sel,tipo:fp.tipo,acc:0,ini:Date.now(),meta:metaC,...(IDI_LIVROS.includes(fp.tipo)&&fp.ref.trim()?{ref:fp.ref.trim()}:{})});setFp({...fp,ref:""});};
   const pausarCron=()=>{if(cron)setCron({...cron,acc:decorrido,ini:null});};
   const retomarCron=()=>{if(cron)setCron({...cron,ini:Date.now()});};
   const finalizarCron=()=>{
@@ -4004,13 +4007,14 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const ms=decorrido;
     if(ms<30000){setCron(null);setToast("Menos de 30 segundos: não salvei.");return;}
     const min=Math.max(1,Math.round(ms/60000));
-    setLog([{id:uid(),lang:cron.lang,tipo:cron.tipo,min,nota:"cronômetro",data:hoje},...log]);
+    setLog([{id:uid(),lang:cron.lang,tipo:cron.tipo,min,nota:"cronômetro",data:hoje,...(cron.ref?{ref:cron.ref}:{})},...log]);
     setToast(`Salvo: ${min} min de ${L(cron.lang).nome} · ${tipoNome(cron.tipo)}`);
     setCron(null);
   };
   const descartarCron=()=>{if(window.confirm("Descartar este tempo sem salvar?"))setCron(null);};
   const trocarIdioma=id=>{
     if(id===sel)return;
+    if(id!=="de"&&IDI_LIVROS.includes(fp.tipo))setFp({...fp,tipo:"ouvir"});
     setSel(id);setRs(null);setDs(null);setDicaEd(null);setFw(f=>({...f,art:"",plural:""}));
     const u=avsDe(id)[0];setAvN(u?{...u.notas}:{ouvir:3,falar:3,ler:3,escrever:3,gramatica:3,vocab:3});
   };
@@ -4036,7 +4040,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       <i style={{width:10,height:10,borderRadius:"50%",background:L(s.lang).cor,flexShrink:0}}/>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontSize:14.5,fontWeight:600}}>{L(s.lang).nome} · {(IDI_TIPOS.find(t=>t[0]===s.tipo)||[0,s.tipo])[1]}</div>
-        <div style={{...lab,fontSize:9.5,marginTop:3,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{fd(s.data)}{s.nota?" · "+s.nota:""}</div>
+        <div style={{...lab,fontSize:9.5,marginTop:3,whiteSpace:s.ref?"normal":"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{fd(s.data)}{s.ref?" · "+s.ref:""}{s.nota?" · "+s.nota:""}</div>
       </div>
       <span style={{...serif,fontSize:22}}>{s.min}<small style={{fontSize:"55%",opacity:.55}}> min</small></span>
       <button onClick={()=>setLog(log.filter(x=>x.id!==s.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
@@ -4298,7 +4302,12 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               </div>
               {!ativo?(<>
                 <div style={{...lab,marginBottom:8}}>O que vai estudar</div>
-                <div style={{display:"flex",justifyContent:"center"}}><Pick val={fp.tipo} set={v=>setFp({...fp,tipo:v})} opts={IDI_TIPOS.map(([i,n])=>[i,n])}/></div>
+                <div style={{display:"flex",justifyContent:"center"}}><Pick val={fp.tipo} set={v=>setFp({...fp,tipo:v})} opts={tiposSel.map(([i,n])=>[i,n])}/></div>
+                {IDI_LIVROS.includes(fp.tipo)&&<div style={{maxWidth:360,margin:"14px auto 0",textAlign:"left"}}>
+                  <div style={{...lab,marginBottom:6}}>Capítulo, página e exercício (opcional)</div>
+                  <input style={inp} value={fp.ref} onChange={e=>setFp({...fp,ref:e.target.value})} placeholder="Ex.: Kapitel 9, S. 112, Üb. 3"/>
+                  {ultRef(fp.tipo)&&<div style={{...lab,fontSize:9.5,marginTop:6}}>Onde parou: {ultRef(fp.tipo).ref}</div>}
+                </div>}
                 <div style={{...lab,margin:"16px 0 8px"}}>Meta de tempo</div>
                 <div style={{display:"flex",justifyContent:"center"}}><Pick val={metaC} set={setMetaC} opts={[[0,"Livre"],[25,"25 min"],[45,"45 min"],[60,"1 h"],[90,"1h30"]]}/></div>
                 <div style={{marginTop:22}}><button style={{...btnP,padding:"14px 34px",fontSize:14}} onClick={iniciarCron}>Iniciar</button></div>
@@ -4315,7 +4324,12 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         <Card>
           <Titulo k="Registro" t="Lançar manualmente"/>
           <div style={{...lab,marginBottom:8}}>Atividade</div>
-          <Pick val={fp.tipo} set={v=>setFp({...fp,tipo:v})} opts={IDI_TIPOS.map(([i,n])=>[i,n])}/>
+          <Pick val={fp.tipo} set={v=>setFp({...fp,tipo:v})} opts={tiposSel.map(([i,n])=>[i,n])}/>
+          {IDI_LIVROS.includes(fp.tipo)&&<div style={{marginTop:16}}>
+            <div style={{...lab,marginBottom:6}}>Capítulo, página e exercício (opcional)</div>
+            <input style={inp} value={fp.ref} onChange={e=>setFp({...fp,ref:e.target.value})} placeholder="Ex.: Kapitel 9, S. 112, Üb. 3"/>
+            {ultRef(fp.tipo)&&<div style={{...lab,fontSize:9.5,marginTop:6}}>Onde parou: {ultRef(fp.tipo).ref}</div>}
+          </div>}
           <div style={{...lab,margin:"18px 0 8px"}}>Minutos</div>
           <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
             {[15,30,45,60,90].map(n=><button key={n} onClick={()=>setFp({...fp,min:String(n)})} style={{...btnS,padding:"8px 14px",background:+fp.min===n?T.ink:"transparent",color:+fp.min===n?T.sheet:T.ink}}>{n}</button>)}
@@ -4327,6 +4341,17 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           </div>
           <div style={{marginTop:18}}><button style={btnP} onClick={addPratica}>Salvar registro</button></div>
         </Card>
+        {sel==="de"&&<Card>
+          <Titulo k="Livros" t="Netzwerk neu · últimos 30 dias"/>
+          {IDI_LIVROS.map((t,k)=>{const min=logSel.filter(x=>x.tipo===t&&x.data>=ult30).reduce((a,x)=>a+(+x.min||0),0);const u=ultRef(t);return (
+            <div key={t} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:k===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:14.5,fontWeight:600}}>{tipoNome(t)}</div>
+                <div style={{...lab,fontSize:9.5,marginTop:3}}>{u?"Onde parou: "+u.ref+" · "+fd(u.data):"Nenhuma página registrada ainda"}</div>
+              </div>
+              <span style={{...serif,fontSize:22}}>{min>=60?(min/60).toFixed(1).replace(".0","").replace(".",","):min}<small style={{fontSize:"55%",opacity:.55}}> {min>=60?"h":"min"}</small></span>
+            </div>);})}
+        </Card>}
         <Card>
           <Titulo k="Histórico" t="Registros recentes"/>
           {logSel.length===0?<Vazio>Nenhum registro ainda.</Vazio>:<Hist lista={logSel.slice(0,12)}/>}
