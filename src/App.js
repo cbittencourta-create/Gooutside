@@ -2026,10 +2026,10 @@ async function gArqB64(file){
   const b=await medPrep(file);
   return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=rej;r.readAsDataURL(b);});
 }
-async function gIdentificarAssuntos(texto,imgs,lang,areas){
+async function gIdentificarAssuntos(texto,imgs,lang,areas,ctx){
   const idioma=lang==="de"?"alemão":"francês";
   const chaves=areas.map(a=>a[0]+" = "+a[1]).join("; ");
-  const prompt="Você é professor de "+idioma+" (nível A2). Uma aluna brasileira estudou hoje no livro didático e descreve ou fotografa o que estudou. Texto dela: «"+(texto||"(sem texto)")+"»."+(imgs.length?" As imagens anexas são das páginas que ela estudou.":"")+" Identifique os ASSUNTOS estudados (gramática e funções de comunicação). Para cada um dê um título curto em português com o termo em "+idioma+" quando existir (ex.: Nebensätze com weil), a chave da área (uma destas: "+chaves+"; use outro se nenhuma servir) e um resumo de 1 ou 2 frases com a regra essencial e um exemplo curto. No máximo 8 assuntos, sem repetir, e só o que realmente aparece no material. Se houver capítulo, lição ou página, devolva em fonte (ex.: Kapitel 9, S. 110-114). Responda SOMENTE com JSON: {\"fonte\":\"\",\"assuntos\":[{\"titulo\":\"\",\"area\":\"\",\"resumo\":\"\"}]}";
+  const prompt="Você é professor de "+idioma+" (nível A2). Uma aluna brasileira estudou hoje no livro didático e descreve ou fotografa o que estudou. Texto dela: «"+(texto||"(sem texto)")+"»."+(imgs.length?" As imagens anexas são das páginas que ela estudou.":"")+(ctx?" Texto extraído do PDF do livro dela ("+ctx.rotulo+"); use-o como fonte principal do que foi estudado: «"+ctx.txt+"».":"")+" Identifique os ASSUNTOS estudados (gramática e funções de comunicação). Para cada um dê um título curto em português com o termo em "+idioma+" quando existir (ex.: Nebensätze com weil), a chave da área (uma destas: "+chaves+"; use outro se nenhuma servir) e um resumo de 1 ou 2 frases com a regra essencial e um exemplo curto. No máximo 8 assuntos, sem repetir, e só o que realmente aparece no material. Se houver capítulo, lição ou página, devolva em fonte (ex.: Kapitel 9, S. 110-114). Responda SOMENTE com JSON: {\"fonte\":\"\",\"assuntos\":[{\"titulo\":\"\",\"area\":\"\",\"resumo\":\"\"}]}";
   const obj=iaJson(await iaChamar(prompt,imgs.length?imgs:null,true));
   const ok=new Set(areas.map(a=>a[0]));
   const assuntos=(Array.isArray(obj.assuntos)?obj.assuntos:[]).filter(x=>x&&typeof x.titulo==="string"&&x.titulo.trim()).slice(0,8).map(x=>({titulo:x.titulo.trim(),area:ok.has(x.area)?x.area:"outro",resumo:String(x.resumo||"").trim()}));
@@ -2042,9 +2042,9 @@ async function gAvaliarRevisao(lang,item,texto){
   return {resultado:["otimo","parcial","errou"].includes(obj.resultado)?obj.resultado:"parcial",feedback:String(obj.feedback||""),regra:String(obj.regra||""),exemplo:String(obj.exemplo||"")};
 }
 const EX_TIPOS={lacuna:"Completar",corrigir:"Corrigir a frase",reordenar:"Ordenar as palavras",traducao:"Traduzir",producao:"Produzir"};
-async function gGerarExercicios(lang,topico,resumo,evitar){
+async function gGerarExercicios(lang,topico,resumo,evitar,ctx){
   const idioma=lang==="de"?"alemão":"francês";
-  const prompt="Você é professor de "+idioma+" (nível A2) de uma aluna brasileira. Ela acabou de estudar o assunto: "+topico+(resumo?" ("+resumo+")":"")+". Crie EXATAMENTE 10 exercícios de prática ativa só sobre esse assunto, em ordem crescente de dificuldade, com vocabulário simples do dia a dia (pode incluir contexto de hospital e plantão). Distribuição: 4 do tipo lacuna, 2 corrigir, 1 reordenar, 2 traducao, 1 producao. Regras por tipo: lacuna = enunciado em "+idioma+" com UMA lacuna escrita ___ (e, se ajudar, o infinitivo ou a palavra-base entre parênteses), respostas = o que preenche a lacuna (inclua variantes aceitas); corrigir = enunciado é uma frase em "+idioma+" com UM erro sobre o assunto, respostas = [a frase inteira corrigida]; reordenar = enunciado é a frase com as palavras embaralhadas separadas por \" / \", respostas = [a frase correta]; traducao = enunciado é uma frase curta em português, respostas = [tradução principal e 1 ou 2 variantes corretas]; producao = enunciado é uma instrução em português pedindo 1 ou 2 frases que usem o assunto, respostas = []. Cada exercício tem dica (curta, em português, sem entregar a resposta) e explicacao (a regra em 1 frase, em português). "+(evitar&&evitar.length?"Não repita estes enunciados já usados: "+evitar.slice(0,30).join(" | ")+". ":"")+"Responda SOMENTE com JSON: {\"exercicios\":[{\"tipo\":\"\",\"enunciado\":\"\",\"respostas\":[\"\"],\"dica\":\"\",\"explicacao\":\"\"}]}";
+  const prompt="Você é professor de "+idioma+" (nível A2) de uma aluna brasileira. Ela acabou de estudar o assunto: "+topico+(resumo?" ("+resumo+")":"")+". "+(ctx?"Trecho do livro dela, para você seguir o vocabulário e o estilo: «"+ctx+"». ":"")+"Crie EXATAMENTE 10 exercícios de prática ativa só sobre esse assunto, em ordem crescente de dificuldade, com vocabulário simples do dia a dia (pode incluir contexto de hospital e plantão). Distribuição: 4 do tipo lacuna, 2 corrigir, 1 reordenar, 2 traducao, 1 producao. Regras por tipo: lacuna = enunciado em "+idioma+" com UMA lacuna escrita ___ (e, se ajudar, o infinitivo ou a palavra-base entre parênteses), respostas = o que preenche a lacuna (inclua variantes aceitas); corrigir = enunciado é uma frase em "+idioma+" com UM erro sobre o assunto, respostas = [a frase inteira corrigida]; reordenar = enunciado é a frase com as palavras embaralhadas separadas por \" / \", respostas = [a frase correta]; traducao = enunciado é uma frase curta em português, respostas = [tradução principal e 1 ou 2 variantes corretas]; producao = enunciado é uma instrução em português pedindo 1 ou 2 frases que usem o assunto, respostas = []. Cada exercício tem dica (curta, em português, sem entregar a resposta) e explicacao (a regra em 1 frase, em português). "+(evitar&&evitar.length?"Não repita estes enunciados já usados: "+evitar.slice(0,30).join(" | ")+". ":"")+"Responda SOMENTE com JSON: {\"exercicios\":[{\"tipo\":\"\",\"enunciado\":\"\",\"respostas\":[\"\"],\"dica\":\"\",\"explicacao\":\"\"}]}";
   const obj=iaJson(await iaChamar(prompt,null,true));
   const arr=Array.isArray(obj)?obj:(Array.isArray(obj.exercicios)?obj.exercicios:[]);
   return arr.filter(x=>x&&EX_TIPOS[x.tipo]&&typeof x.enunciado==="string"&&x.enunciado.trim()&&(x.tipo!=="lacuna"||x.enunciado.includes("___"))&&(x.tipo==="producao"||(Array.isArray(x.respostas)&&x.respostas.some(r=>typeof r==="string"&&r.trim())))).slice(0,10)
@@ -2055,6 +2055,104 @@ async function gAvaliarExercicio(lang,ex,resposta,topico){
   const prompt="Você é professor de "+idioma+" (nível A2). Assunto: "+topico+". Exercício ("+EX_TIPOS[ex.tipo]+"): «"+ex.enun+"»."+(ex.resp.length?" Resposta de referência: «"+ex.resp[0]+"».":"")+" A aluna respondeu: «"+resposta+"». Avalie se a resposta dela está correta (respostas diferentes da referência também valem se estiverem corretas em "+idioma+" e usarem o assunto corretamente). Responda SOMENTE com JSON: {\"ok\":true ou false,\"correta\":\"a melhor versão correta da resposta dela\",\"feedback\":\"até 40 palavras em português, apontando o erro e a regra, ou confirmando o acerto\"}.";
   const obj=iaJson(await iaChamar(prompt,null,true));
   return {ok:obj.ok===true,correta:String(obj.correta||""),feedback:String(obj.feedback||"")};
+}
+// ── PDFs dos livros (ficam só no navegador; o texto das páginas citadas vai ao Claude) ──
+const PDFJS_URL="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
+const PDFJS_WORKER="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
+const LIVRO_NOME={kursbuch:"Kursbuch",ubungsbuch:"Übungsbuch"};
+let _pdfjsP=null; const _pdfDocs={};
+function carregarPdfJs(){
+  if(window.pdfjsLib)return Promise.resolve(window.pdfjsLib);
+  if(_pdfjsP)return _pdfjsP;
+  _pdfjsP=new Promise((res,rej)=>{
+    const sc=document.createElement("script"); sc.src=PDFJS_URL;
+    sc.onload=()=>{ if(window.pdfjsLib){window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_WORKER;res(window.pdfjsLib);}else{_pdfjsP=null;rej(new Error("leitor de PDF indisponível"));} };
+    sc.onerror=()=>{_pdfjsP=null;rej(new Error("não consegui carregar o leitor de PDF; confira a internet"));};
+    document.head.appendChild(sc);
+  });
+  return _pdfjsP;
+}
+function idbAbrir(){return new Promise((res,rej)=>{const r=indexedDB.open("velara_pdfs",1);r.onupgradeneeded=()=>r.result.createObjectStore("pdf");r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function idbPdf(op,id,val){
+  const db=await idbAbrir();
+  return new Promise((res,rej)=>{
+    const tx=db.transaction("pdf",op==="get"||op==="has"?"readonly":"readwrite"); const st=tx.objectStore("pdf");
+    const rq=op==="get"?st.get(id):(op==="has"?st.count(id):(op==="put"?st.put(val,id):st.delete(id)));
+    rq.onsuccess=()=>res(op==="has"?rq.result>0:rq.result); rq.onerror=()=>rej(rq.error);
+  });
+}
+function pdfEsquecer(id){delete _pdfDocs[id];}
+async function abrirPdf(id){
+  if(_pdfDocs[id])return _pdfDocs[id];
+  const blob=await idbPdf("get",id); if(!blob)throw new Error("SEM_ARQUIVO");
+  const lib=await carregarPdfJs();
+  const pr=blob.arrayBuffer().then(b=>lib.getDocument({data:new Uint8Array(b)}).promise);
+  _pdfDocs[id]=pr; pr.catch(()=>{delete _pdfDocs[id];});
+  return pr;
+}
+async function pdfTextoPagina(doc,n){
+  const pg=await doc.getPage(n); const tc=await pg.getTextContent(); let out="",y=null;
+  for(const it of tc.items){
+    if(typeof it.str!=="string")continue;
+    const yy=it.transform?Math.round(it.transform[5]):0;
+    if(y!==null&&Math.abs(yy-y)>3)out+="\n"; else if(out&&!/\s$/.test(out)&&it.str&&!/^\s/.test(it.str))out+=" ";
+    out+=it.str; y=yy;
+  }
+  return out.replace(/[ \t]+/g," ").replace(/ ?\n ?/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
+}
+async function pdfImagemPagina(doc,n){
+  const pg=await doc.getPage(n); const v0=pg.getViewport({scale:1}); const v=pg.getViewport({scale:Math.min(2,1400/v0.width)});
+  const c=document.createElement("canvas"); c.width=Math.round(v.width); c.height=Math.round(v.height);
+  await pg.render({canvasContext:c.getContext("2d"),viewport:v}).promise;
+  return c.toDataURL("image/jpeg",0.72).split(",")[1]||"";
+}
+// páginas citadas num texto livre: "página 12 até 15", "S. 110 a 114", "p. 12, 14 e 15"
+function pgParse(t){
+  const pgs=new Set(); const str=String(t||"");
+  const add=(a,b)=>{a=+a;b=b?+b:a;if(!a||a>2000)return;if(b<a)b=a;for(let x=a;x<=b&&x<a+40;x++)pgs.add(x);};
+  const re=/(?:p[áa]g(?:ina)?s?\.?|\bpp?\.|\bs\.|seiten?)\s*(\d{1,4})(?:\s*(?:a|at[ée]|à|ao|-|–|—|bis)(?:\s+(?:a|à|o))?\s*(\d{1,4}))?((?:\s*(?:,|e|und|&)\s*\d{1,4})*)/gi;
+  let m; while((m=re.exec(str))){add(m[1],m[2]);(m[3]||"").split(/[^\d]+/).filter(Boolean).forEach(n=>add(n));}
+  if(!pgs.size&&/k[uü]rs?buch|[uü]bungs?buch|arbeitsbuch|livro/i.test(str)){const r2=/(\d{1,4})\s*(?:a|at[ée]|à|ao|-|–|—|bis)(?:\s+(?:a|à|o))?\s*(\d{1,4})/gi;while((m=r2.exec(str)))add(m[1],m[2]);}
+  return [...pgs].sort((a,b)=>a-b);
+}
+function pgRotulo(pags){
+  const r=[]; let i=0;
+  while(i<pags.length){let j=i;while(j+1<pags.length&&pags[j+1]===pags[j]+1)j++;r.push(j>i?pags[i]+"–"+pags[j]:String(pags[i]));i=j+1;}
+  return "S. "+r.join(", ");
+}
+function pdfEscolher(pdfs,lang,texto,fonte){
+  const lst=pdfs.filter(p=>p.lang===lang); if(!lst.length)return {p:null,motivo:""};
+  const t=(texto+" "+fonte).toLowerCase();
+  const k=/k[uü]rs?buch/.test(t), u=/[uü]bungs?buch|arbeitsbuch/.test(t);
+  if(k!==u){const tp=k?"kursbuch":"ubungsbuch";const p=lst.find(x=>x.tipo===tp);return p?{p}:{p:null,motivo:"Não há PDF do "+LIVRO_NOME[tp]+" cadastrado. Envie em Livros."};}
+  if(lst.length===1)return {p:lst[0]};
+  return {p:null,motivo:"Diga se são páginas do Kursbuch ou do Übungsbuch."};
+}
+// lê as páginas do livro (números impressos) e devolve texto e, nas páginas sem texto, imagens
+async function lerPaginasLivro(p,pags,max){
+  const doc=await abrirPdf(p.id); const out=[]; const avisos=[]; const alvo=pags.slice(0,max);
+  if(pags.length>max)avisos.push("Li só as "+max+" primeiras páginas ("+pgRotulo(alvo)+").");
+  for(const n of alvo){
+    const idx=n+(+p.offset||0);
+    if(idx<1||idx>doc.numPages){avisos.push("A S. "+n+" fica fora do PDF; confira o deslocamento em Livros.");continue;}
+    out.push({pag:n,idx,txt:await pdfTextoPagina(doc,idx),img:null});
+  }
+  let ni=0;
+  for(const o of out){ if(o.txt.length<60){ if(ni<6){o.img=await pdfImagemPagina(doc,o.idx);ni++;}else avisos.push("A S. "+o.pag+" está sem texto e passou do limite de 6 imagens."); } }
+  if(!out.length)throw new Error("nenhuma página válida");
+  const comTxt=out.filter(o=>o.txt.length>=60); const lim=Math.floor(14000/Math.max(1,comTxt.length));
+  const txt=comTxt.map(o=>"[S. "+o.pag+"]\n"+o.txt.slice(0,lim)).join("\n\n");
+  const imgs=out.filter(o=>o.img).map(o=>o.img);
+  const pg=out.map(o=>o.pag);
+  const rotulo=LIVRO_NOME[p.tipo]+", "+pgRotulo(pg);
+  const idxs=out.map(o=>o.idx);
+  return {txt,imgs,rotulo,pags:pg,avisos,lido:"Li "+rotulo+" (PDF p. "+Math.min(...idxs)+(Math.max(...idxs)>Math.min(...idxs)?"–"+Math.max(...idxs):"")+")"+(imgs.length?"; "+imgs.length+(imgs.length>1?" páginas por imagem":" página por imagem"):"")};
+}
+async function gConversarLivro(hist,lang,lv){
+  const idioma=lang==="de"?"alemão":"francês";
+  const conv=hist.map(m=>(m.r==="u"?"Aluna: ":"Professor: ")+m.t).join("\n");
+  const prompt="Você é professor de "+idioma+" (nível A2) conversando em português do Brasil com uma aluna sobre o livro didático dela. Conteúdo das páginas em foco ("+lv.rotulo+")"+(lv.imgs.length?" (as imagens anexas são páginas sem texto selecionável)":"")+":\n«"+(lv.txt||"(veja as imagens)")+"»\n\nConversa até agora:\n"+conv+"\n\nResponda à última mensagem da aluna com base nessas páginas: direto, no máximo 180 palavras, citando a página quando ajudar e com exemplos curtos em "+idioma+". Se a pergunta não estiver coberta pelas páginas, diga isso e responda com o que você sabe, deixando claro que não está no trecho.";
+  return (await iaChamar(prompt,lv.imgs.length?lv.imgs:null,false)).trim();
 }
 const GRAM_ITENS=Object.entries(GRAM_RAW).flatMap(([lang,txt])=>{
   const cnt={};
@@ -3518,6 +3616,21 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [eid,setEid]=useState({load:false,msg:"",res:null});
   const [rvE,setRvE]=useState(null);
   const [verTodosEst,setVerTodosEst]=useState(false);
+  const [pdfs,setPdfs]=useLS("v5_idi_pdfs",[],userId);
+  const [pdfSt,setPdfSt]=useState({});
+  const [pdfOk,setPdfOk]=useState({});
+  const [lvChat,setLvChat]=useState([]);
+  const [lvIn,setLvIn]=useState("");
+  const [lvLoad,setLvLoad]=useState(false);
+  const [lvErr,setLvErr]=useState("");
+  const lvCtx=useRef(null);
+  const lvRef=useRef(null);
+  useEffect(()=>{
+    let vivo=true;
+    (async()=>{const o={};for(const x of pdfs){try{o[x.id]=await idbPdf("has",x.id);}catch{o[x.id]=false;}}if(vivo)setPdfOk(o);})();
+    return()=>{vivo=false;};
+  },[pdfs]);
+  useEffect(()=>{const e=lvRef.current;if(e)e.scrollTop=e.scrollHeight;},[lvChat,lvLoad]);
   const [exerc,setExerc]=useLS("v5_idi_exerc",[],userId);
   const exercRef=useRef(exerc); exercRef.current=exerc;
   const [exS,setExS]=useState(null);
@@ -4149,20 +4262,90 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       setEf2(f=>({...f,imgs:[...f.imgs,...novos].slice(0,4)})); setEid(x=>({...x,msg:""}));
     }catch{setEid(x=>({...x,msg:"Não consegui ler a imagem."}));}
   };
-  const identificarEst=async()=>{
-    const txt=ef2.txt.trim();
-    if(!txt&&!ef2.imgs.length)return;
+  const pdfsSel=pdfs.filter(x=>x.lang===sel);
+  const identificarEst=async(txtIn,fonteIn)=>{
+    const txt=(typeof txtIn==="string"?txtIn:ef2.txt).trim(); const fonteTxt=(typeof fonteIn==="string"?fonteIn:ef2.fonte).trim();
+    if(!txt&&!ef2.imgs.length)return {n:0,lido:""};
     if(!iaNome){
       const ass=txt.split("\n").map(x=>x.trim()).filter(Boolean).slice(0,12).map(x=>({titulo:x,area:"outro",resumo:"",on:true}));
-      setEid({load:false,msg:"",res:{fonte:ef2.fonte.trim(),assuntos:ass}}); return;
+      setEid({load:false,msg:"",res:{fonte:fonteTxt,assuntos:ass}}); return {n:ass.length,lido:""};
+    }
+    setEid({load:true,msg:"",res:null});
+    let lv=null; const avisos=[];
+    const pags=pdfsSel.length?pgParse(txt+" "+fonteTxt):[];
+    if(pags.length){
+      const esc=pdfEscolher(pdfsSel,sel,txt,fonteTxt);
+      if(!esc.p){ if(esc.motivo)avisos.push(esc.motivo+" Identifiquei só pelo seu texto."); }
+      else if(pdfOk[esc.p.id]===false)avisos.push("O PDF do "+LIVRO_NOME[esc.p.tipo]+" não está neste aparelho. Reenvie em Livros. Identifiquei só pelo seu texto.");
+      else{
+        setEid({load:true,msg:"Lendo as páginas no PDF…",res:null});
+        try{lv=await lerPaginasLivro(esc.p,pags,15);avisos.push(...lv.avisos);}
+        catch(err){avisos.push("Não consegui ler o PDF ("+(err.message==="SEM_ARQUIVO"?"arquivo não está neste aparelho":err.message)+"). Identifiquei só pelo seu texto.");}
+      }
     }
     setEid({load:true,msg:"",res:null});
     try{
-      const r=await gIdentificarAssuntos(txt,ef2.imgs,sel,gAreas);
-      setEid({load:false,msg:r.assuntos.length?"":"Não identifiquei assuntos. Descreva com mais detalhe ou mande uma foto mais nítida.",res:{fonte:ef2.fonte.trim()||r.fonte,assuntos:r.assuntos.map(x=>({...x,on:true}))}});
+      const r=await gIdentificarAssuntos(txt,[...ef2.imgs,...(lv?lv.imgs:[])].slice(0,10),sel,gAreas,lv&&lv.txt?{rotulo:lv.rotulo,txt:lv.txt}:(lv?{rotulo:lv.rotulo,txt:"(páginas em imagem anexa)"}:null));
+      setEid({load:false,msg:r.assuntos.length?"":"Não identifiquei assuntos. Descreva com mais detalhe ou mande uma foto mais nítida.",res:{fonte:fonteTxt||(lv?lv.rotulo:r.fonte),ctx:lv?lv.txt.slice(0,2500):"",lido:lv?lv.lido:"",avisos,assuntos:r.assuntos.map(x=>({...x,on:true}))}});
+      return {n:r.assuntos.length,lido:lv?lv.lido:""};
     }catch(err){
       setEid({load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros.":"Não consegui identificar ("+err.message+").",res:null});
+      return {n:0,lido:""};
     }
+  };
+  const addPdf=async(tipo,file)=>{
+    if(!file)return;
+    const id=uid(); setPdfSt(x=>({...x,[tipo]:{load:true,msg:"Lendo o PDF…"}}));
+    try{
+      await idbPdf("put",id,file);
+      const doc=await abrirPdf(id);
+      let soma=0,cnt=0; for(let i=Math.min(doc.numPages,3);i<=Math.min(doc.numPages,8);i++){soma+=(await pdfTextoPagina(doc,i)).length;cnt++;}
+      const scan=cnt>0&&soma/cnt<80;
+      const ant=pdfs.find(x=>x.lang===sel&&x.tipo===tipo);
+      if(ant){try{await idbPdf("del",ant.id);}catch{} pdfEsquecer(ant.id);}
+      setPdfs([{id,lang:sel,tipo,nome:file.name.replace(/\.pdf$/i,""),pags:doc.numPages,offset:ant?ant.offset:0,scan,data:hoje},...pdfs.filter(x=>!(x.lang===sel&&x.tipo===tipo))]);
+      setPdfSt(x=>({...x,[tipo]:{load:false,msg:""}}));
+      setToast(LIVRO_NOME[tipo]+" guardado neste aparelho · "+doc.numPages+" páginas"+(scan?" · escaneado":""));
+    }catch(err){
+      try{await idbPdf("del",id);}catch{} pdfEsquecer(id);
+      setPdfSt(x=>({...x,[tipo]:{load:false,msg:"Não consegui abrir este PDF ("+err.message+")."}}));
+    }
+  };
+  const removerPdf=async x=>{
+    if(!window.confirm("Remover o PDF do "+LIVRO_NOME[x.tipo]+" deste aparelho?"))return;
+    try{await idbPdf("del",x.id);}catch{} pdfEsquecer(x.id);
+    setPdfs(pdfs.filter(y=>y.id!==x.id));
+  };
+  const setOffsetPdf=(x,v)=>setPdfs(pdfs.map(y=>y.id===x.id?{...y,offset:Math.max(-50,Math.min(300,parseInt(v,10)||0))}:y));
+  const enviarLivro=async()=>{
+    const t=lvIn.trim(); if(!t||lvLoad)return;
+    if(!iaNome){setLvErr("Cadastre uma chave em Gramática › Registrar erros.");return;}
+    const hist=[...lvChat,{r:"u",t}]; setLvChat(hist); setLvIn(""); setLvErr("");
+    const pags=pgParse(t);
+    const relato=pags.length>0&&/\b(fiz|fizemos|estudei|terminei|conclu[ií]|completei|li|vi)\b/i.test(t)&&!/\?\s*$/.test(t);
+    if(relato){
+      setLvLoad(true);
+      const r=await identificarEst(t,"");
+      setLvLoad(false);
+      setLvChat([...hist,{r:"a",t:r.n>0?(r.lido?r.lido+". ":"")+"Identifiquei "+r.n+(r.n>1?" assuntos":" assunto")+". Confira no card «O que você estudou hoje» e confirme para agendar as revisões e gerar os 10 exercícios.":"Não consegui identificar os assuntos. Veja a mensagem no card «O que você estudou hoje»."}]);
+      const el=document.getElementById("idi-estudei"); if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+      return;
+    }
+    const esc=pdfEscolher(pdfsSel,sel,t,"");
+    if(pags.length){
+      if(!esc.p){setLvErr(esc.motivo||"Envie o PDF do livro primeiro.");return;}
+      lvCtx.current={id:esc.p.id,pags};
+    }else if(!lvCtx.current){setLvErr("Diga a página, por exemplo: o que a página 14 explica?");return;}
+    const c=lvCtx.current; const pdf=pdfsSel.find(x=>x.id===c.id);
+    if(!pdf){setLvErr("Este PDF não está mais cadastrado. Envie de novo em Livros.");return;}
+    if(pdfOk[pdf.id]===false){setLvErr("O PDF do "+LIVRO_NOME[pdf.tipo]+" não está neste aparelho. Reenvie em Livros.");return;}
+    setLvLoad(true);
+    try{
+      const lv=await lerPaginasLivro(pdf,c.pags,8);
+      const resp=await gConversarLivro(hist.slice(-8),sel,lv);
+      setLvChat([...hist,{r:"a",t:(resp||"(sem resposta)")+"\n\n— "+lv.rotulo}]);
+    }catch(err){setLvErr("Não consegui responder ("+(err.message==="SEM_ARQUIVO"?"o PDF não está neste aparelho":err.message)+").");}
+    setLvLoad(false);
   };
   const setAss=(i,pt)=>setEid(x=>({...x,res:{...x.res,assuntos:x.res.assuntos.map((a,j)=>j===i?{...a,...pt}:a)}}));
   const salvarEst=()=>{
@@ -4172,8 +4355,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     let lista=[...estud]; const novos=[];
     sel2.forEach(a=>{
       const k=normEst(a.titulo); const i=lista.findIndex(e=>e.lang===sel&&normEst(e.topico)===k);
-      if(i>=0){lista[i]={...lista[i],data:hoje,fonte:eid.res.fonte||lista[i].fonte,resumo:a.resumo||lista[i].resumo,area:a.area||lista[i].area,prox:addDays(hoje,1)};}
-      else novos.push({id:uid(),lang:sel,data:hoje,fonte:eid.res.fonte||"",topico:a.titulo.trim(),area:a.area||"outro",resumo:a.resumo||"",nv:0,prox:addDays(hoje,GLAD[0]),ok:0,er:0});
+      if(i>=0){lista[i]={...lista[i],data:hoje,fonte:eid.res.fonte||lista[i].fonte,resumo:a.resumo||lista[i].resumo,area:a.area||lista[i].area,prox:addDays(hoje,1),ctx:eid.res.ctx||lista[i].ctx||""};}
+      else novos.push({id:uid(),lang:sel,data:hoje,fonte:eid.res.fonte||"",topico:a.titulo.trim(),area:a.area||"outro",resumo:a.resumo||"",nv:0,prox:addDays(hoje,GLAD[0]),ok:0,er:0,ctx:eid.res.ctx||""});
     });
     setEstud([...novos,...lista]); setEf2({txt:"",fonte:"",imgs:[]}); setEid({load:false,msg:"",res:null});
     setToast(sel2.length+(sel2.length>1?" assuntos agendados":" assunto agendado")+" · primeira revisão amanhã"+(iaNome?" · gerando exercícios":""));
@@ -4225,7 +4408,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setGerEx(g=>({...g,[e.id]:true}));
     try{
       const evitar=exercRef.current.filter(x=>x.estId===e.id).map(x=>x.enun);
-      const lista=await gGerarExercicios(sel,e.topico,e.resumo,evitar);
+      const lista=await gGerarExercicios(sel,e.topico,e.resumo,evitar,e.ctx);
       if(!lista.length)throw new Error("nenhum exercício válido");
       const novos=lista.map(x=>({id:uid(),estId:e.id,lang:sel,tipo:x.tipo,enun:x.enun,resp:x.resp,dica:x.dica,expl:x.expl,estado:"pendente",ok:null,err:0,data:hoje}));
       const nova=[...novos,...exercRef.current]; exercRef.current=nova; setExerc(nova);
@@ -4654,9 +4837,9 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             {!iaNome&&<div style={{...lab,fontSize:9.5,marginTop:12,lineHeight:1.6}}>Para gerar os exercícios, cadastre uma chave em Gramática › Registrar erros.</div>}
           </>}
         </Card>}
-        <Card>
+        <div id="idi-estudei"><Card>
           <Titulo k="Estudei" t="O que você estudou hoje"/>
-          <div style={{fontSize:13.5,lineHeight:1.6,opacity:.8,maxWidth:620,marginBottom:12}}>Diga as páginas, o capítulo ou o tema{iaNome?", ou mande foto das páginas. O "+iaNome+" identifica os assuntos de gramática e o app agenda quando você deve revisar cada um.":". Sem chave cadastrada, cada linha vira um assunto agendado."}</div>
+          <div style={{fontSize:13.5,lineHeight:1.6,opacity:.8,maxWidth:620,marginBottom:12}}>Diga as páginas, o capítulo ou o tema{iaNome?", ou mande foto das páginas. O "+iaNome+" identifica os assuntos de gramática e o app agenda quando você deve revisar cada um.":". Sem chave cadastrada, cada linha vira um assunto agendado."}{iaNome&&pdfsSel.length>0?" Com o PDF do livro cadastrado, basta escrever, por exemplo, «Kursbuch, páginas 12 a 15»: o app lê essas páginas.":""}</div>
           <textarea style={{...inp,minHeight:84,resize:"vertical",lineHeight:1.5}} value={ef2.txt} onChange={e=>setEf2({...ef2,txt:e.target.value})} placeholder={sel==="de"?"Ex.: Netzwerk neu Kapitel 9, S. 110 a 114: Nebensätze com weil, Perfekt com sein, Wechselpräpositionen":"Ex.: Cap. 5, p. 60 a 64: passé composé, pronoms COD"} aria-label="O que estudei"/>
           <input style={{...inp,marginTop:10}} value={ef2.fonte} onChange={e=>setEf2({...ef2,fonte:e.target.value})} placeholder="Fonte (opcional): Kursbuch, Übungsbuch, aula…" aria-label="Fonte"/>
           <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginTop:12}}>
@@ -4664,9 +4847,11 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             {ef2.imgs.length>0&&<button onClick={()=>setEf2({...ef2,imgs:[]})} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)",padding:0}}>remover fotos</button>}
           </div>
           {eid.msg&&<div style={{marginTop:10,fontSize:13,color:eid.load?"inherit":IDI_RED}}>{eid.msg}</div>}
-          {!eid.res&&<div style={{marginTop:14}}><button style={{...btnP,opacity:((ef2.txt.trim()||ef2.imgs.length)&&!eid.load)?1:.4}} disabled={!(ef2.txt.trim()||ef2.imgs.length)||eid.load} onClick={identificarEst}>{eid.load?"Identificando…":(iaNome?"Identificar assuntos":"Agendar revisões")}</button></div>}
+          {!eid.res&&<div style={{marginTop:14}}><button style={{...btnP,opacity:((ef2.txt.trim()||ef2.imgs.length)&&!eid.load)?1:.4}} disabled={!(ef2.txt.trim()||ef2.imgs.length)||eid.load} onClick={()=>identificarEst()}>{eid.load?"Identificando…":(iaNome?"Identificar assuntos":"Agendar revisões")}</button></div>}
           {eid.res&&eid.res.assuntos.length>0&&<div style={{marginTop:16}}>
             <div style={{...lab,marginBottom:6}}>Confira antes de agendar{eid.res.fonte?" · "+eid.res.fonte:""}</div>
+            {eid.res.lido&&<div style={{fontSize:13,lineHeight:1.5,marginBottom:6}}>📖 {eid.res.lido}</div>}
+            {(eid.res.avisos||[]).map((w,i)=><div key={i} style={{fontSize:12.5,lineHeight:1.5,marginBottom:6,color:IDI_RED}}>{w}</div>)}
             {eid.res.assuntos.map((a,i)=>(
               <div key={i} style={{padding:"10px 0",borderTop:"1px solid rgba(var(--idi-rgb),.1)"}}>
                 <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
@@ -4679,7 +4864,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <div style={{marginTop:12,display:"flex",gap:10,flexWrap:"wrap"}}><button style={btnP} onClick={salvarEst}>Agendar {eid.res.assuntos.filter(a=>a.on).length} revisões</button><button style={btnS} onClick={()=>setEid({load:false,msg:"",res:null})}>Descartar</button></div>
             <div style={{...lab,fontSize:9,marginTop:10,lineHeight:1.6,opacity:.65}}>Revisões em 1, 3, 7, 21, 60 e 150 dias. Cada revisão pede que você escreva de memória, e o resultado ajusta o intervalo.</div>
           </div>}
-        </Card>
+        </Card></div>
         <Card>
           <Titulo k="Registro" t="Lançar manualmente"/>
           <div style={{...lab,marginBottom:8}}>Atividade</div>
@@ -4702,14 +4887,47 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         </Card>
         {sel==="de"&&<Card>
           <Titulo k="Livros" t="Netzwerk neu · últimos 30 dias"/>
-          {IDI_LIVROS.map((t,k)=>{const min=logSel.filter(x=>x.tipo===t&&x.data>=ult30).reduce((a,x)=>a+(+x.min||0),0);const u=ultRef(t);return (
-            <div key={t} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:k===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontSize:14.5,fontWeight:600}}>{tipoNome(t)}</div>
-                <div style={{...lab,fontSize:9.5,marginTop:3}}>{u?"Onde parou: "+u.ref+" · "+fd(u.data):"Nenhuma página registrada ainda"}</div>
+          {IDI_LIVROS.map((t,k)=>{const min=logSel.filter(x=>x.tipo===t&&x.data>=ult30).reduce((a,x)=>a+(+x.min||0),0);const u=ultRef(t);const pd=pdfsSel.find(x=>x.tipo===t);const st=pdfSt[t]||{};return (
+            <div key={t} style={{padding:"11px 0",borderTop:k===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14.5,fontWeight:600}}>{tipoNome(t)}</div>
+                  <div style={{...lab,fontSize:9.5,marginTop:3}}>{u?"Onde parou: "+u.ref+" · "+fd(u.data):"Nenhuma página registrada ainda"}</div>
+                </div>
+                <span style={{...serif,fontSize:22}}>{min>=60?(min/60).toFixed(1).replace(".0","").replace(".",","):min}<small style={{fontSize:"55%",opacity:.55}}> {min>=60?"h":"min"}</small></span>
               </div>
-              <span style={{...serif,fontSize:22}}>{min>=60?(min/60).toFixed(1).replace(".0","").replace(".",","):min}<small style={{fontSize:"55%",opacity:.55}}> {min>=60?"h":"min"}</small></span>
+              <div style={{marginTop:10,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+                {!pd&&<label style={{...btnS,display:"inline-block",cursor:"pointer",padding:"8px 14px",fontSize:12,opacity:st.load?.5:1}}>{st.load?"Lendo…":"Adicionar PDF do "+LIVRO_NOME[t]}<input type="file" accept="application/pdf,.pdf" style={{display:"none"}} disabled={!!st.load} onChange={e=>{const f=e.target.files&&e.target.files[0];e.target.value="";addPdf(t,f);}}/></label>}
+                {pd&&<>
+                  <span style={{fontSize:12.5}}>📖 {pd.pags} páginas{pd.scan?" · escaneado":""}</span>
+                  {pdfOk[pd.id]===false
+                    ?<label style={{...btnS,display:"inline-block",cursor:"pointer",padding:"7px 12px",fontSize:12,color:IDI_RED}}>{st.load?"Lendo…":"Não está neste aparelho · reenviar"}<input type="file" accept="application/pdf,.pdf" style={{display:"none"}} disabled={!!st.load} onChange={e=>{const f=e.target.files&&e.target.files[0];e.target.value="";addPdf(t,f);}}/></label>
+                    :<button onClick={()=>removerPdf(pd)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)",padding:0}}>remover PDF</button>}
+                </>}
+              </div>
+              {pd&&<div style={{marginTop:8,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12.5}}>
+                <span>Páginas antes da pág. 1 do livro (capa, índice):</span>
+                <input type="number" style={{...inp,width:76,padding:"6px 10px"}} value={pd.offset||0} onChange={e=>setOffsetPdf(pd,e.target.value)} aria-label="Deslocamento do PDF"/>
+                <span style={{...lab,fontSize:9.5}}>pág. 12 do livro = pág. {12+(+pd.offset||0)} do PDF</span>
+              </div>}
+              {pd&&pd.scan&&<div style={{...lab,fontSize:9.5,marginTop:6,lineHeight:1.6,whiteSpace:"normal"}}>Este PDF é imagem: o app lê cada página por foto (mais lento e mais caro).</div>}
+              {st.msg&&<div style={{marginTop:8,fontSize:12.5,color:st.load?"inherit":IDI_RED}}>{st.msg}</div>}
             </div>);})}
+          {pdfsSel.length>0&&<div style={{marginTop:18,paddingTop:16,borderTop:"1px solid rgba(var(--idi-rgb),.1)"}}>
+            <div style={{...lab,marginBottom:6}}>Conversar sobre o livro</div>
+            <div style={{fontSize:13.5,lineHeight:1.6,opacity:.8,maxWidth:600,marginBottom:12}}>Conte o que fez («fiz do Kursbuch da página 12 até a 15») e o app lê essas páginas e identifica a matéria. Ou pergunte («o que a página 14 explica sobre weil?»). Só o texto das páginas citadas vai ao {iaNome||"Claude"}; o livro fica neste aparelho.</div>
+            {(lvChat.length>0||lvLoad)&&<div ref={lvRef} style={{maxHeight:380,overflowY:"auto",padding:"4px 2px",marginBottom:12,display:"flex",flexDirection:"column",gap:10}}>
+              {lvChat.map((m,i)=>(
+                <div key={i} style={{alignSelf:m.r==="u"?"flex-end":"flex-start",maxWidth:"88%",padding:"10px 14px",borderRadius:16,fontSize:14,lineHeight:1.6,whiteSpace:"pre-wrap",wordBreak:"break-word",background:m.r==="u"?T.ink:"rgba(var(--idi-rgb),.07)",color:m.r==="u"?T.sheet:"inherit"}}>{m.t}</div>))}
+              {lvLoad&&<div style={{alignSelf:"flex-start",padding:"10px 14px",borderRadius:16,fontSize:13,opacity:.6,background:"rgba(var(--idi-rgb),.07)"}}>lendo o livro…</div>}
+            </div>}
+            {lvErr&&<div style={{marginBottom:10,fontSize:13,color:IDI_RED}}>{lvErr}</div>}
+            <textarea style={{...inp,minHeight:64,resize:"vertical",lineHeight:1.5}} value={lvIn} onChange={e=>setLvIn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();enviarLivro();}}} placeholder="Ex.: fiz do Kursbuch da página 12 até a 15" aria-label="Mensagem sobre o livro"/>
+            <div style={{marginTop:10,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+              <button style={{...btnP,opacity:(lvIn.trim()&&!lvLoad)?1:.4}} disabled={!lvIn.trim()||lvLoad} onClick={enviarLivro}>Enviar</button>
+              {lvChat.length>0&&<button onClick={()=>{setLvChat([]);setLvErr("");lvCtx.current=null;}} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)",padding:0}}>limpar conversa</button>}
+            </div>
+          </div>}
         </Card>}
         <Card>
           <Titulo k="Histórico" t="Registros recentes"/>
