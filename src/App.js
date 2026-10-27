@@ -1945,13 +1945,13 @@ async function iaChamar(prompt,b64,json){
   const ck=iaKey(IA_KC), gk=iaKey(IA_KG);
   if(!ck&&!gk)throw new Error("SEM_CHAVE");
   if(ck){
-    const content=[]; if(b64)content.push({type:"image",source:{type:"base64",media_type:"image/jpeg",data:b64}}); content.push({type:"text",text:prompt});
+    const imgs=!b64?[]:(Array.isArray(b64)?b64:[b64]); const content=imgs.map(d=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data:d}})); content.push({type:"text",text:prompt});
     const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":ck,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-5-5",max_tokens:4096,messages:[{role:"user",content}]})});
     const data=await resp.json();
     if(data.error)throw new Error(data.error.message||"erro na API");
     return (data.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
   }
-  const parts=[]; if(b64)parts.push({inline_data:{mime_type:"image/jpeg",data:b64}}); parts.push({text:prompt});
+  const imgs2=!b64?[]:(Array.isArray(b64)?b64:[b64]); const parts=imgs2.map(d=>({inline_data:{mime_type:"image/jpeg",data:d}})); parts.push({text:prompt});
   const resp=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+gk,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts}],generationConfig:json?{responseMimeType:"application/json",temperature:0.1}:{temperature:0.3}})});
   const data=await resp.json();
   if(data.error)throw new Error(data.error.message||"erro na API");
@@ -2021,6 +2021,40 @@ async function gAnaliseFrases(lang,itens){
   const linhas=itens.map((x,i)=>(i+1)+". Substantivo "+x.art+" "+x.termo+"\n   Ela escreveu: "+x.frase+"\n   Corrigido: "+x.correta+"\n   Erros: "+(x.erros.length?x.erros.map(e=>frTipoNome(e.tipo)+" («"+e.trecho+"» → «"+e.correcao+"»: "+e.porque+")").join("; "):"nenhum")).join("\n");
   const prompt="Você é professor de "+idioma+" (nível A2) de uma aluna brasileira que quer fluência e um certificado. Ela acabou uma sessão escrevendo frases com substantivos. Dados da sessão:\n"+linhas+"\n\nFaça uma análise geral, em português do Brasil, sem markdown e sem elogios vazios, em até 230 palavras, com estes quatro títulos em linhas separadas, cada um seguido de 1 a 2 frases citando exemplos dela: Gramática. Ortografia. Coesão. Coerência. Depois a linha Prioridades: com 3 itens curtos e concretos para a próxima sessão. Em Coesão e Coerência avalie como as frases dela se ligam e fazem sentido; se ela escreveu só uma frase por vez, diga isso e como melhorar.";
   return (await iaChamar(prompt,null,false)).trim();
+}
+async function gArqB64(file){
+  const b=await medPrep(file);
+  return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(",")[1]||"");r.onerror=rej;r.readAsDataURL(b);});
+}
+async function gIdentificarAssuntos(texto,imgs,lang,areas){
+  const idioma=lang==="de"?"alemão":"francês";
+  const chaves=areas.map(a=>a[0]+" = "+a[1]).join("; ");
+  const prompt="Você é professor de "+idioma+" (nível A2). Uma aluna brasileira estudou hoje no livro didático e descreve ou fotografa o que estudou. Texto dela: «"+(texto||"(sem texto)")+"»."+(imgs.length?" As imagens anexas são das páginas que ela estudou.":"")+" Identifique os ASSUNTOS estudados (gramática e funções de comunicação). Para cada um dê um título curto em português com o termo em "+idioma+" quando existir (ex.: Nebensätze com weil), a chave da área (uma destas: "+chaves+"; use outro se nenhuma servir) e um resumo de 1 ou 2 frases com a regra essencial e um exemplo curto. No máximo 8 assuntos, sem repetir, e só o que realmente aparece no material. Se houver capítulo, lição ou página, devolva em fonte (ex.: Kapitel 9, S. 110-114). Responda SOMENTE com JSON: {\"fonte\":\"\",\"assuntos\":[{\"titulo\":\"\",\"area\":\"\",\"resumo\":\"\"}]}";
+  const obj=iaJson(await iaChamar(prompt,imgs.length?imgs:null,true));
+  const ok=new Set(areas.map(a=>a[0]));
+  const assuntos=(Array.isArray(obj.assuntos)?obj.assuntos:[]).filter(x=>x&&typeof x.titulo==="string"&&x.titulo.trim()).slice(0,8).map(x=>({titulo:x.titulo.trim(),area:ok.has(x.area)?x.area:"outro",resumo:String(x.resumo||"").trim()}));
+  return {fonte:typeof obj.fonte==="string"?obj.fonte.trim():"",assuntos};
+}
+async function gAvaliarRevisao(lang,item,texto){
+  const idioma=lang==="de"?"alemão":"francês";
+  const prompt="Você é professor de "+idioma+" (nível A2). Revisão ativa de um assunto já estudado por uma aluna brasileira. Assunto: "+item.topico+(item.resumo?" (resumo de referência: "+item.resumo+")":"")+". Ela escreveu de memória, sem consultar: «"+texto+"». Avalie a regra e os exemplos. Responda SOMENTE com JSON: {\"resultado\":\"otimo ou parcial ou errou\",\"feedback\":\"até 60 palavras em português: o que acertou e o que faltou\",\"regra\":\"a regra correta em 1 ou 2 frases\",\"exemplo\":\"um exemplo correto em "+idioma+"\"}. otimo = regra correta e exemplos corretos; parcial = ideia certa, mas falta algo ou há erro importante; errou = regra errada ou sem exemplo válido.";
+  const obj=iaJson(await iaChamar(prompt,null,true));
+  return {resultado:["otimo","parcial","errou"].includes(obj.resultado)?obj.resultado:"parcial",feedback:String(obj.feedback||""),regra:String(obj.regra||""),exemplo:String(obj.exemplo||"")};
+}
+const EX_TIPOS={lacuna:"Completar",corrigir:"Corrigir a frase",reordenar:"Ordenar as palavras",traducao:"Traduzir",producao:"Produzir"};
+async function gGerarExercicios(lang,topico,resumo,evitar){
+  const idioma=lang==="de"?"alemão":"francês";
+  const prompt="Você é professor de "+idioma+" (nível A2) de uma aluna brasileira. Ela acabou de estudar o assunto: "+topico+(resumo?" ("+resumo+")":"")+". Crie EXATAMENTE 10 exercícios de prática ativa só sobre esse assunto, em ordem crescente de dificuldade, com vocabulário simples do dia a dia (pode incluir contexto de hospital e plantão). Distribuição: 4 do tipo lacuna, 2 corrigir, 1 reordenar, 2 traducao, 1 producao. Regras por tipo: lacuna = enunciado em "+idioma+" com UMA lacuna escrita ___ (e, se ajudar, o infinitivo ou a palavra-base entre parênteses), respostas = o que preenche a lacuna (inclua variantes aceitas); corrigir = enunciado é uma frase em "+idioma+" com UM erro sobre o assunto, respostas = [a frase inteira corrigida]; reordenar = enunciado é a frase com as palavras embaralhadas separadas por \" / \", respostas = [a frase correta]; traducao = enunciado é uma frase curta em português, respostas = [tradução principal e 1 ou 2 variantes corretas]; producao = enunciado é uma instrução em português pedindo 1 ou 2 frases que usem o assunto, respostas = []. Cada exercício tem dica (curta, em português, sem entregar a resposta) e explicacao (a regra em 1 frase, em português). "+(evitar&&evitar.length?"Não repita estes enunciados já usados: "+evitar.slice(0,30).join(" | ")+". ":"")+"Responda SOMENTE com JSON: {\"exercicios\":[{\"tipo\":\"\",\"enunciado\":\"\",\"respostas\":[\"\"],\"dica\":\"\",\"explicacao\":\"\"}]}";
+  const obj=iaJson(await iaChamar(prompt,null,true));
+  const arr=Array.isArray(obj)?obj:(Array.isArray(obj.exercicios)?obj.exercicios:[]);
+  return arr.filter(x=>x&&EX_TIPOS[x.tipo]&&typeof x.enunciado==="string"&&x.enunciado.trim()&&(x.tipo!=="lacuna"||x.enunciado.includes("___"))&&(x.tipo==="producao"||(Array.isArray(x.respostas)&&x.respostas.some(r=>typeof r==="string"&&r.trim())))).slice(0,10)
+    .map(x=>({tipo:x.tipo,enun:x.enunciado.trim(),resp:(Array.isArray(x.respostas)?x.respostas:[]).filter(r=>typeof r==="string"&&r.trim()).map(r=>r.trim()),dica:String(x.dica||""),expl:String(x.explicacao||"")}));
+}
+async function gAvaliarExercicio(lang,ex,resposta,topico){
+  const idioma=lang==="de"?"alemão":"francês";
+  const prompt="Você é professor de "+idioma+" (nível A2). Assunto: "+topico+". Exercício ("+EX_TIPOS[ex.tipo]+"): «"+ex.enun+"»."+(ex.resp.length?" Resposta de referência: «"+ex.resp[0]+"».":"")+" A aluna respondeu: «"+resposta+"». Avalie se a resposta dela está correta (respostas diferentes da referência também valem se estiverem corretas em "+idioma+" e usarem o assunto corretamente). Responda SOMENTE com JSON: {\"ok\":true ou false,\"correta\":\"a melhor versão correta da resposta dela\",\"feedback\":\"até 40 palavras em português, apontando o erro e a regra, ou confirmando o acerto\"}.";
+  const obj=iaJson(await iaChamar(prompt,null,true));
+  return {ok:obj.ok===true,correta:String(obj.correta||""),feedback:String(obj.feedback||"")};
 }
 const GRAM_ITENS=Object.entries(GRAM_RAW).flatMap(([lang,txt])=>{
   const cnt={};
@@ -3479,6 +3513,17 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [chatAll,setChatAll]=useLS("v5_idi_chat",{},userId);
   const [frases,setFrases]=useLS("v5_idi_frases",[],userId);
   const [fq,setFq]=useState(null);
+  const [estud,setEstud]=useLS("v5_idi_estud",[],userId);
+  const [ef2,setEf2]=useState({txt:"",fonte:"",imgs:[]});
+  const [eid,setEid]=useState({load:false,msg:"",res:null});
+  const [rvE,setRvE]=useState(null);
+  const [verTodosEst,setVerTodosEst]=useState(false);
+  const [exerc,setExerc]=useLS("v5_idi_exerc",[],userId);
+  const exercRef=useRef(exerc); exercRef.current=exerc;
+  const [exS,setExS]=useState(null);
+  const [gerEx,setGerEx]=useState({});
+  const [gerMsg,setGerMsg]=useState("");
+  const [verTodosEx,setVerTodosEx]=useState(false);
   const [chatIn,setChatIn]=useState("");
   const [chatLoad,setChatLoad]=useState(false);
   const [chatErr,setChatErr]=useState("");
@@ -4090,7 +4135,144 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     {l:"Vocabulário",v:String(vocSel.length),u:dominadas+" dominadas",s:T.tiles[2],z:1.5,x:10,y:50,to:"palavras"},
     {l:"Sequência",v:String(streak),u:streak===1?"dia seguido":"dias seguidos",s:T.tiles[3],z:1.4,x:30,y:20,to:"evol"},
   ];
-  const subs=[["hoje","Hoje"],["pratica","Praticar"],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
+  // ── Estudei: assuntos estudados e revisões agendadas ──
+  const estSel=estud.filter(e=>e.lang===sel);
+  const estDue=estSel.filter(e=>e.prox<=hoje).sort((a,b)=>a.prox.localeCompare(b.prox));
+  const estProx=estSel.filter(e=>e.prox>hoje).sort((a,b)=>a.prox.localeCompare(b.prox));
+  const normEst=t=>(t||"").toLowerCase().replace(/\s+/g," ").trim();
+  const addImgsEst=async e=>{
+    const fs=Array.from((e.target.files)||[]); e.target.value="";
+    if(!fs.length)return;
+    setEid(x=>({...x,msg:"Preparando as imagens…"}));
+    try{
+      const novos=[]; for(const f of fs.slice(0,4)){novos.push(await gArqB64(f));}
+      setEf2(f=>({...f,imgs:[...f.imgs,...novos].slice(0,4)})); setEid(x=>({...x,msg:""}));
+    }catch{setEid(x=>({...x,msg:"Não consegui ler a imagem."}));}
+  };
+  const identificarEst=async()=>{
+    const txt=ef2.txt.trim();
+    if(!txt&&!ef2.imgs.length)return;
+    if(!iaNome){
+      const ass=txt.split("\n").map(x=>x.trim()).filter(Boolean).slice(0,12).map(x=>({titulo:x,area:"outro",resumo:"",on:true}));
+      setEid({load:false,msg:"",res:{fonte:ef2.fonte.trim(),assuntos:ass}}); return;
+    }
+    setEid({load:true,msg:"",res:null});
+    try{
+      const r=await gIdentificarAssuntos(txt,ef2.imgs,sel,gAreas);
+      setEid({load:false,msg:r.assuntos.length?"":"Não identifiquei assuntos. Descreva com mais detalhe ou mande uma foto mais nítida.",res:{fonte:ef2.fonte.trim()||r.fonte,assuntos:r.assuntos.map(x=>({...x,on:true}))}});
+    }catch(err){
+      setEid({load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros.":"Não consegui identificar ("+err.message+").",res:null});
+    }
+  };
+  const setAss=(i,pt)=>setEid(x=>({...x,res:{...x.res,assuntos:x.res.assuntos.map((a,j)=>j===i?{...a,...pt}:a)}}));
+  const salvarEst=()=>{
+    if(!eid.res)return;
+    const sel2=eid.res.assuntos.filter(a=>a.on&&a.titulo.trim());
+    if(!sel2.length)return;
+    let lista=[...estud]; const novos=[];
+    sel2.forEach(a=>{
+      const k=normEst(a.titulo); const i=lista.findIndex(e=>e.lang===sel&&normEst(e.topico)===k);
+      if(i>=0){lista[i]={...lista[i],data:hoje,fonte:eid.res.fonte||lista[i].fonte,resumo:a.resumo||lista[i].resumo,area:a.area||lista[i].area,prox:addDays(hoje,1)};}
+      else novos.push({id:uid(),lang:sel,data:hoje,fonte:eid.res.fonte||"",topico:a.titulo.trim(),area:a.area||"outro",resumo:a.resumo||"",nv:0,prox:addDays(hoje,GLAD[0]),ok:0,er:0});
+    });
+    setEstud([...novos,...lista]); setEf2({txt:"",fonte:"",imgs:[]}); setEid({load:false,msg:"",res:null});
+    setToast(sel2.length+(sel2.length>1?" assuntos agendados":" assunto agendado")+" · primeira revisão amanhã"+(iaNome?" · gerando exercícios":""));
+    if(iaNome){
+      const alvo=[...novos,...lista.filter(e=>e.lang===sel&&sel2.some(a=>normEst(a.titulo)===normEst(e.topico)))];
+      (async()=>{for(const t of alvo){ if(exercRef.current.some(x=>x.estId===t.id&&x.estado!=="feito"))continue; await gerarExTopico(t); }})();
+    }
+  };
+  const iniciarRevEst=()=>{ if(!estDue.length)return; setRvE({fila:estDue.slice(0,8).map(e=>e.id),i:0,texto:"",load:false,res:null,cont:{otimo:0,parcial:0,errou:0},msg:"",fim:false}); };
+  const aplicarRevEst=(id,resultado)=>{
+    setEstud(estud.map(e=>{
+      if(e.id!==id)return e;
+      if(resultado==="otimo"){const nv=Math.min((e.nv||0)+1,GLAD.length);return {...e,nv,ok:(e.ok||0)+1,ult:hoje,prox:addDays(hoje,GLAD[Math.min(nv,GLAD.length-1)])};}
+      if(resultado==="parcial")return {...e,ult:hoje,prox:addDays(hoje,2)};
+      return {...e,nv:0,er:(e.er||0)+1,ult:hoje,prox:addDays(hoje,1)};
+    }));
+  };
+  const avaliarRevEst=async()=>{
+    if(!rvE||rvE.load||rvE.res)return;
+    const it=estud.find(e=>e.id===rvE.fila[rvE.i]); const t=rvE.texto.trim(); if(!it||t.length<3)return;
+    setRvE({...rvE,load:true,msg:""});
+    try{
+      const r=await gAvaliarRevisao(sel,it,t);
+      aplicarRevEst(it.id,r.resultado);
+      setRvE({...rvE,load:false,res:r,cont:{...rvE.cont,[r.resultado]:rvE.cont[r.resultado]+1}});
+    }catch(err){setRvE({...rvE,load:false,msg:"Não consegui corrigir ("+err.message+"). Seu texto continua aí, tente de novo."});}
+  };
+  const autoRevEst=resultado=>{
+    if(!rvE||!rvE.res||!rvE.res.manual||rvE.res.feito)return;
+    const it=estud.find(e=>e.id===rvE.fila[rvE.i]); if(!it)return;
+    aplicarRevEst(it.id,resultado);
+    setRvE({...rvE,res:{...rvE.res,feito:resultado},cont:{...rvE.cont,[resultado]:rvE.cont[resultado]+1}});
+  };
+  const proxRevEst=()=>{
+    if(!rvE)return; const p=rvE.i+1;
+    if(p>=rvE.fila.length)setRvE({...rvE,fim:true,res:null});
+    else setRvE({...rvE,i:p,texto:"",res:null,msg:""});
+  };
+  // ── Exercícios em espera (gerados a partir do que foi estudado) ──
+  const exSel=exerc.filter(x=>x.lang===sel);
+  const exPend=exSel.filter(x=>x.estado!=="feito");
+  const exTopicosPend=new Set(exPend.map(x=>x.estId)).size;
+  const exNorm=x=>(x||"").toLowerCase().replace(/[.,;:!?"“”«»()]/g,"").replace(/\s+/g," ").trim();
+  const exFold=x=>semAcento(exNorm(x).replace(/ß/g,"ss")).replace(/ae/g,"a").replace(/oe/g,"o").replace(/ue/g,"u");
+  const exLocal=(r,lista)=>{let m="er";for(const a of lista){if(exNorm(r)===exNorm(a))return "ok";if(exFold(r)===exFold(a))m="quase";}return m;};
+  const gerarExTopico=async(e)=>{
+    if(!e)return;
+    setGerMsg("");
+    setGerEx(g=>({...g,[e.id]:true}));
+    try{
+      const evitar=exercRef.current.filter(x=>x.estId===e.id).map(x=>x.enun);
+      const lista=await gGerarExercicios(sel,e.topico,e.resumo,evitar);
+      if(!lista.length)throw new Error("nenhum exercício válido");
+      const novos=lista.map(x=>({id:uid(),estId:e.id,lang:sel,tipo:x.tipo,enun:x.enun,resp:x.resp,dica:x.dica,expl:x.expl,estado:"pendente",ok:null,err:0,data:hoje}));
+      const nova=[...novos,...exercRef.current]; exercRef.current=nova; setExerc(nova);
+    }catch(err){setGerMsg("Não consegui gerar os exercícios de «"+e.topico+"» ("+err.message+").");}
+    setGerEx(g=>{const n={...g};delete n[e.id];return n;});
+  };
+  const filaMistaEx=()=>{
+    const porT={}; exPend.forEach(x=>{(porT[x.estId]=porT[x.estId]||[]).push(x.id);});
+    const ord=Object.values(porT); const mx=Math.max(0,...ord.map(a=>a.length)); const ids=[];
+    for(let k=0;k<mx;k++){ ord.forEach(a=>{ if(a[k]&&ids.length<10)ids.push(a[k]); }); }
+    return ids;
+  };
+  const iniciarExS=ids=>{
+    const fila=ids.filter(id=>{const x=exercRef.current.find(y=>y.id===id);return x&&(x.tipo!=="producao"||iaNome);}).slice(0,10);
+    if(!fila.length)return;
+    setExS({fila,i:0,resp:"",load:false,fb:null,dica:false,ok:0,er:0,rep:{},fim:false});
+  };
+  const exCur=exS&&!exS.fim?exerc.find(x=>x.id===exS.fila[exS.i]):null;
+  const conferirEx=async forcarIA=>{
+    if(!exS||!exCur||exS.fb||exS.load)return;
+    const t=exS.resp.trim(); if(!t)return;
+    const topico=(estud.find(e=>e.id===exCur.estId)||{}).topico||"";
+    let ok=false,quase=false,ia=null;
+    const loc=exCur.tipo!=="producao"&&exCur.resp.length?exLocal(t,exCur.resp):"er";
+    if(loc==="ok"||loc==="quase"){ok=true;quase=loc==="quase";}
+    else if(iaNome&&(exCur.tipo==="traducao"||exCur.tipo==="producao"||forcarIA===true)){
+      setExS({...exS,load:true});
+      try{ia=await gAvaliarExercicio(sel,exCur,t,topico);ok=ia.ok;}
+      catch(err){setExS({...exS,load:false,fb:{ok:false,msg:"Não consegui conferir com o "+iaNome+" ("+err.message+")."}});return;}
+    }
+    const primeira=!exS.rep[exCur.id];
+    if(primeira){
+      if(!ok){const e0=estud.find(e=>e.id===exCur.estId); const am=addDays(hoje,1); if(e0&&e0.prox>am)setEstud(estud.map(e=>e.id===e0.id?{...e,prox:am}:e));}
+      const dia=rv[hoje]||{}; const c=dia[sel]||{ok:0,er:0};
+      setRv({...rv,[hoje]:{...dia,[sel]:{ok:c.ok+(ok?1:0),er:c.er+(ok?0:1)}}});
+    }
+    setExerc(exerc.map(x=>x.id!==exCur.id?x:(ok?{...x,estado:"feito",ok:true,ult:hoje}:{...x,err:(x.err||0)+1,ult:hoje})));
+    setExS({...exS,load:false,tentou:true,fb:{ok,quase,ia,pedirIA:!ok&&!!iaNome&&!ia&&exCur.tipo!=="producao"}});
+  };
+  const proxEx=()=>{
+    if(!exS||!exS.fb)return;
+    const erro=!exS.fb.ok; const id=exS.fila[exS.i];
+    const fila=(erro&&!exS.rep[id])?[...exS.fila,id]:exS.fila; const p=exS.i+1;
+    setExS({...exS,fila,rep:erro?{...exS.rep,[id]:1}:exS.rep,i:p,resp:"",fb:null,dica:false,tentou:false,ok:exS.ok+(erro?0:1),er:exS.er+(erro?1:0),fim:p>=fila.length});
+  };
+  const corrigirPeloIA=()=>conferirEx(true);
+  const subs=[["hoje","Hoje"],["pratica","Praticar"+((estDue.length+exTopicosPend)?" · "+(estDue.length+exTopicosPend):"")],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
   const nomeSel=`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
   // Evolução
@@ -4360,6 +4542,144 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               </>)}
             </Card>);
         })()}
+        {(estDue.length>0||estProx.length>0||rvE)&&<Card>
+          <Titulo k="Revisão espaçada" t={rvE?"Recordar sem olhar":"Assuntos para revisar"} dir={!rvE&&estDue.length>0?<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={iniciarRevEst}>Revisar agora · {estDue.length}</button>:null}/>
+          {rvE&&!rvE.fim&&(()=>{const it=estud.find(e=>e.id===rvE.fila[rvE.i]); if(!it)return null; const r=rvE.res; return (
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={lab}>{nomeAreaG(it.area).replace(/ \(.*\)/,"")}{it.fonte?" · "+it.fonte:""}</span><span style={lab}>{rvE.i+1} / {rvE.fila.length}</span></div>
+              <div style={{...serif,fontSize:isMobile?28:34,lineHeight:1.15,marginBottom:14}}>{it.topico}</div>
+              {!r&&<>
+                <div style={{fontSize:13.5,lineHeight:1.55,opacity:.8,marginBottom:10}}>Sem olhar o livro nem suas anotações: explique a regra com suas palavras e escreva 2 exemplos em {sel==="de"?"alemão":"francês"}.</div>
+                <textarea autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} disabled={rvE.load} style={{...inp,minHeight:110,resize:"vertical",lineHeight:1.5,fontSize:16}} value={rvE.texto} onChange={e=>setRvE({...rvE,texto:e.target.value})} aria-label="Resposta da revisão"/>
+                {rvE.msg&&<div style={{marginTop:10,fontSize:13,color:IDI_RED}}>{rvE.msg}</div>}
+                <div style={{marginTop:14,display:"flex",gap:10,flexWrap:"wrap"}}>
+                  {iaNome?<button style={{...btnP,opacity:(rvE.texto.trim().length>=3&&!rvE.load)?1:.4}} disabled={rvE.texto.trim().length<3||rvE.load} onClick={avaliarRevEst}>{rvE.load?"Corrigindo…":"Corrigir"}</button>
+                    :<button style={btnP} onClick={()=>setRvE({...rvE,res:{manual:true}})}>Mostrar resposta</button>}
+                  <button style={btnS} onClick={()=>setRvE(null)}>Sair</button>
+                </div>
+              </>}
+              {r&&<div>
+                {!r.manual&&<div style={{padding:"14px 16px",borderRadius:16,background:r.resultado==="otimo"?"#E3EFDB":(r.resultado==="parcial"?"#FBF1D8":"#F8E0D9"),marginBottom:12}}>
+                  <div style={{fontWeight:700,fontSize:15,color:r.resultado==="otimo"?"#3C7030":(r.resultado==="parcial"?"#8B6000":"#B23F2A")}}>{r.resultado==="otimo"?"✓ Lembrou bem":(r.resultado==="parcial"?"◐ Lembrou em parte":"✗ Precisa rever")}</div>
+                  <div style={{fontSize:14,lineHeight:1.55,marginTop:6}}>{r.feedback}</div>
+                </div>}
+                {(r.regra||it.resumo)&&<div style={{fontSize:13.5,lineHeight:1.6,marginBottom:8}}><b>Regra:</b> {r.regra||it.resumo}</div>}
+                {r.exemplo&&<div style={{fontSize:13.5,lineHeight:1.6,marginBottom:8}}><b>Exemplo:</b> {r.exemplo}</div>}
+                {r.manual&&!r.feito&&<div style={{marginTop:12}}>
+                  <div style={{...lab,marginBottom:8}}>Como foi?</div>
+                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}><button style={btnS} onClick={()=>autoRevEst("otimo")}>Lembrei bem</button><button style={btnS} onClick={()=>autoRevEst("parcial")}>Em parte</button><button style={btnS} onClick={()=>autoRevEst("errou")}>Não lembrei</button></div>
+                </div>}
+                {(!r.manual||r.feito)&&(()=>{const nx=estud.find(e=>e.id===it.id);return <div style={{...lab,fontSize:9.5,marginTop:10}}>Próxima revisão: {nx?fd(nx.prox):"—"}{nx&&nx.prox?" ("+(diasAte(nx.prox)||0)+(diasAte(nx.prox)===1?" dia":" dias")+")":""}</div>;})()}
+                {(!r.manual||r.feito)&&<div style={{marginTop:14,display:"flex",gap:10,flexWrap:"wrap"}}>
+                  <button style={btnP} onClick={proxRevEst}>{rvE.i+1>=rvE.fila.length?"Finalizar":"Próximo"}</button>
+                  {gItens.some(x=>x.area===it.area)&&<button style={btnS} onClick={()=>{setRvE(null);setSub("gram");iniciarGram(it.area);}}>Treinar {nomeAreaG(it.area).replace(/ \(.*\)/,"")}</button>}
+                </div>}
+              </div>}
+            </div>);})()}
+          {rvE&&rvE.fim&&<div style={{textAlign:"center"}}>
+            <div style={lab}>Revisão concluída</div>
+            <div style={{fontSize:14.5,lineHeight:1.6,margin:"12px 0 4px"}}>{rvE.cont.otimo} lembrou bem · {rvE.cont.parcial} em parte · {rvE.cont.errou} para rever</div>
+            <Vazio>O que você errou volta amanhã; o que lembrou bem volta em intervalos maiores.</Vazio>
+            <div style={{marginTop:16}}><button style={btnP} onClick={()=>setRvE(null)}>Fechar</button></div>
+          </div>}
+          {!rvE&&<>
+            {estDue.length===0&&<Vazio>Nada vencido hoje. Próximas revisões abaixo.</Vazio>}
+            {[...estDue,...estProx].slice(0,verTodosEst?200:6).map((e,k)=>{const d=diasAte(e.prox);return (
+              <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:k===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14.5,fontWeight:600}}>{e.topico}</div>
+                  <div style={{...lab,fontSize:9.5,marginTop:3,whiteSpace:"normal"}}>{nomeAreaG(e.area).replace(/ \(.*\)/,"")}{e.fonte?" · "+e.fonte:""} · {"●".repeat(e.nv||0)+"○".repeat(Math.max(0,GLAD.length-(e.nv||0)))}</div>
+                </div>
+                <span style={{...lab,fontSize:10,color:d<=0?IDI_RED:"inherit",fontWeight:d<=0?700:400,textAlign:"right"}}>{d<=0?"hoje":"em "+d+(d===1?" dia":" dias")}<br/>{fd(e.prox)}</span>
+                <button onClick={()=>{if(window.confirm("Remover este assunto e os exercícios dele?")){setEstud(estud.filter(x=>x.id!==e.id));setExerc(exerc.filter(x=>x.estId!==e.id));}}} aria-label="remover assunto" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
+              </div>);})}
+            {estDue.length+estProx.length>6&&<div style={{marginTop:10}}><button style={btnS} onClick={()=>setVerTodosEst(!verTodosEst)}>{verTodosEst?"mostrar menos":"ver todos ("+(estDue.length+estProx.length)+")"}</button></div>}
+          </>}
+        </Card>}
+        {(estSel.length>0||exS)&&<Card>
+          <Titulo k="Em espera" t="Exercícios do que você estudou" dir={!exS&&exPend.length>0?<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>iniciarExS(filaMistaEx())}>Fazer {Math.min(10,exPend.length)}</button>:null}/>
+          {exS&&!exS.fim&&exCur&&(()=>{const f=exS.fb; const topico=(estud.find(e=>e.id===exCur.estId)||{}).topico||""; return (
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}><span style={lab}>{EX_TIPOS[exCur.tipo]} · {topico}</span><span style={lab}>{Math.min(exS.i+1,exS.fila.length)} / {exS.fila.length}</span></div>
+              <div style={{height:4,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden",marginBottom:18}}><div style={{width:(exS.i/exS.fila.length*100)+"%",height:"100%",background:T.ink,transition:"width .3s"}}/></div>
+              <div style={{fontSize:isMobile?19:22,lineHeight:1.5,marginBottom:14,wordBreak:"break-word"}}>{exCur.enun}</div>
+              {!f&&<>
+                {exCur.tipo==="lacuna"
+                  ?<input autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,fontSize:17}} value={exS.resp} onChange={e=>setExS({...exS,resp:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")conferirEx();}} aria-label="Resposta do exercício" placeholder="preencha a lacuna"/>
+                  :<textarea autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,minHeight:exCur.tipo==="producao"?100:70,resize:"vertical",lineHeight:1.5,fontSize:16}} value={exS.resp} onChange={e=>setExS({...exS,resp:e.target.value})} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();conferirEx();}}} aria-label="Resposta do exercício"/>}
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>{G.chars.map(c=><button key={c} onClick={()=>setExS({...exS,resp:exS.resp+c})} style={{width:38,height:38,borderRadius:12,border:"1px solid rgba(var(--idi-rgb),.2)",background:"transparent",cursor:"pointer",fontSize:16,color:"inherit"}}>{c}</button>)}</div>
+                {exS.dica&&exCur.dica&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:14,background:"#FBF1D8",fontSize:13.5,lineHeight:1.5}}>💡 {exCur.dica}</div>}
+                <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
+                  <button style={{...btnP,opacity:(exS.resp.trim()&&!exS.load)?1:.4}} disabled={!exS.resp.trim()||exS.load} onClick={()=>conferirEx()}>{exS.load?"Conferindo…":"Conferir"}</button>
+                  {exCur.dica&&!exS.dica&&<button style={btnS} onClick={()=>setExS({...exS,dica:true})}>Dica</button>}
+                  <button style={btnS} onClick={()=>setExS(null)}>Sair (ficam em espera)</button>
+                </div>
+              </>}
+              {f&&<div>
+                <div style={{padding:"14px 16px",borderRadius:16,background:f.ok?"#E3EFDB":"#F8E0D9",marginBottom:10}}>
+                  <div style={{fontWeight:700,fontSize:15,color:f.ok?"#3C7030":"#B23F2A"}}>{f.msg?f.msg:(f.ok?(f.quase?"✓ Certo · atenção à grafia":"✓ Certo"):"✗ Ainda não")}</div>
+                  {exS.resp&&<div style={{fontSize:13,marginTop:6,opacity:.8}}>Você escreveu: <i>{exS.resp}</i></div>}
+                  {f.ia&&f.ia.feedback&&<div style={{fontSize:14,lineHeight:1.55,marginTop:6}}>{f.ia.feedback}</div>}
+                  {(!f.ok||exCur.tipo==="producao")&&((f.ia&&f.ia.correta)||exCur.resp[0])&&<div style={{fontSize:14.5,marginTop:8,fontWeight:600,lineHeight:1.5}}>{(f.ia&&f.ia.correta)||exCur.resp[0]}</div>}
+                </div>
+                {exCur.expl&&<div style={{fontSize:13.5,lineHeight:1.6,marginBottom:10}}><b>Regra:</b> {exCur.expl}</div>}
+                {!f.ok&&<div style={{...lab,fontSize:9.5,marginBottom:10}}>Este exercício continua em espera até você acertar.</div>}
+                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                  <button style={btnP} onClick={proxEx}>{exS.i+1>=exS.fila.length?"Finalizar":"Próximo"}</button>
+                  {f.pedirIA&&<button style={btnS} onClick={corrigirPeloIA}>Minha resposta também vale? Pedir ao {iaNome}</button>}
+                </div>
+              </div>}
+            </div>);})()}
+          {exS&&exS.fim&&<div style={{textAlign:"center"}}>
+            <div style={lab}>Rodada concluída</div>
+            <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{exS.ok}<small style={{fontSize:"45%",opacity:.45}}> / {exS.ok+exS.er}</small></div>
+            <Vazio>{exPend.length>0?exPend.length+(exPend.length===1?" exercício continua":" exercícios continuam")+" em espera, incluindo os que você errou.":"Nada pendente. Tudo o que você estudou está praticado."}</Vazio>
+            <div style={{marginTop:16}}><button style={btnP} onClick={()=>setExS(null)}>Fechar</button></div>
+          </div>}
+          {!exS&&<>
+            {gerMsg&&<div style={{fontSize:13,color:IDI_RED,marginBottom:10}}>{gerMsg}</div>}
+            {estSel.length===0?null:[...estSel].sort((a,b)=>exPend.filter(x=>x.estId===b.id).length-exPend.filter(x=>x.estId===a.id).length).slice(0,verTodosEx?200:6).map((e,k)=>{
+              const tot=exSel.filter(x=>x.estId===e.id), pend=tot.filter(x=>x.estado!=="feito"), gen=!!gerEx[e.id];
+              return (
+              <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:k===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14.5,fontWeight:600}}>{e.topico}</div>
+                  <div style={{...lab,fontSize:9.5,marginTop:3,whiteSpace:"normal"}}>{gen?"gerando exercícios…":(tot.length===0?"sem exercícios ainda":(pend.length>0?pend.length+" em espera · "+(tot.length-pend.length)+" feitos":"todos feitos ✓"))}</div>
+                </div>
+                {!gen&&tot.length===0&&iaNome&&<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>gerarExTopico(e)}>Gerar 10</button>}
+                {!gen&&pend.length>0&&<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>iniciarExS(pend.map(x=>x.id))}>Fazer {Math.min(10,pend.length)}</button>}
+                {!gen&&tot.length>0&&pend.length===0&&iaNome&&<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>gerarExTopico(e)}>Mais 10</button>}
+              </div>);})}
+            {estSel.length>6&&<div style={{marginTop:10}}><button style={btnS} onClick={()=>setVerTodosEx(!verTodosEx)}>{verTodosEx?"mostrar menos":"ver todos ("+estSel.length+")"}</button></div>}
+            {!iaNome&&<div style={{...lab,fontSize:9.5,marginTop:12,lineHeight:1.6}}>Para gerar os exercícios, cadastre uma chave em Gramática › Registrar erros.</div>}
+          </>}
+        </Card>}
+        <Card>
+          <Titulo k="Estudei" t="O que você estudou hoje"/>
+          <div style={{fontSize:13.5,lineHeight:1.6,opacity:.8,maxWidth:620,marginBottom:12}}>Diga as páginas, o capítulo ou o tema{iaNome?", ou mande foto das páginas. O "+iaNome+" identifica os assuntos de gramática e o app agenda quando você deve revisar cada um.":". Sem chave cadastrada, cada linha vira um assunto agendado."}</div>
+          <textarea style={{...inp,minHeight:84,resize:"vertical",lineHeight:1.5}} value={ef2.txt} onChange={e=>setEf2({...ef2,txt:e.target.value})} placeholder={sel==="de"?"Ex.: Netzwerk neu Kapitel 9, S. 110 a 114: Nebensätze com weil, Perfekt com sein, Wechselpräpositionen":"Ex.: Cap. 5, p. 60 a 64: passé composé, pronoms COD"} aria-label="O que estudei"/>
+          <input style={{...inp,marginTop:10}} value={ef2.fonte} onChange={e=>setEf2({...ef2,fonte:e.target.value})} placeholder="Fonte (opcional): Kursbuch, Übungsbuch, aula…" aria-label="Fonte"/>
+          <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap",marginTop:12}}>
+            {iaNome&&<label style={{...btnS,display:"inline-block",cursor:"pointer"}}>{ef2.imgs.length?ef2.imgs.length+(ef2.imgs.length>1?" fotos anexadas":" foto anexada"):"Anexar foto das páginas"}<input type="file" accept="image/*" multiple style={{display:"none"}} onChange={addImgsEst}/></label>}
+            {ef2.imgs.length>0&&<button onClick={()=>setEf2({...ef2,imgs:[]})} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)",padding:0}}>remover fotos</button>}
+          </div>
+          {eid.msg&&<div style={{marginTop:10,fontSize:13,color:eid.load?"inherit":IDI_RED}}>{eid.msg}</div>}
+          {!eid.res&&<div style={{marginTop:14}}><button style={{...btnP,opacity:((ef2.txt.trim()||ef2.imgs.length)&&!eid.load)?1:.4}} disabled={!(ef2.txt.trim()||ef2.imgs.length)||eid.load} onClick={identificarEst}>{eid.load?"Identificando…":(iaNome?"Identificar assuntos":"Agendar revisões")}</button></div>}
+          {eid.res&&eid.res.assuntos.length>0&&<div style={{marginTop:16}}>
+            <div style={{...lab,marginBottom:6}}>Confira antes de agendar{eid.res.fonte?" · "+eid.res.fonte:""}</div>
+            {eid.res.assuntos.map((a,i)=>(
+              <div key={i} style={{padding:"10px 0",borderTop:"1px solid rgba(var(--idi-rgb),.1)"}}>
+                <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
+                  <input type="checkbox" aria-label="Incluir assunto" checked={a.on} onChange={e=>setAss(i,{on:e.target.checked})}/>
+                  <select style={{...inp,width:"auto",flex:"1 1 150px"}} value={a.area} onChange={e=>setAss(i,{area:e.target.value})}>{gAreas.map(([k,nome])=><option key={k} value={k}>{nome.replace(/ \(.*\)/,"")}</option>)}</select>
+                </div>
+                <input style={{...inp,marginBottom:6}} value={a.titulo} onChange={e=>setAss(i,{titulo:e.target.value})} aria-label="Título do assunto"/>
+                {a.resumo&&<input style={{...inp,opacity:.75}} value={a.resumo} onChange={e=>setAss(i,{resumo:e.target.value})} aria-label="Resumo do assunto"/>}
+              </div>))}
+            <div style={{marginTop:12,display:"flex",gap:10,flexWrap:"wrap"}}><button style={btnP} onClick={salvarEst}>Agendar {eid.res.assuntos.filter(a=>a.on).length} revisões</button><button style={btnS} onClick={()=>setEid({load:false,msg:"",res:null})}>Descartar</button></div>
+            <div style={{...lab,fontSize:9,marginTop:10,lineHeight:1.6,opacity:.65}}>Revisões em 1, 3, 7, 21, 60 e 150 dias. Cada revisão pede que você escreva de memória, e o resultado ajusta o intervalo.</div>
+          </div>}
+        </Card>
         <Card>
           <Titulo k="Registro" t="Lançar manualmente"/>
           <div style={{...lab,marginBottom:8}}>Atividade</div>
