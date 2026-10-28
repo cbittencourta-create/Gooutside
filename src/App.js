@@ -2041,6 +2041,13 @@ async function gAvaliarRevisao(lang,item,texto){
   const obj=iaJson(await iaChamar(prompt,null,true));
   return {resultado:["otimo","parcial","errou"].includes(obj.resultado)?obj.resultado:"parcial",feedback:String(obj.feedback||""),regra:String(obj.regra||""),exemplo:String(obj.exemplo||"")};
 }
+async function gNotaDia(lang,resumos,fracos){
+  const idioma=lang==="de"?"alemão":"francês";
+  const prompt="Você é o treinador de "+idioma+" de uma aluna brasileira (nível A2) que quer ficar fluente. Resultado da sessão de hoje:\n"+resumos.map(r=>"- "+r).join("\n")+"\nPontos fracos atuais: "+(fracos.length?fracos.join("; "):"ainda sem dados")+".\nEscreva em português do Brasil, em até 60 palavras, uma observação direta: o que merece atenção amanhã e por quê. Sem elogios vazios e sem listas.";
+  return (await iaChamar(prompt,null,false)).trim();
+}
+const DIA_NOMES={voc:"Palavras",rev:"Recordar assuntos",ex:"Exercícios em espera",gram:"Pontos fracos",frase:"Escrever frases"};
+const DIA_MIN={voc:0.3,rev:2.5,ex:0.8,gram:0.45,frase:1.5};
 const EX_TIPOS={lacuna:"Completar",corrigir:"Corrigir a frase",reordenar:"Ordenar as palavras",traducao:"Traduzir",producao:"Produzir"};
 async function gGerarExercicios(lang,topico,resumo,evitar,ctx){
   const idioma=lang==="de"?"alemão":"francês";
@@ -2138,8 +2145,8 @@ async function lerPaginasLivro(p,pags,max){
     out.push({pag:n,idx,txt:await pdfTextoPagina(doc,idx),img:null});
   }
   let ni=0;
-  for(const o of out){ if(o.txt.length<60){ if(ni<6){o.img=await pdfImagemPagina(doc,o.idx);ni++;}else avisos.push("A S. "+o.pag+" está sem texto e passou do limite de 6 imagens."); } }
-  if(!out.length)throw new Error("nenhuma página válida");
+  for(const o of out){ if(o.txt.length<60){ if(ni<10){o.img=await pdfImagemPagina(doc,o.idx);ni++;}else avisos.push("A S. "+o.pag+" está sem texto e passou do limite de 10 imagens por pedido."); } }
+  if(!out.length)throw new Error(avisos.join(" ")||"nenhuma página válida");
   const comTxt=out.filter(o=>o.txt.length>=60); const lim=Math.floor(14000/Math.max(1,comTxt.length));
   const txt=comTxt.map(o=>"[S. "+o.pag+"]\n"+o.txt.slice(0,lim)).join("\n\n");
   const imgs=out.filter(o=>o.img).map(o=>o.img);
@@ -3624,6 +3631,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [lvLoad,setLvLoad]=useState(false);
   const [lvErr,setLvErr]=useState("");
   const lvCtx=useRef(null);
+  const [pdfCk,setPdfCk]=useState({});
   const lvRef=useRef(null);
   useEffect(()=>{
     let vivo=true;
@@ -3663,6 +3671,17 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [busca,setBusca]=useState("");
   const [verTodas,setVerTodas]=useState(false);
   const [rs,setRs]=useState(null);
+  const [dia,setDia]=useState(null);
+  const [diaLog,setDiaLog]=useLS("v5_idi_dia",{},userId);
+  const diaRef=useRef({ativo:false,i:0,passos:[],visto:false,ult:{},res:[]});
+  useEffect(()=>{
+    const d=diaRef.current; if(!d.ativo)return;
+    const pa=d.passos[d.i]; if(!pa)return;
+    const st={voc:rs,rev:rvE,ex:exS,gram:gm,frase:fq}[pa.t];
+    if(st){d.visto=true;d.ult[pa.t]=st;}
+    else if(d.visto){d.visto=false;passoConcluido();}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[rs,rvE,exS,gm,fq]);
   const [avN,setAvN]=useState({ouvir:3,falar:3,ler:3,escrever:3,gramatica:3,vocab:3});
   const [fm,setFm]=useState({titulo:"",data:""});
   const [cron,setCron]=useLS("v5_idi_cron",null,userId);
@@ -3856,9 +3875,9 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   };
   // ── Frases com correção (memória ativa) ──
   const iaNomeF=iaKey(IA_KC)?"Claude":(iaKey(IA_KG)?"Gemini":"");
-  const iniciarFrases=()=>{
+  const iniciarFrases=nMax=>{
     const pr=n=>{const x=sbst[n.k]||{ok:0,er:0};return x.er*2-x.ok*0.6+Math.random()*2.5;};
-    const fila=[...poolAll].sort((a,b)=>pr(b)-pr(a)).slice(0,6);
+    const fila=[...poolAll].sort((a,b)=>pr(b)-pr(a)).slice(0,typeof nMax==="number"?nMax:6);
     if(!fila.length)return;
     setDicaEd(null); setDs(null);
     setFq({fila,i:0,texto:"",load:false,res:null,itens:[],fim:false,ana:null,msg:"",salvo:false});
@@ -3978,7 +3997,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     }
     setChatLoad(false);
   };
-  const iniciarGram=(af,fr)=>{
+  const iniciarGram=(af,fr,nMax)=>{
     const stI=gstat.items||{};
     const q={};
     [...gItens,...meusItens].filter(x=>(!af||x.area===af)&&(!fr||fr.includes(x.area))).forEach(x=>{
@@ -3990,7 +4009,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     });
     Object.values(q).forEach(a=>a.sort((u,v)=>v.k-u.k));
     const ord=fr?fr.filter(a=>q[a]):Object.keys(q).sort(()=>Math.random()-.5);
-    const N=af?8:10; const fila=[];
+    const N=typeof nMax==="number"?nMax:(af?8:10); const fila=[];
     while(fila.length<N&&ord.some(a=>q[a].length)){
       for(const a of ord){if(fila.length>=N)break;const it=q[a].shift();if(it)fila.push(it.x.id);}
     }
@@ -4118,8 +4137,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const sugForm=G.sug(fw.termo);
   const bancoFiltrado=poolAll.filter(n=>!bancoBusca||(n.termo+" "+n.trad).toLowerCase().includes(bancoBusca.toLowerCase()));
 
-  const iniciarRev=m5=>{
-    const base=m5===true?due.slice(0,15):due;
+  const iniciarRev=(m5,lim)=>{
+    const base=m5===true?due.slice(0,typeof lim==="number"?lim:15):due;
     const novas=m5===true?[]:novasLib;
     const fila=[...base,...novas].map(v=>v.id);
     if(!fila.length)return;
@@ -4298,12 +4317,15 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const id=uid(); setPdfSt(x=>({...x,[tipo]:{load:true,msg:"Lendo o PDF…"}}));
     try{
       await idbPdf("put",id,file);
+      const gv=await idbPdf("get",id);
+      if(!gv||gv.size!==file.size)throw new Error("o arquivo foi gravado incompleto; tente de novo");
       const doc=await abrirPdf(id);
-      let soma=0,cnt=0; for(let i=Math.min(doc.numPages,3);i<=Math.min(doc.numPages,8);i++){soma+=(await pdfTextoPagina(doc,i)).length;cnt++;}
-      const scan=cnt>0&&soma/cnt<80;
+      const total=doc.numPages, nAm=Math.min(12,total); let comTxt=0;
+      for(let k=0;k<nAm;k++){const i=Math.min(total,Math.max(1,Math.round(total*(0.05+0.9*(nAm>1?k/(nAm-1):0.5)))));if((await pdfTextoPagina(doc,i)).length>=60)comTxt++;}
+      const scan=comTxt/nAm<0.5;
       const ant=pdfs.find(x=>x.lang===sel&&x.tipo===tipo);
       if(ant){try{await idbPdf("del",ant.id);}catch{} pdfEsquecer(ant.id);}
-      setPdfs([{id,lang:sel,tipo,nome:file.name.replace(/\.pdf$/i,""),pags:doc.numPages,offset:ant?ant.offset:0,scan,data:hoje},...pdfs.filter(x=>!(x.lang===sel&&x.tipo===tipo))]);
+      setPdfs([{id,lang:sel,tipo,nome:file.name.replace(/\.pdf$/i,""),pags:doc.numPages,tam:file.size,amo:{t:comTxt,n:nAm},offset:ant?ant.offset:0,scan,data:hoje},...pdfs.filter(x=>!(x.lang===sel&&x.tipo===tipo))]);
       setPdfSt(x=>({...x,[tipo]:{load:false,msg:""}}));
       setToast(LIVRO_NOME[tipo]+" guardado neste aparelho · "+doc.numPages+" páginas"+(scan?" · escaneado":""));
     }catch(err){
@@ -4316,12 +4338,23 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     try{await idbPdf("del",x.id);}catch{} pdfEsquecer(x.id);
     setPdfs(pdfs.filter(y=>y.id!==x.id));
   };
+  const conferirPdf=async(x,n)=>{
+    const pgN=parseInt(n,10); if(!pgN)return;
+    setPdfCk(c=>({...c,[x.tipo]:{...(c[x.tipo]||{}),load:true,res:null}}));
+    try{
+      const doc=await abrirPdf(x.id); const idx=pgN+(+x.offset||0);
+      if(idx<1||idx>doc.numPages){setPdfCk(c=>({...c,[x.tipo]:{pag:String(pgN),load:false,res:{erro:"A S. "+pgN+" cairia na pág. "+idx+" do PDF, que só vai de 1 a "+doc.numPages+"."}}}));return;}
+      const t=await pdfTextoPagina(doc,idx);
+      const img=t.length<60?await pdfImagemPagina(doc,idx):"";
+      setPdfCk(c=>({...c,[x.tipo]:{pag:String(pgN),load:false,res:{idx,total:doc.numPages,chars:t.length,amostra:t.slice(0,420),img}}}));
+    }catch(err){setPdfCk(c=>({...c,[x.tipo]:{pag:String(pgN),load:false,res:{erro:err.message==="SEM_ARQUIVO"?"O PDF não está neste aparelho.":err.message}}}));}
+  };
   const setOffsetPdf=(x,v)=>setPdfs(pdfs.map(y=>y.id===x.id?{...y,offset:Math.max(-50,Math.min(300,parseInt(v,10)||0))}:y));
   const enviarLivro=async()=>{
     const t=lvIn.trim(); if(!t||lvLoad)return;
     if(!iaNome){setLvErr("Cadastre uma chave em Gramática › Registrar erros.");return;}
     const hist=[...lvChat,{r:"u",t}]; setLvChat(hist); setLvIn(""); setLvErr("");
-    const pags=pgParse(t);
+    let pags=pgParse(t);
     const relato=pags.length>0&&/\b(fiz|fizemos|estudei|terminei|conclu[ií]|completei|li|vi)\b/i.test(t)&&!/\?\s*$/.test(t);
     if(relato){
       setLvLoad(true);
@@ -4332,6 +4365,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       return;
     }
     const esc=pdfEscolher(pdfsSel,sel,t,"");
+    if(!pags.length&&esc.p&&/[úu]ltima\s+p[áa]g/i.test(t))pags=[Math.max(1,esc.p.pags-(+esc.p.offset||0))];
+    if(!pags.length&&/p[áa]g|seite/i.test(t)&&/\d{2,4}/.test(t)){setLvErr("Não entendi qual página você quis dizer. Escreva, por exemplo, «página 202» ou «páginas 12 a 15».");return;}
     if(pags.length){
       if(!esc.p){setLvErr(esc.motivo||"Envie o PDF do livro primeiro.");return;}
       lvCtx.current={id:esc.p.id,pags};
@@ -4343,7 +4378,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     try{
       const lv=await lerPaginasLivro(pdf,c.pags,8);
       const resp=await gConversarLivro(hist.slice(-8),sel,lv);
-      setLvChat([...hist,{r:"a",t:(resp||"(sem resposta)")+"\n\n— "+lv.rotulo}]);
+      setLvChat([...hist,{r:"a",t:resp||"(sem resposta)",f:lv.lido,w:lv.avisos}]);
     }catch(err){setLvErr("Não consegui responder ("+(err.message==="SEM_ARQUIVO"?"o PDF não está neste aparelho":err.message)+").");}
     setLvLoad(false);
   };
@@ -4365,7 +4400,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       (async()=>{for(const t of alvo){ if(exercRef.current.some(x=>x.estId===t.id&&x.estado!=="feito"))continue; await gerarExTopico(t); }})();
     }
   };
-  const iniciarRevEst=()=>{ if(!estDue.length)return; setRvE({fila:estDue.slice(0,8).map(e=>e.id),i:0,texto:"",load:false,res:null,cont:{otimo:0,parcial:0,errou:0},msg:"",fim:false}); };
+  const iniciarRevEst=nMax=>{ if(!estDue.length)return; setRvE({fila:estDue.slice(0,typeof nMax==="number"?nMax:8).map(e=>e.id),i:0,texto:"",load:false,res:null,cont:{otimo:0,parcial:0,errou:0},msg:"",fim:false}); };
   const aplicarRevEst=(id,resultado)=>{
     setEstud(estud.map(e=>{
       if(e.id!==id)return e;
@@ -4455,6 +4490,80 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setExS({...exS,fila,rep:erro?{...exS.rep,[id]:1}:exS.rep,i:p,resp:"",fb:null,dica:false,tentou:false,ok:exS.ok+(erro?0:1),er:exS.er+(erro?1:0),fim:p>=fila.length});
   };
   const corrigirPeloIA=()=>conferirEx(true);
+  // ── Sessão do dia: monta o treino a partir do que está vencido, errado e fraco ──
+  const planoDia=()=>{
+    const exOrd=[...exPend].sort((a,b)=>(b.err||0)-(a.err||0)||(b.data||"").localeCompare(a.data||""));
+    let nR=Math.min(estDue.length,3), nEx=Math.min(exOrd.length,6), nVoc=Math.min(due.length,10), nGram=6, nFr=(iaNomeF&&poolAll.length)?2:0;
+    const tot=()=>nVoc*DIA_MIN.voc+nR*DIA_MIN.rev+nEx*DIA_MIN.ex+nGram*DIA_MIN.gram+nFr*DIA_MIN.frase;
+    const cortes=[()=>{if(nVoc>6)nVoc=6;},()=>{if(nEx>4)nEx=4;},()=>{if(nFr>1)nFr=1;},()=>{if(nR>2)nR=2;},()=>{if(nGram>4)nGram=4;},()=>{if(nVoc>4)nVoc=4;}];
+    for(const c of cortes){if(tot()<=15.5)break;c();}
+    const P=[];
+    if(nVoc>0)P.push({t:"voc",n:nVoc,por:nVoc+(nVoc>1?" palavras":" palavra")+" para rever hoje"});
+    if(nR>0)P.push({t:"rev",n:nR,por:nR+(nR>1?" assuntos vencidos":" assunto vencido")+" · escrever de memória"});
+    if(nEx>0){const volt=exOrd.slice(0,nEx).filter(x=>(x.err||0)>0).length;P.push({t:"ex",n:nEx,ids:exOrd.slice(0,nEx).map(x=>x.id),por:nEx+(nEx>1?" exercícios":" exercício")+" do que você estudou"+(volt?" · "+volt+(volt>1?" que você errou voltam":" que você errou volta"):"")});}
+    P.push({t:"gram",n:nGram,fr:fracos.length?fracos.map(x=>x.k):undefined,por:fracos.length?"Ponto mais fraco: "+fracos[0].nome.replace(/ \(.*\)/,"")+(fracos[0].pct!=null?" ("+fracos[0].pct+"% de acerto)":""):"Gramática mista, para mapear seus pontos fracos"});
+    if(nFr>0)P.push({t:"frase",n:nFr,por:nFr+(nFr>1?" frases":" frase")+" para escrever e ser corrigida"});
+    return {passos:P,min:Math.max(5,Math.round(tot()))};
+  };
+  const resumoPasso=(t,st)=>{
+    if(!st)return null;
+    const feitos={voc:(st.ok||0)+(st.er||0),rev:Object.values(st.cont||{}).reduce((a,b)=>a+b,0),ex:(st.ok||0)+(st.er||0),gram:(st.ok||0)+(st.aut||0)+(st.er||0),frase:(st.itens||[]).length}[t];
+    if(!feitos)return null;
+    if(t==="voc")return st.ok+(st.ok===1?" certa":" certas")+", "+st.er+(st.er===1?" errada":" erradas");
+    if(t==="rev"){const c=st.cont||{};return (c.otimo||0)+" ótimas, "+(c.parcial||0)+" parciais, "+(c.errou||0)+" erradas";}
+    if(t==="ex")return st.ok+(st.ok===1?" acerto":" acertos")+", "+st.er+(st.er===1?" erro (continua em espera)":" erros (continuam em espera)");
+    if(t==="gram")return st.ok+" de primeira, "+st.aut+" na 2ª tentativa, "+st.er+(st.er===1?" erro":" erros");
+    if(t==="frase"){const it=st.itens||[];return it.filter(x=>x.ok).length+" de "+it.length+" frases sem erro";}
+    return null;
+  };
+  const lancarPasso=idx=>{
+    const d=diaRef.current; const pa=d.passos[idx]; if(!pa)return;
+    d.i=idx; d.visto=false;
+    if(pa.t==="voc"){setSub("palavras");iniciarRev(true,pa.n);}
+    else if(pa.t==="rev"){setSub("pratica");iniciarRevEst(pa.n);}
+    else if(pa.t==="ex"){setSub("pratica");iniciarExS(pa.ids);}
+    else if(pa.t==="gram"){setSub("gram");iniciarGram(undefined,pa.fr,pa.n);}
+    else if(pa.t==="frase"){setSub("subst");iniciarFrases(pa.n);}
+    setTimeout(()=>{const x=diaRef.current; if(x.ativo&&x.i===idx&&!x.visto)passoConcluido();},1200);
+  };
+  const terminarDia=()=>{
+    const d=diaRef.current; d.ativo=false;
+    const min=Math.max(1,Math.round((Date.now()-d.ini)/60000));
+    setDia({ativo:false,fim:true,res:[...d.res],min,nota:"",passos:d.passos,i:d.i});
+    if(d.res.length){
+      const lim=addDays(hoje,-30); const antigo=Object.fromEntries(Object.entries(diaLog).filter(([k])=>k>=lim));
+      setDiaLog({...antigo,[hoje]:{...(antigo[hoje]||{}),[d.lang]:{n:d.res.length,min}}});
+      if(iaNome)gNotaDia(d.lang,d.res.map(r=>DIA_NOMES[r.t]+": "+r.txt),fracos.map(x=>x.nome.replace(/ \(.*\)/,"")+(x.pct!=null?" ("+x.pct+"%)":""))).then(nota=>setDia(x=>x&&x.fim?{...x,nota}:x)).catch(()=>{});
+    }
+    setSub("hoje");
+  };
+  const passoConcluido=()=>{
+    const d=diaRef.current; if(!d.ativo)return;
+    const pa=d.passos[d.i]; if(!pa)return;
+    const r=resumoPasso(pa.t,d.ult[pa.t]); if(r)d.res.push({t:pa.t,txt:r});
+    const prox=d.i+1;
+    if(prox>=d.passos.length){terminarDia();return;}
+    setDia(x=>x?{...x,i:prox,res:[...d.res]}:x);
+    lancarPasso(prox);
+  };
+  const limparSessoes=()=>{setRs(null);setRvE(null);setExS(null);setGm(null);setFq(null);};
+  const comecarDia=()=>{
+    const pl=planoDia(); if(!pl.passos.length)return;
+    limparSessoes();
+    diaRef.current={ativo:true,i:0,passos:pl.passos,visto:false,ult:{},res:[],ini:Date.now(),lang:sel};
+    setDia({ativo:true,fim:false,i:0,passos:pl.passos,res:[]});
+    lancarPasso(0);
+  };
+  const pularPasso=()=>{const d=diaRef.current; d.visto=false; limparSessoes(); passoConcluido();};
+  const encerrarDia=()=>{
+    const d=diaRef.current; d.visto=false; limparSessoes();
+    if(d.res.length||d.ult[(d.passos[d.i]||{}).t])passoConcluidoFinal(); else {d.ativo=false;setDia(null);setSub("hoje");}
+  };
+  const passoConcluidoFinal=()=>{
+    const d=diaRef.current; const pa=d.passos[d.i];
+    const r=pa&&resumoPasso(pa.t,d.ult[pa.t]); if(r&&!d.res.some(x=>x.t===pa.t))d.res.push({t:pa.t,txt:r});
+    terminarDia();
+  };
   const subs=[["hoje","Hoje"],["pratica","Praticar"+((estDue.length+exTopicosPend)?" · "+(estDue.length+exTopicosPend):"")],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
   const nomeSel=`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
@@ -4532,8 +4641,45 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
 
       <div className="idi-sheet" key={"s"+sel}><div className="idi-wrap">
 
+      {dia&&dia.ativo&&dia.passos[dia.i]&&<div style={{background:T.ink,color:T.sheet,borderRadius:20,padding:"14px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+        <div style={{flex:"1 1 200px",minWidth:0}}>
+          <div style={{...lab,color:"inherit",opacity:.7}}>Sessão do dia · passo {dia.i+1} de {dia.passos.length}</div>
+          <div style={{fontSize:15,fontWeight:600,marginTop:3}}>{DIA_NOMES[dia.passos[dia.i].t]}</div>
+          <div style={{display:"flex",gap:5,marginTop:8}}>{dia.passos.map((q,k)=><span key={k} style={{flex:1,height:4,borderRadius:99,background:k<=dia.i?T.acc:"rgba(255,255,255,.25)"}}/>)}</div>
+        </div>
+        <div style={{display:"flex",gap:8,flexShrink:0}}>
+          <button style={{...btnS,color:T.sheet,borderColor:"rgba(255,255,255,.4)",padding:"8px 14px",fontSize:12}} onClick={pularPasso}>Pular passo</button>
+          <button style={{...btnS,color:T.sheet,borderColor:"rgba(255,255,255,.4)",padding:"8px 14px",fontSize:12}} onClick={encerrarDia}>Encerrar</button>
+        </div>
+      </div>}
+
       {/* ═ HOJE ═ */}
       {sub==="hoje"&&(<>
+        {!(dia&&dia.ativo)&&(()=>{
+          const pl=planoDia(); const feito=(diaLog[hoje]||{})[sel];
+          if(dia&&dia.fim)return (
+            <Card>
+              <Titulo k="Sessão do dia" t="Sessão concluída"/>
+              {dia.res.length===0?<Vazio>Nenhum passo foi concluído.</Vazio>:dia.res.map((r,k)=>(
+                <div key={k} style={{padding:"9px 0",borderTop:k===0?"none":"1px solid rgba(var(--idi-rgb),.08)",fontSize:14}}><b>{DIA_NOMES[r.t]}</b><span style={{opacity:.75}}> · {r.txt}</span></div>))}
+              {dia.nota&&<div style={{marginTop:12,padding:"12px 14px",borderRadius:14,background:"rgba(var(--idi-rgb),.06)",fontSize:14,lineHeight:1.6}}>{dia.nota}</div>}
+              <div style={{...lab,marginTop:12}}>{dia.min} min</div>
+              <div style={{marginTop:14,display:"flex",gap:10,flexWrap:"wrap"}}><button style={btnP} onClick={()=>setDia(null)}>Fechar</button></div>
+            </Card>);
+          if(!pl.passos.length)return null;
+          return (
+            <Card>
+              <Titulo k="Sessão do dia" t="Seu treino de hoje" dir={<span style={{...lab,whiteSpace:"nowrap"}}>≈ {pl.min} min</span>}/>
+              {feito&&<div style={{...lab,marginBottom:10,color:"#3C7030"}}>✓ Você já fez uma sessão hoje · {feito.n} {feito.n===1?"passo":"passos"} · {feito.min} min</div>}
+              {pl.passos.map((q,k)=>(
+                <div key={k} style={{display:"flex",gap:12,alignItems:"baseline",padding:"9px 0",borderTop:k===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+                  <span style={{...serif,fontSize:20,opacity:.45,width:20,flexShrink:0}}>{k+1}</span>
+                  <div style={{minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}>{DIA_NOMES[q.t]}</div><div style={{fontSize:12.5,opacity:.7,marginTop:2,lineHeight:1.45}}>{q.por}</div></div>
+                </div>))}
+              <div style={{marginTop:14}}><button style={btnP} onClick={comecarDia}>{feito?"Fazer outra sessão":"Começar"}</button></div>
+              <div style={{...lab,fontSize:9.5,marginTop:10,lineHeight:1.6,whiteSpace:"normal"}}>O app escolhe pelo que está vencido, pelo que você errou e pelo seu ponto mais fraco. Passos sem nada para fazer são pulados.</div>
+            </Card>);
+        })()}
         <div className="idi-grid4">
           {tiles.map(t=>(
             <div key={t.l} className="bento-tile" onClick={()=>setSub(t.to)} style={{background:STY[t.s].paper,cursor:"pointer",minHeight:isMobile?172:200}}>
@@ -4899,7 +5045,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               <div style={{marginTop:10,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
                 {!pd&&<label style={{...btnS,display:"inline-block",cursor:"pointer",padding:"8px 14px",fontSize:12,opacity:st.load?.5:1}}>{st.load?"Lendo…":"Adicionar PDF do "+LIVRO_NOME[t]}<input type="file" accept="application/pdf,.pdf" style={{display:"none"}} disabled={!!st.load} onChange={e=>{const f=e.target.files&&e.target.files[0];e.target.value="";addPdf(t,f);}}/></label>}
                 {pd&&<>
-                  <span style={{fontSize:12.5}}>📖 {pd.pags} páginas{pd.scan?" · escaneado":""}</span>
+                  <span style={{fontSize:12.5}}>📖 {pd.pags} páginas{pd.tam?" · "+(pd.tam/1048576).toFixed(1).replace(".",",")+" MB":""}{pd.amo?" · texto em "+pd.amo.t+" de "+pd.amo.n+" páginas testadas":(pd.scan?" · escaneado":"")}</span>
                   {pdfOk[pd.id]===false
                     ?<label style={{...btnS,display:"inline-block",cursor:"pointer",padding:"7px 12px",fontSize:12,color:IDI_RED}}>{st.load?"Lendo…":"Não está neste aparelho · reenviar"}<input type="file" accept="application/pdf,.pdf" style={{display:"none"}} disabled={!!st.load} onChange={e=>{const f=e.target.files&&e.target.files[0];e.target.value="";addPdf(t,f);}}/></label>
                     :<button onClick={()=>removerPdf(pd)} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)",padding:0}}>remover PDF</button>}
@@ -4910,7 +5056,23 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 <input type="number" style={{...inp,width:76,padding:"6px 10px"}} value={pd.offset||0} onChange={e=>setOffsetPdf(pd,e.target.value)} aria-label="Deslocamento do PDF"/>
                 <span style={{...lab,fontSize:9.5}}>pág. 12 do livro = pág. {12+(+pd.offset||0)} do PDF</span>
               </div>}
-              {pd&&pd.scan&&<div style={{...lab,fontSize:9.5,marginTop:6,lineHeight:1.6,whiteSpace:"normal"}}>Este PDF é imagem: o app lê cada página por foto (mais lento e mais caro).</div>}
+              {pd&&pd.scan&&<div style={{...lab,fontSize:9.5,marginTop:6,lineHeight:1.6,whiteSpace:"normal"}}>Este PDF é quase só imagem: o app lê as páginas por foto, até 10 por pedido (mais lento e mais caro).</div>}
+              {pd&&!pd.scan&&pd.amo&&pd.amo.t<pd.amo.n&&<div style={{...lab,fontSize:9.5,marginTop:6,lineHeight:1.6,whiteSpace:"normal"}}>Páginas sem texto selecionável são lidas por foto.</div>}
+              {pd&&pdfOk[pd.id]!==false&&<div style={{marginTop:10}}>
+                <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",fontSize:12.5}}>
+                  <span>Conferir a página</span>
+                  <input type="number" style={{...inp,width:76,padding:"6px 10px"}} value={(pdfCk[t]||{}).pag||""} onChange={e=>setPdfCk(c=>({...c,[t]:{...(c[t]||{}),pag:e.target.value}}))} placeholder="12" aria-label={"Página para conferir no "+LIVRO_NOME[t]}/>
+                  <button style={{...btnS,padding:"7px 12px",fontSize:12}} onClick={()=>conferirPdf(pd,(pdfCk[t]||{}).pag)}>{(pdfCk[t]||{}).load?"Lendo…":"Ver o que o app lê"}</button>
+                  <button style={{...btnS,padding:"7px 12px",fontSize:12}} onClick={()=>{const u=Math.max(1,pd.pags-(+pd.offset||0));setPdfCk(c=>({...c,[t]:{...(c[t]||{}),pag:String(u)}}));conferirPdf(pd,u);}}>Última página</button>
+                </div>
+                {(pdfCk[t]||{}).res&&(pdfCk[t].res.erro
+                  ?<div style={{marginTop:8,fontSize:12.5,color:IDI_RED}}>{pdfCk[t].res.erro}</div>
+                  :<div style={{marginTop:8,padding:"10px 12px",borderRadius:12,background:"rgba(var(--idi-rgb),.06)",fontSize:12.5,lineHeight:1.55}}>
+                    <div style={{...lab,fontSize:9.5,marginBottom:4,whiteSpace:"normal"}}>Pág. {pdfCk[t].res.idx} de {pdfCk[t].res.total} do PDF · {pdfCk[t].res.chars} caracteres de texto</div>
+                    {pdfCk[t].res.chars>=60?<div style={{whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{pdfCk[t].res.amostra}{pdfCk[t].res.chars>420?"…":""}</div>:<div>Sem texto selecionável nesta página: o app vai lê-la por foto. Confira abaixo se é a página que você queria.</div>}
+                    {pdfCk[t].res.img&&<img alt={"Página "+pdfCk[t].res.idx+" do PDF"} src={"data:image/jpeg;base64,"+pdfCk[t].res.img} style={{display:"block",width:"100%",maxWidth:380,borderRadius:8,marginTop:8,border:"1px solid rgba(var(--idi-rgb),.15)"}}/>}
+                  </div>)}
+              </div>}
               {st.msg&&<div style={{marginTop:8,fontSize:12.5,color:st.load?"inherit":IDI_RED}}>{st.msg}</div>}
             </div>);})}
           {pdfsSel.length>0&&<div style={{marginTop:18,paddingTop:16,borderTop:"1px solid rgba(var(--idi-rgb),.1)"}}>
@@ -4918,7 +5080,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <div style={{fontSize:13.5,lineHeight:1.6,opacity:.8,maxWidth:600,marginBottom:12}}>Conte o que fez («fiz do Kursbuch da página 12 até a 15») e o app lê essas páginas e identifica a matéria. Ou pergunte («o que a página 14 explica sobre weil?»). Só o texto das páginas citadas vai ao {iaNome||"Claude"}; o livro fica neste aparelho.</div>
             {(lvChat.length>0||lvLoad)&&<div ref={lvRef} style={{maxHeight:380,overflowY:"auto",padding:"4px 2px",marginBottom:12,display:"flex",flexDirection:"column",gap:10}}>
               {lvChat.map((m,i)=>(
-                <div key={i} style={{alignSelf:m.r==="u"?"flex-end":"flex-start",maxWidth:"88%",padding:"10px 14px",borderRadius:16,fontSize:14,lineHeight:1.6,whiteSpace:"pre-wrap",wordBreak:"break-word",background:m.r==="u"?T.ink:"rgba(var(--idi-rgb),.07)",color:m.r==="u"?T.sheet:"inherit"}}>{m.t}</div>))}
+                <div key={i} style={{alignSelf:m.r==="u"?"flex-end":"flex-start",maxWidth:"88%",padding:"10px 14px",borderRadius:16,fontSize:14,lineHeight:1.6,whiteSpace:"pre-wrap",wordBreak:"break-word",background:m.r==="u"?T.ink:"rgba(var(--idi-rgb),.07)",color:m.r==="u"?T.sheet:"inherit"}}>{m.t}{m.f&&<div style={{...lab,fontSize:9.5,marginTop:8,whiteSpace:"normal",lineHeight:1.5}}>{m.f}</div>}{(m.w||[]).map((w,j)=><div key={j} style={{fontSize:12,marginTop:6,color:IDI_RED}}>{w}</div>)}</div>))}
               {lvLoad&&<div style={{alignSelf:"flex-start",padding:"10px 14px",borderRadius:16,fontSize:13,opacity:.6,background:"rgba(var(--idi-rgb),.07)"}}>lendo o livro…</div>}
             </div>}
             {lvErr&&<div style={{marginBottom:10,fontSize:13,color:IDI_RED}}>{lvErr}</div>}
