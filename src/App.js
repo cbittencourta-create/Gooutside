@@ -2041,6 +2041,25 @@ async function gAvaliarRevisao(lang,item,texto){
   const obj=iaJson(await iaChamar(prompt,null,true));
   return {resultado:["otimo","parcial","errou"].includes(obj.resultado)?obj.resultado:"parcial",feedback:String(obj.feedback||""),regra:String(obj.regra||""),exemplo:String(obj.exemplo||"")};
 }
+// ── Mapa mental do vocabulário ──
+const temaPartes=t=>{const [a,...r]=String(t||"").split(/\s*·\s*/);return {nome:(a||"").trim(),sub:r.join(" · ").trim()};};
+const mapaCor=v=>{
+  const b=v.box||0;
+  if(!v.vista&&!((v.ok||0)+(v.er||0)))return {fill:"#FFFFFF",stroke:"#9A948A",dash:"4 3",nome:"nova"};
+  if(b>=4)return {fill:"#D5E8C8",stroke:"#3C7030",dash:"",nome:"dominada"};
+  if(b===3)return {fill:"#E8F1DA",stroke:"#7FA84A",dash:"",nome:"quase lá"};
+  return {fill:"#FBF1D8",stroke:"#C9922B",dash:"",nome:"aprendendo"};
+};
+function mapaLayout(n,caps,radii){
+  const pos=[]; let resto=n,k=0;
+  while(resto>0){
+    const cap=caps[Math.min(k,caps.length-1)]; const m=Math.min(cap,resto);
+    const r=radii[Math.min(k,radii.length-1)]+(k>=radii.length?(k-radii.length+1)*80:0); const off=-Math.PI/2+k*0.42;
+    for(let i=0;i<m;i++){const a=off+i*2*Math.PI/m;pos.push({x:Math.cos(a)*r,y:Math.sin(a)*r});}
+    resto-=m;k++;
+  }
+  return {pos,rmax:pos.reduce((a,q)=>Math.max(a,Math.hypot(q.x,q.y)),0)};
+}
 async function gNotaDia(lang,resumos,fracos){
   const idioma=lang==="de"?"alemão":"francês";
   const prompt="Você é o treinador de "+idioma+" de uma aluna brasileira (nível A2) que quer ficar fluente. Resultado da sessão de hoje:\n"+resumos.map(r=>"- "+r).join("\n")+"\nPontos fracos atuais: "+(fracos.length?fracos.join("; "):"ainda sem dados")+".\nEscreva em português do Brasil, em até 60 palavras, uma observação direta: o que merece atenção amanhã e por quê. Sem elogios vazios e sem listas.";
@@ -3672,6 +3691,16 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [verTodas,setVerTodas]=useState(false);
   const [rs,setRs]=useState(null);
   const [dia,setDia]=useState(null);
+  const [mapaCat,setMapaCat]=useState(null);
+  const [mapaSel,setMapaSel]=useState(null);
+  const [mapaZ,setMapaZ]=useState(1);
+  const [cats,setCats]=useLS("v5_idi_cats",[],userId);
+  const [catForm,setCatForm]=useState(null);
+  const [catEd,setCatEd]=useState(null);
+  const [mapaF,setMapaF]=useState({termo:"",art:"",plural:"",trad:"",ex:""});
+  const [mapaMais,setMapaMais]=useState(false);
+  const [mapaBusca,setMapaBusca]=useState("");
+  const [mapaNova,setMapaNova]=useState("");
   const [diaLog,setDiaLog]=useLS("v5_idi_dia",{},userId);
   const diaRef=useRef({ativo:false,i:0,passos:[],visto:false,ult:{},res:[]});
   useEffect(()=>{
@@ -4150,7 +4179,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const id=rs.fila[rs.i]; const w=vocab.find(v=>v.id===id);
     if(!w){setRs({...rs,i:rs.i+1,show:false,resp:"",res:null,fim:rs.i+1>=rs.fila.length});return;}
     const b=w.box||0;
-    setVocab(vocab.map(v=>v.id!==id?v:{...v,box:ok?Math.min(b+1,5):0,prox:ok?addDays(hoje,LEIT[Math.min(b,5)]):addDays(hoje,1),vista:v.vista||hoje,ok:(v.ok||0)+(ok?1:0),er:(v.er||0)+(ok?0:1)}));
+    setVocab(vocab.map(v=>v.id!==id?v:{...v,box:ok?Math.min(b+1,5):0,prox:ok?addDays(hoje,LEIT[Math.min(b,5)]):addDays(hoje,1),vista:v.vista||hoje,ok:(v.ok||0)+(ok?1:0),er:(v.er||0)+(ok?0:1),domEm:ok?(b+1>=4?((v.domEm&&b>=4)?v.domEm:hoje):undefined):undefined}));
     const dia=rv[hoje]||{}; const c=dia[w.lang]||{ok:0,er:0};
     setRv({...rv,[hoje]:{...dia,[w.lang]:{ok:c.ok+(ok?1:0),er:c.er+(ok?0:1)}}});
     const fila=(!ok&&!rs.rep[id])?[...rs.fila,id]:rs.fila;
@@ -4564,7 +4593,220 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const r=pa&&resumoPasso(pa.t,d.ult[pa.t]); if(r&&!d.res.some(x=>x.t===pa.t))d.res.push({t:pa.t,txt:r});
     terminarDia();
   };
-  const subs=[["hoje","Hoje"],["pratica","Praticar"+((estDue.length+exTopicosPend)?" · "+(estDue.length+exTopicosPend):"")],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
+  // ── Mapa mental ──
+  const mapaCats=(()=>{
+    const m=new Map();
+    cats.filter(c=>c.lang===sel).forEach(c=>{const t=c.nome.trim()+((c.sub||"").trim()?" · "+c.sub.trim():"");const k=t.toLowerCase();if(!m.has(k))m.set(k,{key:k,nome:c.nome.trim(),sub:(c.sub||"").trim(),tema:t,id:c.id,pal:[]});});
+    vocSel.forEach(v=>{const k=(v.tema||"").trim().toLowerCase();let c=m.get(k);if(!c){const pt=temaPartes(v.tema);c={key:k,nome:k?pt.nome:"Sem categoria",sub:pt.sub,tema:(v.tema||"").trim(),pal:[]};m.set(k,c);}c.pal.push(v);});
+    return [...m.values()].map(c=>{
+      const tot=c.pal.length, dom=c.pal.filter(v=>(v.box||0)>=4).length, nov=c.pal.filter(isNova).length;
+      return {...c,total:tot,dom,nov,apr:tot-dom-nov,err:c.pal.filter(v=>(v.er||0)>=2&&(v.er||0)>(v.ok||0)).length,pct:tot?Math.round(dom/tot*100):0};
+    }).sort((a,b)=>(a.key===""?1:0)-(b.key===""?1:0)||b.total-a.total||a.nome.localeCompare(b.nome));
+  })();
+  const mapaSemCat=mapaCats.find(c=>c.key==="");
+  const criarCategoria=()=>{
+    if(!catForm)return; const nome=catForm.nome.trim(), sub=catForm.sub.trim(); if(!nome)return;
+    const tema=nome+(sub?" · "+sub:""); const key=tema.toLowerCase();
+    if(mapaCats.some(c=>c.key===key)){setToast("Essa categoria já existe.");setMapaCat(key);setCatForm(null);return;}
+    setCats([...cats,{id:uid(),lang:sel,nome,sub}]); setCatForm(null); setMapaCat(key); setMapaSel(null); setMapaMais(false);
+    setToast("Categoria criada · agora adicione palavras");
+  };
+  const renomearCategoria=()=>{
+    const cat=mapaCats.find(c=>c.key===mapaCat); if(!cat||!catEd||!cat.key)return;
+    const nome=catEd.nome.trim(), sub=catEd.sub.trim(); if(!nome)return;
+    const tema=nome+(sub?" · "+sub:""); const key=tema.toLowerCase();
+    if(key!==cat.key&&mapaCats.some(c=>c.key===key)){setToast("Já existe uma categoria com esse nome.");return;}
+    setVocab(vocab.map(v=>(v.lang===sel&&(v.tema||"").trim().toLowerCase()===cat.key)?{...v,tema}:v));
+    setCats(cat.id?cats.map(c=>c.id===cat.id?{...c,nome,sub}:c):[...cats,{id:uid(),lang:sel,nome,sub}]);
+    setMapaCat(key); setCatEd(null);
+  };
+  const excluirCategoria=()=>{
+    const cat=mapaCats.find(c=>c.key===mapaCat); if(!cat||!cat.key)return;
+    if(!window.confirm("Excluir a categoria «"+cat.nome+"»?"+(cat.total?" As "+cat.total+(cat.total>1?" palavras continuam":" palavra continua")+" no seu vocabulário, sem categoria.":"")))return;
+    setVocab(vocab.map(v=>(v.lang===sel&&(v.tema||"").trim().toLowerCase()===cat.key)?{...v,tema:""}:v));
+    if(cat.id)setCats(cats.filter(c=>c.id!==cat.id));
+    setMapaCat(null); setMapaSel(null); setCatEd(null);
+  };
+  const addPalavraMapa=()=>{
+    const cat=mapaCats.find(c=>c.key===mapaCat); if(!cat||!cat.key)return;
+    let termo=mapaF.termo.trim(); const trad=mapaF.trad.trim(); if(!termo||!trad)return;
+    let art=mapaF.art||"", pl=(mapaF.plural||"").trim(), ex=mapaF.ex.trim();
+    const g=GEN[sel]; const mm=g?termo.match(g.parse):null;
+    if(mm){art=mm[1].toLowerCase();termo=mm[2];}
+    if(g&&pl)pl=pl.replace(new RegExp("^"+g.plArt+"\\s+","i"),"");
+    if(ex&&!temCloze(ex)){const i=ex.toLowerCase().indexOf(termo.toLowerCase());if(i>=0)ex=ex.slice(0,i)+"[["+ex.slice(i,i+termo.length)+"]]"+ex.slice(i+termo.length);}
+    const vazio={termo:"",art:"",plural:"",trad:"",ex:""};
+    const igual=vocab.find(v=>v.lang===sel&&v.tipo!=="chunk"&&(v.termo||"").trim().toLowerCase()===termo.toLowerCase());
+    if(igual){
+      if((igual.tema||"").trim().toLowerCase()===cat.key){setToast("«"+termo+"» já está nesta categoria.");return;}
+      setVocab(vocab.map(v=>v.id===igual.id?{...v,tema:cat.tema}:v)); setToast("«"+termo+"» já era seu; movi para "+cat.nome+"."); setMapaF(vazio); return;
+    }
+    setVocab([{id:uid(),lang:sel,termo,trad,ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,tema:cat.tema,...(art?{art,plural:pl}:{})},...vocab]);
+    setMapaF(vazio); setToast("«"+termo+"» entrou em "+cat.nome);
+  };
+  const moverPalavra=(id,tema)=>{const t=(tema||"").trim();setVocab(vocab.map(v=>v.id===id?{...v,tema:t}:v));setMapaNova("");if(t)setMapaCat(t.toLowerCase());else setMapaCat("");};
+  const selPalavra=id=>{setMapaSel(id);if(id)setTimeout(()=>{const e=document.getElementById("idi-mapa-det");if(e)e.scrollIntoView({behavior:"smooth",block:"nearest"});},120);};
+  const mapaTrunc=(t,n)=>t.length>n?t.slice(0,n-1)+"…":t;
+  const mapaUI=()=>{
+    const cat=mapaCat!==null?mapaCats.find(c=>c.key===mapaCat):null;
+    const dom7=vocSel.filter(v=>v.domEm&&v.domEm>=addDays(hoje,-7)).length;
+        const avail=isMobile?318:640;
+    let vb=0,svg=null;
+    const seg=(r,frac,ini,col,w)=>frac>0?<circle r={r} fill="none" stroke={col} strokeWidth={w} strokeDasharray={(frac*2*Math.PI*r)+" "+(2*Math.PI*r)} strokeDashoffset={-ini*2*Math.PI*r} transform="rotate(-90)"/>:null;
+    if(!cat&&mapaCats.length){
+      const {pos,rmax}=mapaLayout(mapaCats.length,[6,10,14,18],[160,260,360,460]);
+      const R=rmax+95; vb=Math.max(380,Math.round(R*2)); const cx=vb/2, cy=vb/2;
+      const totDom=vocSel.filter(v=>(v.box||0)>=4).length;
+      svg=<svg role="img" aria-label={"Mapa mental de "+unica.nome+": "+mapaCats.length+" categorias"} width={vb*Math.max(.72,Math.min(1,avail/vb))*mapaZ} viewBox={"0 0 "+vb+" "+vb} style={{display:"block",margin:"0 auto"}}>
+        {mapaCats.map((c,k)=>{const p=pos[k];return <path key={"l"+c.key} d={"M"+cx+","+cy+" Q"+(cx+p.x*.5-p.y*.1)+","+(cy+p.y*.5+p.x*.1)+" "+(cx+p.x)+","+(cy+p.y)} stroke="#B9AE97" strokeOpacity=".55" strokeWidth="2" fill="none"/>;})}
+        <g transform={"translate("+cx+","+cy+")"}>
+          <circle r={58} fill={T.ink}/>
+          <text textAnchor="middle" y={-2} fontSize="20" fill={T.sheet} fontFamily="'Fraunces',Georgia,serif">{mapaTrunc(unica.nome,10)}</text>
+          <text textAnchor="middle" y={18} fontSize="11" fill={T.sheet} opacity=".75" fontFamily="'DM Sans',sans-serif">{vocSel.length} palavras</text>
+          <g transform="rotate(-90)"><circle r={66} fill="none" stroke="rgba(0,0,0,.08)" strokeWidth="6"/></g>
+          {seg(66,vocSel.length?totDom/vocSel.length:0,0,"#3C7030",6)}
+        </g>
+        {mapaCats.map((c,k)=>{const p=pos[k];const r=26+Math.min(24,Math.sqrt(c.total)*5.5);const t=c.total||1;return (
+          <g key={c.key} transform={"translate("+(cx+p.x)+","+(cy+p.y)+")"}>
+            <g className="idi-float" style={{animationDelay:(-(k%7)*.7)+"s",animationDuration:(4.4+(k%4)*.6)+"s",cursor:"pointer"}} role="button" tabIndex={0} aria-label={c.nome+": "+c.total+(c.total===1?" palavra, ":" palavras, ")+c.pct+"% dominadas"} onClick={()=>{setMapaCat(c.key);setMapaSel(null);}} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setMapaCat(c.key);setMapaSel(null);}}}>
+              <circle r={r} fill="#fff" stroke="rgba(0,0,0,.08)" strokeWidth="1"/>
+              {seg(r,c.dom/t,0,"#3C7030",7)}{seg(r,c.apr/t,c.dom/t,"#C9922B",7)}{seg(r,c.nov/t,(c.dom+c.apr)/t,"#C9C3B6",7)}
+              <text textAnchor="middle" y={6} fontSize={r>40?20:17} fill={T.ink} fontFamily="'Fraunces',Georgia,serif">{c.total}</text>
+              <text textAnchor="middle" y={r+17} fontSize="13" fontWeight="700" fill={T.ink} fontFamily="'DM Sans',sans-serif">{mapaTrunc(c.nome,16)}</text>
+              <text textAnchor="middle" y={r+32} fontSize="10.5" fill={T.ink} opacity=".6" fontFamily="'DM Sans',sans-serif">{c.pct}% dominadas</text>
+              {c.err>0&&<g transform={"translate("+(r*.72)+","+(-r*.72)+")"}><circle r={8} fill="#B23F2A"/><text textAnchor="middle" y={4} fontSize="11" fontWeight="700" fill="#fff">{c.err}</text></g>}
+            </g>
+          </g>);})}
+      </svg>;
+    }else if(cat){
+      const pal=[...cat.pal].sort((a,b)=>(b.criada||"").localeCompare(a.criada||""));
+      const {pos,rmax}=mapaLayout(pal.length,[6,10,14,18,22],[120,195,270,345,420]);
+      const R=rmax+90; vb=Math.max(380,Math.round(R*2)); const cx=vb/2, cy=vb/2;
+      svg=<svg role="img" aria-label={"Mapa mental da categoria "+cat.nome+": "+pal.length+" palavras"} width={vb*Math.max(.72,Math.min(1,avail/vb))*mapaZ} viewBox={"0 0 "+vb+" "+vb} style={{display:"block",margin:"0 auto"}}>
+        {pal.map((v,k)=>{const p=pos[k];const c=mapaCor(v);return <path key={"l"+v.id} d={"M"+cx+","+cy+" Q"+(cx+p.x*.5-p.y*.12)+","+(cy+p.y*.5+p.x*.12)+" "+(cx+p.x)+","+(cy+p.y)} stroke={c.stroke} strokeOpacity=".5" strokeWidth="2" fill="none"/>;})}
+        <g transform={"translate("+cx+","+cy+")"}>
+          <circle r={64} fill={T.ink}/>
+          <text textAnchor="middle" y={cat.sub?-2:5} fontSize="19" fill={T.sheet} fontFamily="'Fraunces',Georgia,serif">{mapaTrunc(cat.nome,11)}</text>
+          {cat.sub&&<text textAnchor="middle" y={15} fontSize="11" fill={T.sheet} opacity=".75" fontFamily="'DM Sans',sans-serif">{mapaTrunc(cat.sub,16)}</text>}
+          <text textAnchor="middle" y={cat.sub?32:24} fontSize="11" fontWeight="700" fill={T.acc} fontFamily="'DM Sans',sans-serif">{cat.pct}%</text>
+          <g transform="rotate(-90)"><circle r={72} fill="none" stroke="rgba(0,0,0,.08)" strokeWidth="6"/></g>
+          {seg(72,cat.dom/cat.total,0,"#3C7030",6)}{seg(72,cat.apr/cat.total,cat.dom/cat.total,"#C9922B",6)}
+        </g>
+        {pal.length===0&&<text x={cx} y={cy+118} textAnchor="middle" fontSize="13" fill={T.ink} opacity=".6" fontFamily="'DM Sans',sans-serif">Adicione a primeira palavra abaixo</text>}
+        {pal.map((v,k)=>{
+          const p=pos[k]; const c=mapaCor(v); const sl=mapaSel===v.id; const lab=(v.art?v.art+" ":"")+mapaTrunc(v.termo,v.tipo==="chunk"?18:20); const w=Math.max(72,lab.length*7.4+30); const err=(v.er||0)>=2&&(v.er||0)>(v.ok||0);
+          return (
+          <g key={v.id} transform={"translate("+(cx+p.x)+","+(cy+p.y)+")"}>
+            <g className="idi-float" style={{animationDelay:(-(k%7)*.7)+"s",animationDuration:(4.2+(k%4)*.6)+"s",cursor:"pointer"}} role="button" tabIndex={0} aria-label={(v.art?v.art+" ":"")+v.termo+", "+c.nome} onClick={()=>selPalavra(sl?null:v.id)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();selPalavra(sl?null:v.id);}}}>
+              <rect x={-w/2} y={-16} width={w} height={32} rx={16} fill={c.fill} stroke={c.stroke} strokeWidth={sl?3.2:1.6} strokeDasharray={c.dash||undefined}/>
+              <text textAnchor="middle" y={5} fontSize="13" fill={T.ink} fontFamily="'DM Sans',sans-serif">{v.art&&<tspan fill={ART_COR[v.art]} fontWeight="700">{v.art} </tspan>}<tspan fontWeight="600">{mapaTrunc(v.termo,v.tipo==="chunk"?18:20)}</tspan></text>
+              {err&&<g transform={"translate("+(w/2-6)+",-15)"}><circle r={7} fill="#B23F2A"/><text textAnchor="middle" y={4} fontSize="10" fontWeight="700" fill="#fff">!</text></g>}
+            </g>
+          </g>);})}
+      </svg>;
+    }
+    const sv=cat&&mapaSel?cat.pal.find(v=>v.id===mapaSel):null;
+    return (<>
+      <Card>
+        <Titulo k="Mapa mental" t={cat?cat.nome:"Seu vocabulário"} dir={cat?<div style={{display:"flex",gap:8,flexWrap:"wrap",justifyContent:"flex-end"}}>
+          {cat.key!==""&&<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setCatEd(catEd?null:{nome:cat.nome,sub:cat.sub})}>Renomear</button>}
+          {cat.key!==""&&<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={excluirCategoria}>Excluir</button>}
+          <button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>{setMapaCat(null);setMapaSel(null);setCatEd(null);}}>← Todas</button>
+        </div>:<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>setCatForm(catForm?null:{nome:"",sub:""})}>+ Nova categoria</button>}/>
+        {catForm&&!cat&&<div style={{padding:14,borderRadius:16,background:"rgba(var(--idi-rgb),.05)",marginBottom:14}}>
+          <div style={{...lab,marginBottom:8}}>Nova categoria</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <input autoFocus style={{...inp,flex:"1 1 150px",width:"auto"}} value={catForm.nome} onChange={e=>setCatForm({...catForm,nome:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")criarCategoria();}} placeholder={sel==="de"?"Nome em alemão: Kleidung":"Nome em francês: Vêtements"} aria-label="Nome da categoria"/>
+            <input style={{...inp,flex:"1 1 150px",width:"auto"}} value={catForm.sub} onChange={e=>setCatForm({...catForm,sub:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")criarCategoria();}} placeholder="Tradução (opcional): roupas" aria-label="Tradução da categoria"/>
+          </div>
+          <div style={{marginTop:10,display:"flex",gap:10}}><button style={{...btnP,opacity:catForm.nome.trim()?1:.4}} disabled={!catForm.nome.trim()} onClick={criarCategoria}>Criar categoria</button><button style={btnS} onClick={()=>setCatForm(null)}>Cancelar</button></div>
+        </div>}
+        {catEd&&cat&&<div style={{padding:14,borderRadius:16,background:"rgba(var(--idi-rgb),.05)",marginBottom:14}}>
+          <div style={{...lab,marginBottom:8}}>Renomear categoria</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            <input style={{...inp,flex:"1 1 150px",width:"auto"}} value={catEd.nome} onChange={e=>setCatEd({...catEd,nome:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")renomearCategoria();}} aria-label="Novo nome da categoria"/>
+            <input style={{...inp,flex:"1 1 150px",width:"auto"}} value={catEd.sub} onChange={e=>setCatEd({...catEd,sub:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")renomearCategoria();}} placeholder="Tradução" aria-label="Nova tradução da categoria"/>
+          </div>
+          <div style={{marginTop:10,display:"flex",gap:10}}><button style={btnP} onClick={renomearCategoria}>Salvar</button><button style={btnS} onClick={()=>setCatEd(null)}>Cancelar</button></div>
+        </div>}
+        {mapaCats.length===0?<Vazio>Crie sua primeira categoria, por exemplo «{sel==="de"?"Kleidung":"Vêtements"}», e vá alimentando com as palavras que você aprende. O mapa cresce com você.</Vazio>:<>
+          <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",marginBottom:10}}>
+            <button style={{...btnS,padding:"6px 14px",fontSize:14}} onClick={()=>setMapaZ(z=>Math.max(.6,+(z-.2).toFixed(2)))} aria-label="Diminuir o mapa">−</button>
+            <button style={{...btnS,padding:"6px 14px",fontSize:14}} onClick={()=>setMapaZ(z=>Math.min(1.8,+(z+.2).toFixed(2)))} aria-label="Aumentar o mapa">+</button>
+            <span style={{...lab,fontSize:9.5}}>{cat?"toque numa palavra para ver os detalhes":"toque numa categoria para abrir"}</span>
+          </div>
+          <div ref={el=>{if(el){const k=(cat?cat.key:"*")+"|"+vocSel.length;if(el.dataset.c!==k){el.dataset.c=k;el.scrollLeft=(el.scrollWidth-el.clientWidth)/2;el.scrollTop=0;}}}} style={{overflow:"auto",maxHeight:isMobile?"68vh":"74vh",borderRadius:18,background:"radial-gradient(circle at 50% 40%,#FFFDF8,#F6EEDC)",border:"1px solid rgba(var(--idi-rgb),.1)",padding:"6px 0"}}>{svg}</div>
+          <div style={{display:"flex",gap:"6px 18px",flexWrap:"wrap",marginTop:14,fontSize:13}}>
+            {(cat?[["palavras",cat.total],["dominadas",cat.dom],["adicionadas em 7 dias",cat.pal.filter(v=>(v.criada||"")>=addDays(hoje,-7)).length],["dominadas em 7 dias",cat.pal.filter(v=>v.domEm&&v.domEm>=addDays(hoje,-7)).length]]:[["palavras",vocSel.length],["categorias",mapaCats.filter(c=>c.key!=="").length],["dominadas",dominadas],["dominadas em 7 dias",dom7]]).map(([l,v])=><span key={l}><b style={{...serif,fontSize:20,fontWeight:400}}>{v}</b> <span style={{opacity:.65}}>{l}</span></span>)}
+          </div>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:12,fontSize:11.5}}>
+            {[["#fff","#9A948A","nova",true],["#FBF1D8","#C9922B","aprendendo"],["#E8F1DA","#7FA84A","quase lá"],["#D5E8C8","#3C7030","dominada"]].map(([f,st,n,d])=>(
+              <span key={n} style={{display:"inline-flex",alignItems:"center",gap:6}}><i style={{width:14,height:14,borderRadius:"50%",background:f,border:"2px "+(d?"dashed":"solid")+" "+st,display:"inline-block"}}/>{n}</span>))}
+            <span style={{display:"inline-flex",alignItems:"center",gap:6}}><i style={{width:14,height:14,borderRadius:"50%",background:"#B23F2A",display:"inline-block"}}/>erra com frequência</span>
+          </div>
+        </>}
+        {mapaSemCat&&!cat&&<div style={{...lab,fontSize:9.5,marginTop:12,lineHeight:1.6,whiteSpace:"normal"}}>{mapaSemCat.total} {mapaSemCat.total>1?"palavras estão":"palavra está"} sem categoria. Abra uma categoria sua e use “Puxar do meu vocabulário” para guardá-las lá.</div>}
+      </Card>
+      {sv&&(()=>{const c=mapaCor(sv);return (
+        <div id="idi-mapa-det"><Card>
+          <div style={{...lab,marginBottom:6}}>{c.nome}</div>
+          <div style={{...serif,fontSize:isMobile?30:36,lineHeight:1.1}}><Nome v={sv}/></div>
+          <div style={{fontSize:14.5,marginTop:6,opacity:.8}}>{sv.trad}{sv.plural&&<span style={{opacity:.6}}> · pl. {sv.plural}</span>}</div>
+          {sv.ex&&<div style={{fontSize:13.5,marginTop:10,lineHeight:1.55,fontStyle:"italic",opacity:.85}}>{sv.ex.replace(/\[\[|\]\]/g,"")}</div>}
+          <div style={{display:"flex",gap:18,flexWrap:"wrap",marginTop:14,fontSize:13}}>
+            <span><span style={lab}>Nível</span><br/>{sv.box||0} de 5</span>
+            <span><span style={lab}>Acertos / erros</span><br/>{sv.ok||0} / {sv.er||0}</span>
+            <span><span style={lab}>Próxima revisão</span><br/>{sv.prox?fd(sv.prox):"—"}</span>
+            {sv.criada&&<span><span style={lab}>Aprendida em</span><br/>{fd(sv.criada)}</span>}
+            {sv.domEm&&<span><span style={lab}>Dominada em</span><br/>{fd(sv.domEm)}</span>}
+          </div>
+          <div style={{marginTop:16,paddingTop:14,borderTop:"1px solid rgba(var(--idi-rgb),.1)"}}>
+            <div style={{...lab,marginBottom:6}}>Mover para outra categoria</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+              <select style={{...inp,width:"auto",flex:"1 1 160px"}} value={cat.key} onChange={e=>{const t=mapaCats.find(x=>x.key===e.target.value);if(t&&t.key!==cat.key)moverPalavra(sv.id,t.tema);}} aria-label="Categoria da palavra">{mapaCats.map(x=><option key={x.key} value={x.key}>{x.key===""?"Sem categoria":x.nome+(x.sub?" · "+x.sub:"")}</option>)}</select>
+              <input style={{...inp,width:"auto",flex:"1 1 160px"}} value={mapaNova} onChange={e=>setMapaNova(e.target.value)} placeholder="ou nova: Kleidung · roupas" aria-label="Nova categoria"/>
+              <button style={{...btnS,padding:"9px 16px",opacity:mapaNova.trim()?1:.4}} disabled={!mapaNova.trim()} onClick={()=>moverPalavra(sv.id,mapaNova)}>Mover</button>
+            </div>
+          </div>
+        </Card></div>);})()}
+      {cat&&cat.key!==""&&<Card>
+        <Titulo k="Alimentar a categoria" t={"Adicionar a "+cat.nome}/>
+        <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10}}>
+          <input style={inp} value={mapaF.termo} onChange={e=>setMapaF({...mapaF,termo:e.target.value})} placeholder={sel==="de"?"Palavra: der Pullover":"Palavra: le pull"} aria-label="Palavra nova"/>
+          <input style={inp} value={mapaF.trad} onChange={e=>setMapaF({...mapaF,trad:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addPalavraMapa();}} placeholder="Tradução: suéter" aria-label="Tradução da palavra"/>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center",marginTop:10}}>
+          <span style={{...lab,fontSize:9.5}}>Artigo</span>
+          {ARTS.map(a=><button key={a} onClick={()=>setMapaF({...mapaF,art:mapaF.art===a?"":a})} style={{border:"1px solid "+ART_COR[a],background:mapaF.art===a?ART_COR[a]:ART_BG[a],color:mapaF.art===a?"#fff":ART_COR[a],fontWeight:700,fontSize:13,padding:"7px 14px",borderRadius:999,cursor:"pointer",fontFamily:"inherit"}}>{a}</button>)}
+          <input style={{...inp,width:"auto",flex:"1 1 140px"}} value={mapaF.plural} onChange={e=>setMapaF({...mapaF,plural:e.target.value})} placeholder="Plural (opcional)" aria-label="Plural da palavra"/>
+        </div>
+        <input style={{...inp,marginTop:10}} value={mapaF.ex} onChange={e=>setMapaF({...mapaF,ex:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addPalavraMapa();}} placeholder="Frase de exemplo (opcional): Ich trage einen Pullover." aria-label="Exemplo da palavra"/>
+        <div style={{marginTop:12,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+          <button style={{...btnP,opacity:(mapaF.termo.trim()&&mapaF.trad.trim())?1:.4}} disabled={!(mapaF.termo.trim()&&mapaF.trad.trim())} onClick={addPalavraMapa}>Adicionar ao mapa</button>
+          <button style={btnS} onClick={()=>{setMapaMais(!mapaMais);setMapaBusca("");}}>{mapaMais?"Fechar":"Puxar do meu vocabulário"}</button>
+        </div>
+        <div style={{...lab,fontSize:9.5,marginTop:10,lineHeight:1.6,whiteSpace:"normal"}}>A palavra entra no seu vocabulário como nova e passa a ser revisada como as outras.</div>
+        {mapaMais&&<div style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(var(--idi-rgb),.1)"}}>
+          <input style={inp} value={mapaBusca} onChange={e=>setMapaBusca(e.target.value)} placeholder="Buscar palavra que você já tem…" aria-label="Buscar no vocabulário"/>
+          {(()=>{const q=mapaBusca.trim().toLowerCase();const lista=vocSel.filter(v=>(v.tema||"").trim().toLowerCase()!==cat.key&&(!q||(v.termo||"").toLowerCase().includes(q)||(v.trad||"").toLowerCase().includes(q))).slice(0,12);
+            return lista.length===0?<div style={{fontSize:13,opacity:.6,marginTop:10}}>Nenhuma palavra encontrada.</div>:lista.map(v=>(
+              <div key={v.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderTop:"1px solid rgba(var(--idi-rgb),.07)"}}>
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:600}}><Nome v={v}/></div><div style={{fontSize:12,opacity:.6}}>{v.trad}{(v.tema||"").trim()?" · em "+temaPartes(v.tema).nome:" · sem categoria"}</div></div>
+                <button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={()=>{setVocab(vocab.map(x=>x.id===v.id?{...x,tema:cat.tema}:x));setToast("«"+v.termo+"» entrou em "+cat.nome);}}>+ Adicionar</button>
+              </div>));})()}
+        </div>}
+      </Card>}
+      {mapaCats.length>0&&<Card>
+        <Titulo k="Evolução" t="Por categoria"/>
+        {mapaCats.map((c,k)=>(
+          <button key={c.key} onClick={()=>{setMapaCat(c.key);setMapaSel(null);}} style={{display:"block",width:"100%",textAlign:"left",background:"none",border:"none",borderTop:k===0?"none":"1px solid rgba(var(--idi-rgb),.08)",padding:"11px 0",cursor:"pointer",fontFamily:"inherit",color:"inherit"}}>
+            <div style={{display:"flex",justifyContent:"space-between",gap:10,fontSize:14.5,fontWeight:600}}><span>{c.nome}{c.sub&&<span style={{fontWeight:400,opacity:.55,fontSize:12.5}}> · {c.sub}</span>}</span><span style={{...lab,fontSize:10}}>{c.dom}/{c.total}{c.err>0?" · "+c.err+" erra":""}</span></div>
+            <div style={{display:"flex",height:6,borderRadius:99,overflow:"hidden",background:"rgba(var(--idi-rgb),.08)",marginTop:8}}><i style={{width:(c.total?c.dom/c.total*100:0)+"%",background:"#3C7030"}}/><i style={{width:(c.total?c.apr/c.total*100:0)+"%",background:"#C9922B"}}/></div>
+          </button>))}
+      </Card>}
+    </>);
+  };
+  const subs=[["hoje","Hoje"],["pratica","Praticar"+((estDue.length+exTopicosPend)?" · "+(estDue.length+exTopicosPend):"")],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["mapa","Mapa"],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
   const nomeSel=`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
   // Evolução
@@ -4605,6 +4847,9 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         .idi .idi-hero,.idi .idi-sheet{animation:idiFade .5s ease both}
         @keyframes idiFade{from{opacity:0}to{opacity:1}}
         @keyframes idiPulse{0%,100%{opacity:1}50%{opacity:.25}}
+        @keyframes idiFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(3px,-6px)}}
+        .idi .idi-float{animation:idiFloat 5s ease-in-out infinite}
+        @media (prefers-reduced-motion:reduce){.idi .idi-float{animation:none}}
         body:has(.idi[data-lang="fr"]){background:#17213F!important}
         .idi .idi-in{position:relative;max-width:1100px;margin:0 auto;padding:${isMobile?"18px 18px 54px":"26px 28px 62px"}}
         .idi .idi-sheet{position:relative;background:${T.sheet};border-radius:30px 30px 0 0;margin-top:-28px;min-height:70vh;padding:${isMobile?"26px 14px 110px":"34px 28px 110px"}}
@@ -5099,6 +5344,9 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       </>)}
 
       {/* ═ PALAVRAS ═ */}
+      {/* ═ MAPA ═ */}
+      {sub==="mapa"&&mapaUI()}
+
       {sub==="palavras"&&(<>
         {rs&&(
           <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"36px 28px"}}>
