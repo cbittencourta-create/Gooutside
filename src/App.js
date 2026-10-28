@@ -2060,6 +2060,23 @@ function mapaLayout(n,caps,radii){
   }
   return {pos,rmax:pos.reduce((a,q)=>Math.max(a,Math.hypot(q.x,q.y)),0)};
 }
+// categoria do mapa fica em "cat"; "tema" continua sendo a cena que espaça as palavras novas
+const catDe=v=>(v&&v.cat!==undefined)?String(v.cat||""):String((v&&v.tema)||"");
+async function gEncaixarPalavras(lang,lista,cats){
+  const idioma=lang==="de"?"alemão":"francês";
+  const linhas=lista.map(v=>v.id+" | "+(v.art?v.art+" ":"")+v.termo+" | "+(v.trad||"")).join("\n");
+  const prompt="Uma aluna brasileira organiza seu vocabulário de "+idioma+" em categorias que ELA mesma criou. Categorias disponíveis (use exatamente uma destas, copiando o texto): "+cats.map(c=>"«"+c+"»").join("; ")+". Para cada palavra escolha a categoria cujo significado combina. Se nenhuma combinar claramente, devolva tema vazio: NÃO invente categoria nova. Palavras (id | termo | tradução):\n"+linhas+"\nResponda SOMENTE com JSON: {\"itens\":[{\"id\":\"\",\"tema\":\"\"}]}";
+  const obj=iaJson(await iaChamar(prompt,null,true));
+  const arr=Array.isArray(obj)?obj:(Array.isArray(obj.itens)?obj.itens:[]);
+  const ids=new Set(lista.map(v=>v.id)); const out={};
+  arr.forEach(x=>{
+    if(!x||!ids.has(x.id)||typeof x.tema!=="string")return;
+    const t=x.tema.replace(/[«»]/g,"").trim().toLowerCase(); if(!t)return;
+    const ja=cats.find(c=>c.toLowerCase()===t)||cats.find(c=>temaPartes(c).nome.toLowerCase()===t);
+    if(ja)out[x.id]=ja;
+  });
+  return out;
+}
 async function gNotaDia(lang,resumos,fracos){
   const idioma=lang==="de"?"alemão":"francês";
   const prompt="Você é o treinador de "+idioma+" de uma aluna brasileira (nível A2) que quer ficar fluente. Resultado da sessão de hoje:\n"+resumos.map(r=>"- "+r).join("\n")+"\nPontos fracos atuais: "+(fracos.length?fracos.join("; "):"ainda sem dados")+".\nEscreva em português do Brasil, em até 60 palavras, uma observação direta: o que merece atenção amanhã e por quê. Sem elogios vazios e sem listas.";
@@ -3620,7 +3637,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [edLog,setEdLog]=useState(null);
   const [verTodosLog,setVerTodosLog]=useState(false);
   const [fp,setFp]=useState({lang:"",tipo:"ouvir",min:"",nota:"",data:"",ref:""});
-  const [fw,setFw]=useState({lang:"",termo:"",trad:"",ex:"",art:"",plural:"",tipo:"palavra",minha:"",tema:"",vars:""});
+  const [fw,setFw]=useState({lang:"",termo:"",trad:"",ex:"",art:"",plural:"",tipo:"palavra",minha:"",tema:"",vars:"",cat:""});
   const [plt]=useLS("v4_plt",[],userId);
   const [ii,setIi]=useLS("v5_idi_ii",{},userId);
   const [iiEd,setIiEd]=useState(null);
@@ -3700,6 +3717,38 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [mapaF,setMapaF]=useState({termo:"",art:"",plural:"",trad:"",ex:""});
   const [mapaMais,setMapaMais]=useState(false);
   const [mapaBusca,setMapaBusca]=useState("");
+  const vocabRef=useRef(vocab); vocabRef.current=vocab;
+  const catTentRef=useRef(new Set());
+  const catBusy=useRef(false);
+  const [encaixando,setEncaixando]=useState(false);
+  const catsDaLang=lg=>{
+    const m=new Map();
+    cats.filter(c=>c.lang===lg).forEach(c=>{const t=c.nome.trim()+((c.sub||"").trim()?" · "+c.sub.trim():"");m.set(t.toLowerCase(),t);});
+    vocabRef.current.filter(v=>v.lang===lg).forEach(v=>{const t=catDe(v).trim();if(t&&!m.has(t.toLowerCase()))m.set(t.toLowerCase(),t);});
+    return [...m.values()];
+  };
+  // palavra nova entra sozinha numa categoria que a usuária já criou (nunca cria categoria)
+  useEffect(()=>{
+    if(catBusy.current||(!iaKey(IA_KC)&&!iaKey(IA_KG)))return;
+    const hj=today();
+    const cand=vocab.filter(v=>v.criada===hj&&v.cat===undefined&&!catDe(v).trim()&&!v.catTent&&v.tipo!=="chunk"&&!catTentRef.current.has(v.id));
+    if(!cand.length)return;
+    const lang=cand[0].lang; const lista=catsDaLang(lang); if(!lista.length)return;
+    const grupo=cand.filter(v=>v.lang===lang).slice(0,10);
+    grupo.forEach(v=>catTentRef.current.add(v.id)); catBusy.current=true;
+    (async()=>{
+      try{
+        const r=await gEncaixarPalavras(lang,grupo,lista);
+        const ids=new Set(grupo.map(v=>v.id)); let n=0; const sem=[]; let ex=null;
+        const nova=vocabRef.current.map(v=>{if(!ids.has(v.id))return v;const t=r[v.id];if(t){n++;if(!ex)ex=(v.art?v.art+" ":"")+v.termo+" → "+temaPartes(t).nome;return {...v,cat:t};}sem.push(v);return {...v,catTent:true};});
+        vocabRef.current=nova; setVocab(nova);
+        if(n)setToast(n===1?ex:n+" palavras encaixadas nas suas categorias");
+        else if(sem.length)setToast("«"+sem[0].termo+"» não combina com nenhuma das suas categorias. Crie uma no Mapa.");
+      }catch{}
+      catBusy.current=false;
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[vocab,cats]);
   const [mapaNova,setMapaNova]=useState("");
   const [diaLog,setDiaLog]=useLS("v5_idi_dia",{},userId);
   const diaRef=useRef({ativo:false,i:0,passos:[],visto:false,ult:{},res:[]});
@@ -3832,6 +3881,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const chunk=fw.tipo==="chunk";
     const extra={};
     if(fw.tema.trim())extra.tema=fw.tema.trim();
+    if(fw.cat)extra.cat=fw.cat;
     if(fw.minha.trim())extra.minha=fw.minha.trim();
     let ex=fw.ex.trim(), art="", pl="";
     if(chunk){
@@ -4597,7 +4647,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const mapaCats=(()=>{
     const m=new Map();
     cats.filter(c=>c.lang===sel).forEach(c=>{const t=c.nome.trim()+((c.sub||"").trim()?" · "+c.sub.trim():"");const k=t.toLowerCase();if(!m.has(k))m.set(k,{key:k,nome:c.nome.trim(),sub:(c.sub||"").trim(),tema:t,id:c.id,pal:[]});});
-    vocSel.forEach(v=>{const k=(v.tema||"").trim().toLowerCase();let c=m.get(k);if(!c){const pt=temaPartes(v.tema);c={key:k,nome:k?pt.nome:"Sem categoria",sub:pt.sub,tema:(v.tema||"").trim(),pal:[]};m.set(k,c);}c.pal.push(v);});
+    vocSel.forEach(v=>{const k=catDe(v).trim().toLowerCase();let c=m.get(k);if(!c){const pt=temaPartes(catDe(v));c={key:k,nome:k?pt.nome:"Sem categoria",sub:pt.sub,tema:catDe(v).trim(),pal:[]};m.set(k,c);}c.pal.push(v);});
     return [...m.values()].map(c=>{
       const tot=c.pal.length, dom=c.pal.filter(v=>(v.box||0)>=4).length, nov=c.pal.filter(isNova).length;
       return {...c,total:tot,dom,nov,apr:tot-dom-nov,err:c.pal.filter(v=>(v.er||0)>=2&&(v.er||0)>(v.ok||0)).length,pct:tot?Math.round(dom/tot*100):0};
@@ -4616,14 +4666,14 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const nome=catEd.nome.trim(), sub=catEd.sub.trim(); if(!nome)return;
     const tema=nome+(sub?" · "+sub:""); const key=tema.toLowerCase();
     if(key!==cat.key&&mapaCats.some(c=>c.key===key)){setToast("Já existe uma categoria com esse nome.");return;}
-    setVocab(vocab.map(v=>(v.lang===sel&&(v.tema||"").trim().toLowerCase()===cat.key)?{...v,tema}:v));
+    setVocab(vocab.map(v=>(v.lang===sel&&catDe(v).trim().toLowerCase()===cat.key)?{...v,cat:tema}:v));
     setCats(cat.id?cats.map(c=>c.id===cat.id?{...c,nome,sub}:c):[...cats,{id:uid(),lang:sel,nome,sub}]);
     setMapaCat(key); setCatEd(null);
   };
   const excluirCategoria=()=>{
     const cat=mapaCats.find(c=>c.key===mapaCat); if(!cat||!cat.key)return;
     if(!window.confirm("Excluir a categoria «"+cat.nome+"»?"+(cat.total?" As "+cat.total+(cat.total>1?" palavras continuam":" palavra continua")+" no seu vocabulário, sem categoria.":"")))return;
-    setVocab(vocab.map(v=>(v.lang===sel&&(v.tema||"").trim().toLowerCase()===cat.key)?{...v,tema:""}:v));
+    setVocab(vocab.map(v=>(v.lang===sel&&catDe(v).trim().toLowerCase()===cat.key)?{...v,cat:""}:v));
     if(cat.id)setCats(cats.filter(c=>c.id!==cat.id));
     setMapaCat(null); setMapaSel(null); setCatEd(null);
   };
@@ -4638,13 +4688,27 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const vazio={termo:"",art:"",plural:"",trad:"",ex:""};
     const igual=vocab.find(v=>v.lang===sel&&v.tipo!=="chunk"&&(v.termo||"").trim().toLowerCase()===termo.toLowerCase());
     if(igual){
-      if((igual.tema||"").trim().toLowerCase()===cat.key){setToast("«"+termo+"» já está nesta categoria.");return;}
-      setVocab(vocab.map(v=>v.id===igual.id?{...v,tema:cat.tema}:v)); setToast("«"+termo+"» já era seu; movi para "+cat.nome+"."); setMapaF(vazio); return;
+      if(catDe(igual).trim().toLowerCase()===cat.key){setToast("«"+termo+"» já está nesta categoria.");return;}
+      setVocab(vocab.map(v=>v.id===igual.id?{...v,cat:cat.tema}:v)); setToast("«"+termo+"» já era seu; movi para "+cat.nome+"."); setMapaF(vazio); return;
     }
-    setVocab([{id:uid(),lang:sel,termo,trad,ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,tema:cat.tema,...(art?{art,plural:pl}:{})},...vocab]);
+    setVocab([{id:uid(),lang:sel,termo,trad,ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,cat:cat.tema,...(art?{art,plural:pl}:{})},...vocab]);
     setMapaF(vazio); setToast("«"+termo+"» entrou em "+cat.nome);
   };
-  const moverPalavra=(id,tema)=>{const t=(tema||"").trim();setVocab(vocab.map(v=>v.id===id?{...v,tema:t}:v));setMapaNova("");if(t)setMapaCat(t.toLowerCase());else setMapaCat("");};
+  const encaixarSemCat=async()=>{
+    if(encaixando)return;
+    const lista=catsDaLang(sel); if(!lista.length)return;
+    const sem=vocabRef.current.filter(v=>v.lang===sel&&!catDe(v).trim()&&v.tipo!=="chunk").slice(0,90);
+    if(!sem.length)return;
+    setEncaixando(true);
+    try{
+      const mp={}; for(let i=0;i<sem.length;i+=30){Object.assign(mp,await gEncaixarPalavras(sel,sem.slice(i,i+30),lista));}
+      const n=Object.keys(mp).length;
+      if(n){const nova=vocabRef.current.map(v=>mp[v.id]?{...v,cat:mp[v.id]}:v);vocabRef.current=nova;setVocab(nova);}
+      setToast(n?n+(n>1?" palavras encaixadas nas suas categorias":" palavra encaixada na sua categoria")+(sem.length-n?" · "+(sem.length-n)+" sem categoria que combine":""):"Nenhuma combinou com as suas categorias.");
+    }catch(err){setToast(err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros.":"Não consegui encaixar ("+err.message+").");}
+    setEncaixando(false);
+  };
+  const moverPalavra=(id,tema)=>{const t=(tema||"").trim();setVocab(vocab.map(v=>v.id===id?{...v,cat:t}:v));setMapaNova("");if(t)setMapaCat(t.toLowerCase());else setMapaCat("");};
   const selPalavra=id=>{setMapaSel(id);if(id)setTimeout(()=>{const e=document.getElementById("idi-mapa-det");if(e)e.scrollIntoView({behavior:"smooth",block:"nearest"});},120);};
   const mapaTrunc=(t,n)=>t.length>n?t.slice(0,n-1)+"…":t;
   const mapaUI=()=>{
@@ -4745,7 +4809,10 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <span style={{display:"inline-flex",alignItems:"center",gap:6}}><i style={{width:14,height:14,borderRadius:"50%",background:"#B23F2A",display:"inline-block"}}/>erra com frequência</span>
           </div>
         </>}
-        {mapaSemCat&&!cat&&<div style={{...lab,fontSize:9.5,marginTop:12,lineHeight:1.6,whiteSpace:"normal"}}>{mapaSemCat.total} {mapaSemCat.total>1?"palavras estão":"palavra está"} sem categoria. Abra uma categoria sua e use “Puxar do meu vocabulário” para guardá-las lá.</div>}
+        {mapaSemCat&&!cat&&<div style={{marginTop:12}}>
+          <div style={{...lab,fontSize:9.5,lineHeight:1.6,whiteSpace:"normal"}}>{mapaSemCat.total} {mapaSemCat.total>1?"palavras estão":"palavra está"} sem categoria. Palavras novas entram sozinhas na categoria que combina; para as antigas, use o botão ou “Puxar do meu vocabulário” dentro de uma categoria.</div>
+          {iaNome&&mapaCats.some(c=>c.key!=="")&&<button style={{...btnS,marginTop:10,opacity:encaixando?.5:1}} disabled={encaixando} onClick={encaixarSemCat}>{encaixando?"Encaixando…":"Encaixar nas minhas categorias"}</button>}
+        </div>}
       </Card>
       {sv&&(()=>{const c=mapaCor(sv);return (
         <div id="idi-mapa-det"><Card>
@@ -4788,11 +4855,11 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         <div style={{...lab,fontSize:9.5,marginTop:10,lineHeight:1.6,whiteSpace:"normal"}}>A palavra entra no seu vocabulário como nova e passa a ser revisada como as outras.</div>
         {mapaMais&&<div style={{marginTop:14,paddingTop:12,borderTop:"1px solid rgba(var(--idi-rgb),.1)"}}>
           <input style={inp} value={mapaBusca} onChange={e=>setMapaBusca(e.target.value)} placeholder="Buscar palavra que você já tem…" aria-label="Buscar no vocabulário"/>
-          {(()=>{const q=mapaBusca.trim().toLowerCase();const lista=vocSel.filter(v=>(v.tema||"").trim().toLowerCase()!==cat.key&&(!q||(v.termo||"").toLowerCase().includes(q)||(v.trad||"").toLowerCase().includes(q))).slice(0,12);
+          {(()=>{const q=mapaBusca.trim().toLowerCase();const lista=vocSel.filter(v=>catDe(v).trim().toLowerCase()!==cat.key&&(!q||(v.termo||"").toLowerCase().includes(q)||(v.trad||"").toLowerCase().includes(q))).slice(0,12);
             return lista.length===0?<div style={{fontSize:13,opacity:.6,marginTop:10}}>Nenhuma palavra encontrada.</div>:lista.map(v=>(
               <div key={v.id} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderTop:"1px solid rgba(var(--idi-rgb),.07)"}}>
-                <div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:600}}><Nome v={v}/></div><div style={{fontSize:12,opacity:.6}}>{v.trad}{(v.tema||"").trim()?" · em "+temaPartes(v.tema).nome:" · sem categoria"}</div></div>
-                <button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={()=>{setVocab(vocab.map(x=>x.id===v.id?{...x,tema:cat.tema}:x));setToast("«"+v.termo+"» entrou em "+cat.nome);}}>+ Adicionar</button>
+                <div style={{flex:1,minWidth:0}}><div style={{fontSize:14,fontWeight:600}}><Nome v={v}/></div><div style={{fontSize:12,opacity:.6}}>{v.trad}{catDe(v).trim()?" · em "+temaPartes(catDe(v)).nome:" · sem categoria"}</div></div>
+                <button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={()=>{setVocab(vocab.map(x=>x.id===v.id?{...x,cat:cat.tema}:x));setToast("«"+v.termo+"» entrou em "+cat.nome);}}>+ Adicionar</button>
               </div>));})()}
         </div>}
       </Card>}
@@ -5461,6 +5528,9 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             ?<div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Variações (dica = resposta, separadas por vírgula)</div><input style={inp} value={fw.vars} onChange={e=>setFw({...fw,vars:e.target.value})} placeholder={sel==="fr"?"partir = partes, venir = viennes, faire = fasses":"mitkommen = mitkommst, bleiben = bleibst"}/><div style={{fontSize:12,opacity:.6,marginTop:6}}>A cada revisão aparece uma variação diferente.</div></div>
             :<div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Frase de exemplo (a palavra vira a lacuna)</div><input style={inp} value={fw.ex} onChange={e=>setFw({...fw,ex:e.target.value})} placeholder="Frase real onde a palavra apareceu"/><div style={{fontSize:12,opacity:.6,marginTop:6}}>Dica: marque a lacuna com [[colchetes duplos]] se quiser outro trecho.</div></div>}
           <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Minha frase (opcional)</div><input style={inp} value={fw.minha} onChange={e=>setFw({...fw,minha:e.target.value})} placeholder={sel==="fr"?"Je suis médecin aux urgences.":"Ich arbeite als Ärztin im Notdienst."}/></div>
+          {fw.tipo!=="chunk"&&mapaCats.some(c=>c.key!=="")&&<div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Categoria do mapa</div>
+            <select style={inp} value={fw.cat||""} onChange={e=>setFw({...fw,cat:e.target.value})} aria-label="Categoria do mapa"><option value="">{iaNomeF?"Automática: o app escolhe pelo significado":"Sem categoria"}</option>{mapaCats.filter(c=>c.key!=="").map(c=><option key={c.key} value={c.tema}>{c.nome}{c.sub?" · "+c.sub:""}</option>)}</select>
+          </div>}
           <div style={{marginTop:12}}><div style={{...lab,marginBottom:6}}>Tema / cena (opcional)</div><input style={inp} list="idi-temas" value={fw.tema} onChange={e=>setFw({...fw,tema:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")addPalavra();}} placeholder="no restaurante, consultório, trânsito…"/>
             <datalist id="idi-temas">{[...new Set(vocSel.map(v=>v.tema).filter(Boolean))].map(t=><option key={t} value={t}/>)}</datalist>
             {temaN>=4&&<div style={{fontSize:12.5,marginTop:8,color:IDI_RED,lineHeight:1.5}}>Você já tem {temaN} palavras recentes em “{fw.tema.trim()}”. Muitas do mesmo campo semântico juntas se confundem: espalhe ao longo dos dias.</div>}
