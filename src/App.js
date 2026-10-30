@@ -2197,6 +2197,55 @@ async function gConversarLivro(hist,lang,lv){
   const prompt="Você é professor de "+idioma+" (nível A2) conversando em português do Brasil com uma aluna sobre o livro didático dela. Conteúdo das páginas em foco ("+lv.rotulo+")"+(lv.imgs.length?" (as imagens anexas são páginas sem texto selecionável)":"")+":\n«"+(lv.txt||"(veja as imagens)")+"»\n\nConversa até agora:\n"+conv+"\n\nResponda à última mensagem da aluna com base nessas páginas: direto, no máximo 180 palavras, citando a página quando ajudar e com exemplos curtos em "+idioma+". Se a pergunta não estiver coberta pelas páginas, diga isso e responda com o que você sabe, deixando claro que não está no trecho.";
   return (await iaChamar(prompt,lv.imgs.length?lv.imgs:null,false)).trim();
 }
+// ── Aula do dia: lançar palavras, verbos e expressões ──
+const AULA_SEP=/\s*(?:=|\t|→|\s[-–—]\s)\s*/;
+function aulaParse(lang,tipo,txt){
+  const Gx=GEN[lang]||GEN.de;
+  return (txt||"").split(/\n/).map(x=>x.trim()).filter(Boolean).map((raw,i)=>{
+    let main=raw, ex="";
+    const p=raw.indexOf("|");
+    if(p>=0){main=raw.slice(0,p).trim();ex=raw.slice(p+1).trim();}
+    const m=AULA_SEP.exec(main);
+    let esq=main, dir="";
+    if(m){esq=main.slice(0,m.index).trim();dir=main.slice(m.index+m[0].length).trim();}
+    let termo=esq, art="", plural="", trad="", formas="";
+    if(tipo==="verbo"){
+      const partes=dir.split(/\s*;\s*/).filter(Boolean);
+      trad=partes[0]||""; formas=partes.slice(1).join(" · ");
+    }else{
+      trad=dir;
+      if(tipo==="palavra"){
+        const c=termo.indexOf(",");
+        if(c>=0){plural=termo.slice(c+1).trim().replace(new RegExp("^"+Gx.plArt+"\\s+","i"),"");termo=termo.slice(0,c).trim();}
+        const a=termo.match(Gx.parse);
+        if(a){art=a[1].toLowerCase();termo=a[2];}
+      }
+    }
+    return {i,raw,tipo,termo,art,plural,trad,formas,ex};
+  }).filter(x=>x.termo);
+}
+function aulaLinha(lang,x){
+  const Gx=GEN[lang]||GEN.de;
+  let l=(x.art?x.art+" ":"")+x.termo+(x.plural?", "+Gx.plArt+" "+x.plural:"");
+  if(x.trad){
+    l+=" = "+x.trad;
+    if(x.tipo==="verbo"&&x.formas)l+=" ; "+x.formas.split(" · ").join(" ; ");
+  }
+  if(x.ex)l+=" | "+x.ex;
+  return l;
+}
+async function gCompletarAula(lang,tipo,itens){
+  const idioma=lang==="de"?"alemão":"francês";
+  const tp=tipo==="verbo"?"verbos (infinitivo)":tipo==="expr"?"expressões":"palavras";
+  const fv=lang==="de"?"Präteritum (3ª pessoa) e Partizip II com auxiliar, separados por ·, ex.: ging · ist gegangen":"particípio passado com auxiliar, ex.: est allé";
+  const linhas=itens.map(x=>x.i+" | "+x.termo+" | "+(x.art||"")+" | "+(x.trad||"")+" | "+(x.formas||"")+" | "+(x.ex||"")).join("\n");
+  const prompt="Uma aluna brasileira (nível A2) anota o que viu na aula de "+idioma+". Itens são "+tp+". Complete SOMENTE o que está vazio em cada item e não altere o que ela escreveu. Campos: art (artigo definido, só para substantivos: "+(lang==="de"?"der/die/das":"le/la")+"; vazio nos demais); plural (plural do substantivo, sem artigo; vazio nos demais); trad (tradução curta em português do Brasil); formas (só para verbos: "+fv+"; vazio nos demais); ex (uma frase curta e natural em "+idioma+", nível A2, usando o item; nos verbos pode estar conjugado). Itens (i | termo | art | trad | formas | ex):\n"+linhas+"\nResponda só com JSON, um objeto por item: [{\"i\":0,\"art\":\"\",\"plural\":\"\",\"trad\":\"\",\"formas\":\"\",\"ex\":\"\"}]";
+  const obj=iaJson(await iaChamar(prompt,null,true));
+  const arr=Array.isArray(obj)?obj:(Array.isArray(obj.itens)?obj.itens:[]);
+  const out={};
+  arr.forEach(y=>{if(y&&Number.isInteger(y.i))out[y.i]=y;});
+  return out;
+}
 const GRAM_ITENS=Object.entries(GRAM_RAW).flatMap(([lang,txt])=>{
   const cnt={};
   return txt.trim().split("\n").filter(Boolean).map(l=>{
@@ -3714,6 +3763,14 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [cats,setCats]=useLS("v5_idi_cats",[],userId);
   const [catForm,setCatForm]=useState(null);
   const [catEd,setCatEd]=useState(null);
+  const [aulaTipo,setAulaTipo]=useState("palavra");
+  const [aulaTxt,setAulaTxt]=useState("");
+  const [aulaData,setAulaData]=useState("");
+  const [aulaTema,setAulaTema]=useState("");
+  const [aulaBusy,setAulaBusy]=useState(false);
+  const [aulaErr,setAulaErr]=useState("");
+  const [aulaVer,setAulaVer]=useState("");
+  const [aulaNotas,setAulaNotas]=useLS("v5_idi_aula",{},userId);
   const [mapaF,setMapaF]=useState({termo:"",art:"",plural:"",trad:"",ex:""});
   const [mapaMais,setMapaMais]=useState(false);
   const [mapaBusca,setMapaBusca]=useState("");
@@ -3731,7 +3788,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   useEffect(()=>{
     if(catBusy.current||(!iaKey(IA_KC)&&!iaKey(IA_KG)))return;
     const hj=today();
-    const cand=vocab.filter(v=>v.criada===hj&&v.cat===undefined&&!catDe(v).trim()&&!v.catTent&&v.tipo!=="chunk"&&!catTentRef.current.has(v.id));
+    const cand=vocab.filter(v=>v.criada===hj&&v.cat===undefined&&!catDe(v).trim()&&!v.catTent&&v.tipo!=="chunk"&&v.tipo!=="verbo"&&!catTentRef.current.has(v.id));
     if(!cand.length)return;
     const lang=cand[0].lang; const lista=catsDaLang(lang); if(!lista.length)return;
     const grupo=cand.filter(v=>v.lang===lang).slice(0,10);
@@ -3792,7 +3849,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const vocSel=vocab.filter(v=>inSel(v.lang));
   const isNova=v=>!v.vista&&!((v.ok||0)+(v.er||0));
   const due=vocSel.filter(v=>!isNova(v)&&v.prox<=hoje).sort((a,b)=>a.prox.localeCompare(b.prox));
-  const novasTodas=vocSel.filter(isNova).sort((a,b)=>(a.criada||"").localeCompare(b.criada||""));
+  const novasTodas=vocSel.filter(isNova).sort((a,b)=>(b.aula||"").localeCompare(a.aula||"")||(a.criada||"").localeCompare(b.criada||""));
   const cfgL=L(sel);
   const baseNov=(cfgL.novosDia!==undefined&&cfgL.novosDia!==null&&cfgL.novosDia!==""&&Number.isFinite(+cfgL.novosDia))?+cfgL.novosDia:(sel==="de"?10:6);
   const hhmm=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||"");return m?(+m[1])*60+(+m[2]):null;};
@@ -3845,6 +3902,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const modoCard=w=>{
     if(w.tipo==="chunk")return (w.vars||[]).length?"chunk":"rec";
     const b=w.box||0;
+    if(w.tipo==="verbo"&&w.formas&&b>=1&&(((w.ok||0)+(w.er||0))%3===2))return "forma";
     if(temCloze(w.ex)&&b>=1&&(((w.ok||0)+(w.er||0))%2===1))return "cloze";
     if(b>=2)return "prod";
     return "rec";
@@ -3900,6 +3958,55 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setVocab([{id:uid(),lang,termo,trad,ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,...extra,...(art?{art,plural:pl}:{})},...vocab]);
     setFw({...fw,termo:"",trad:"",ex:"",art:"",plural:"",minha:"",vars:""});
   };
+  // ── Aula do dia ──
+  const aulaDup=x=>vocSel.find(v=>v.termo.toLowerCase()===x.termo.toLowerCase());
+  const salvarAula=()=>{
+    const lang=defLang; const data=aulaData||hoje;
+    const itens=aulaParse(lang,aulaTipo,aulaTxt).filter(x=>x.trad);
+    if(!itens.length)return;
+    const vistos=new Set(); const novos=[]; const marcar={}; let jaTinha=0;
+    itens.forEach(x=>{
+      const k=x.termo.toLowerCase(); if(vistos.has(k))return; vistos.add(k);
+      const d=aulaDup(x);
+      if(d){jaTinha++;marcar[d.id]=x;return;}
+      let ex=x.ex;
+      if(ex&&aulaTipo==="palavra"&&!temCloze(ex)){
+        const i=ex.toLowerCase().indexOf(x.termo.toLowerCase());
+        if(i>=0)ex=ex.slice(0,i)+"[["+ex.slice(i,i+x.termo.length)+"]]"+ex.slice(i+x.termo.length);
+      }
+      novos.push({id:uid(),lang,termo:x.termo,trad:x.trad,ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,aula:data,...(x.art?{art:x.art,plural:x.plural}:{}),...(aulaTipo==="verbo"?{tipo:"verbo",formas:x.formas}:{})});
+    });
+    const velhos=vocab.map(v=>{const x=marcar[v.id];return x?{...v,aula:data,...(aulaTipo==="verbo"&&x.formas&&!v.formas?{formas:x.formas}:{})}:v;});
+    setVocab([...novos,...velhos]);
+    if(aulaTema.trim())setAulaNotas({...aulaNotas,[lang+"|"+data]:aulaTema.trim()});
+    setAulaTxt(""); setAulaTema(""); setAulaVer(data); setAulaErr("");
+    setToast(novos.length+(novos.length===1?" item salvo":" itens salvos")+(jaTinha?" · "+jaTinha+(jaTinha===1?" já estava":" já estavam")+" na lista (marcado nesta aula)":""));
+  };
+  const completarAula=async()=>{
+    const lang=defLang; const itens=aulaParse(lang,aulaTipo,aulaTxt);
+    if(!itens.length||!iaNome||aulaBusy)return;
+    setAulaBusy(true); setAulaErr("");
+    try{
+      const r=await gCompletarAula(lang,aulaTipo,itens);
+      const linhas=itens.map(x=>{
+        const y=r[x.i]||{};
+        const art=x.art||(aulaTipo==="palavra"&&G.arts.includes(String(y.art||"").toLowerCase())?String(y.art).toLowerCase():"");
+        const plural=x.plural||(aulaTipo==="palavra"&&art?String(y.plural||"").trim().replace(new RegExp("^"+G.plArt+"\\s+","i"),""):"");
+        return aulaLinha(lang,{...x,art,plural,trad:x.trad||String(y.trad||"").trim(),formas:x.formas||(aulaTipo==="verbo"?String(y.formas||"").trim():""),ex:x.ex||String(y.ex||"").trim()});
+      });
+      setAulaTxt(linhas.join("\n"));
+    }catch{setAulaErr("Não consegui completar agora. Tente de novo em instantes.");}
+    setAulaBusy(false);
+  };
+  const iniciarAula=d=>{
+    const fila=vocSel.filter(v=>v.aula===d).map(v=>v.id);
+    if(!fila.length)return;
+    setSub("palavras"); setRs({fila,i:0,show:false,ok:0,er:0,rep:{},fim:false,resp:"",res:null,m5:false});
+  };
+  const aulaDatas=[...new Set(vocSel.filter(v=>v.aula).map(v=>v.aula))].sort().reverse();
+  const aulaVerD=aulaDatas.includes(aulaVer)?aulaVer:(aulaDatas[0]||"");
+  const aulaItensD=vocSel.filter(v=>v.aula===aulaVerD);
+  const dBR=d=>d?d.slice(8,10)+"/"+d.slice(5,7):"";
   // ── Substantivos (artigos e plurais) ──
   const G=GEN[sel]||GEN.de;
   const ARTS=G.arts;
@@ -4873,7 +4980,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       </Card>}
     </>);
   };
-  const subs=[["hoje","Hoje"],["pratica","Praticar"+((estDue.length+exTopicosPend)?" · "+(estDue.length+exTopicosPend):"")],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["mapa","Mapa"],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
+  const subs=[["hoje","Hoje"],["aula","Aula"],["pratica","Praticar"+((estDue.length+exTopicosPend)?" · "+(estDue.length+exTopicosPend):"")],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["mapa","Mapa"],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
   const nomeSel=`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
   // Evolução
@@ -4891,10 +4998,11 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const temaN=fw.tema.trim()?vocSel.filter(v=>(v.tema||"").trim().toLowerCase()===fw.tema.trim().toLowerCase()&&(isNova(v)||(v.criada||"")>=addDays(hoje,-3))).length:0;
   const modoCur=cur?modoCard(cur):"rec";
   const chunkV=cur&&modoCur==="chunk"?cur.vars[((cur.ok||0)+(cur.er||0))%cur.vars.length]:null;
-  const espCur=!cur?"":modoCur==="cloze"?clozeResp(cur.ex):modoCur==="chunk"?chunkV.r:cur.termo;
+  const espCur=!cur?"":modoCur==="cloze"?clozeResp(cur.ex):modoCur==="chunk"?chunkV.r:modoCur==="forma"?cur.formas:cur.termo;
   const verificar=()=>{
     if(!rs||!cur||rs.res||!rs.resp.trim())return;
-    const res=(modoCur==="prod"&&cur.art)?confNome(rs.resp,cur):{r:confTexto(rs.resp,espCur,cur.lang),msg:""};
+    const nF=t=>t.toLowerCase().split(/[\s·,;/]+/).filter(Boolean).join(" ");
+    const res=(modoCur==="prod"&&cur.art)?confNome(rs.resp,cur):{r:confTexto(modoCur==="forma"?nF(rs.resp):rs.resp,modoCur==="forma"?nF(espCur):espCur,cur.lang),msg:""};
     setRs({...rs,res});
   };
   const caixaMinha=()=>(
@@ -5414,6 +5522,79 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       {/* ═ MAPA ═ */}
       {sub==="mapa"&&mapaUI()}
 
+      {/* ═ AULA ═ */}
+      {sub==="aula"&&(()=>{
+        const pillA=on=>({height:34,padding:"0 16px",borderRadius:999,border:"1px solid "+T.ink,background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"});
+        const itens=aulaParse(sel,aulaTipo,aulaTxt);
+        const prontos=itens.filter(x=>x.trad).length;
+        const faltam=itens.length-prontos;
+        const ph=aulaTipo==="verbo"
+          ?(sel==="fr"?"aller = ir ; allé (être) | Je vais au marché.\nmanger = comer ; mangé (avoir)":"gehen = ir ; ging ; ist gegangen | Ich gehe nach Hause.\nessen = comer ; aß ; hat gegessen")
+          :aulaTipo==="expr"
+            ?(sel==="fr"?"avoir envie de = ter vontade de | J'ai envie de café.":"Ich habe keine Lust = não estou com vontade | Ich habe keine Lust heute.")
+            :(sel==="fr"?"la chemise = a camisa | Elle porte une chemise.\nle pull = o suéter":"der Pullover = suéter | Ich trage einen Pullover.\ndie Hose, die Hosen = a calça");
+        const dica=aulaTipo==="verbo"
+          ?"Uma linha por verbo: infinitivo = tradução ; formas | frase (formas e frase são opcionais)."
+          :"Uma linha por item: "+(aulaTipo==="palavra"?"der Pullover = tradução | frase. Para o plural: der Pullover, die Pullover = …":"expressão = tradução | frase")+". Só a palavra também vale: use “Completar com "+(iaNome||"Claude")+"”.";
+        return (<>
+        <Card>
+          <Titulo k="Aula" t="O que você viu na aula"/>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {[["palavra","Palavras"],["verbo","Verbos"],["expr","Expressões"]].map(([k,l])=><button key={k} onClick={()=>setAulaTipo(k)} style={pillA(aulaTipo===k)}>{l}</button>)}
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 2fr",gap:12,marginTop:16}}>
+            <div><div style={{...lab,marginBottom:6}}>Data da aula</div><input type="date" style={inp} value={aulaData||hoje} max={hoje} onChange={e=>setAulaData(e.target.value)}/></div>
+            <div><div style={{...lab,marginBottom:6}}>Assunto (opcional)</div><input style={inp} value={aulaTema} onChange={e=>setAulaTema(e.target.value)} placeholder="ex.: roupas, Perfekt, no restaurante"/></div>
+          </div>
+          <div style={{...lab,margin:"16px 0 6px"}}>{aulaTipo==="verbo"?"Verbos":aulaTipo==="expr"?"Expressões":"Palavras"} da aula</div>
+          <textarea autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,minHeight:150,resize:"vertical",lineHeight:1.6,fontFamily:"'DM Sans','Segoe UI',sans-serif"}} value={aulaTxt} onChange={e=>setAulaTxt(e.target.value)} placeholder={ph}/>
+          <div style={{fontSize:12,opacity:.6,marginTop:6,lineHeight:1.5}}>{dica}</div>
+          {itens.length>0&&<div style={{marginTop:16}}>
+            <div style={lab}>{itens.length} {itens.length===1?"item":"itens"} · {prontos} prontos{faltam?" · "+faltam+" sem tradução":""}</div>
+            {itens.map(x=>{
+              const d=aulaDup(x);
+              return (<div key={x.i} style={{display:"flex",alignItems:"flex-start",gap:12,padding:"10px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14.5,fontWeight:600,wordBreak:"break-word"}}>{x.art?x.art+" ":""}{x.termo}{x.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {x.plural}</span>}</div>
+                  <div style={{fontSize:13,opacity:.65,marginTop:2}}>{x.trad||"—"}{x.formas&&<span style={{fontStyle:"italic"}}> · {x.formas}</span>}</div>
+                  {x.ex&&<div style={{fontSize:12.5,opacity:.55,marginTop:2,fontStyle:"italic"}}>{x.ex}</div>}
+                </div>
+                <span style={{...lab,fontSize:9.5,whiteSpace:"nowrap",color:!x.trad?IDI_RED:undefined}}>{!x.trad?"falta tradução":d?"já está na lista":"novo"}</span>
+              </div>);
+            })}
+          </div>}
+          {aulaErr&&<div style={{fontSize:12.5,marginTop:10,color:IDI_RED}}>{aulaErr}</div>}
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16}}>
+            <button style={{...btnP,opacity:prontos?1:.4}} disabled={!prontos} onClick={salvarAula}>Salvar {prontos||""} na minha lista</button>
+            {iaNome&&<button style={{...btnS,opacity:itens.length&&!aulaBusy?1:.4}} disabled={!itens.length||aulaBusy} onClick={completarAula}>{aulaBusy?"Completando…":"Completar com "+iaNome}</button>}
+          </div>
+          {!iaNome&&itens.length>0&&faltam>0&&<div style={{fontSize:12,opacity:.6,marginTop:10}}>Sem a tradução o item não é salvo. Para o app completar sozinho, cadastre uma chave em Gramática › Registrar erros.</div>}
+        </Card>
+        <Card>
+          <Titulo k="Aulas" t="Histórico da aula"/>
+          {aulaDatas.length===0?<Vazio>Nenhuma aula registrada ainda. O que você salvar aqui entra no seu vocabulário e nas revisões.</Vazio>:(<>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{aulaDatas.slice(0,10).map(d=><button key={d} onClick={()=>setAulaVer(d)} style={pillA(d===aulaVerD)}>{dBR(d)}</button>)}</div>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginTop:16}}>
+              <div>
+                <div style={{fontSize:14,fontWeight:600}}>Aula de {dBR(aulaVerD)}{aulaNotas[sel+"|"+aulaVerD]?" · "+aulaNotas[sel+"|"+aulaVerD]:""}</div>
+                <div style={{fontSize:12.5,opacity:.6,marginTop:2}}>{aulaItensD.length} itens · {aulaItensD.filter(v=>v.tipo==="verbo").length} verbos · {aulaItensD.filter(v=>(v.box||0)>=4).length} dominados</div>
+              </div>
+              <button style={btnP} onClick={()=>iniciarAula(aulaVerD)}>Praticar esta aula</button>
+            </div>
+            {aulaItensD.map(v=>(
+              <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)",marginTop:aulaItensD[0]===v?14:0}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:14.5,fontWeight:600}}><Nome v={v}/>{v.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {v.plural}</span>}{v.tipo==="verbo"&&<span style={{...lab,fontSize:9.5,marginLeft:8}}>verbo</span>}</div>
+                  <div style={{fontSize:13,opacity:.6,marginTop:2}}>{v.trad}{v.formas&&<span style={{fontStyle:"italic"}}> · {v.formas}</span>}</div>
+                </div>
+                <div style={{display:"flex",gap:3}} title={"nível "+(v.box||0)+" de 5"}>{[0,1,2,3,4].map(i=><i key={i} style={{width:6,height:6,borderRadius:"50%",background:i<(v.box||0)?T.ink:"rgba(var(--idi-rgb),.15)"}}/>)}</div>
+                <button onClick={()=>setVocab(vocab.filter(x=>x.id!==v.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
+              </div>))}
+          </>)}
+        </Card>
+        </>);
+      })()}
+
       {sub==="palavras"&&(<>
         {rs&&(
           <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"36px 28px"}}>
@@ -5433,6 +5614,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 {rs.show?(<>
                   <div style={{fontSize:isMobile?20:24,marginTop:18,fontWeight:500}}>{cur.trad}</div>
                   {cur.plural&&<div style={{fontSize:14,marginTop:8,opacity:.65}}>plural: {(GEN[cur.lang]||G).plArt} {cur.plural}</div>}
+                  {cur.formas&&<div style={{fontSize:14,marginTop:8,opacity:.65}}>formas: {cur.formas}</div>}
                   {cur.ex&&<div style={{fontSize:14,marginTop:10,fontStyle:"italic",opacity:.75,lineHeight:1.5}}>{clozeVer(cur.ex,true)}</div>}
                   {cur.fonte&&<div style={{...lab,marginTop:8,fontSize:9.5}}>{cur.fonte}{cur.tempo?" · "+cur.tempo:""}</div>}
                   {caixaMinha()}
@@ -5443,16 +5625,16 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 </>):(
                   <div style={{marginTop:36}}><button style={btnP} onClick={()=>setRs({...rs,show:true})}>Mostrar tradução</button></div>)}
               </>):(<>
-                <div style={{...lab,marginBottom:12}}>{modoCur==="prod"?"Como se diz…?":modoCur==="cloze"?"Complete a frase":"Complete a estrutura"}</div>
+                <div style={{...lab,marginBottom:12}}>{modoCur==="prod"?"Como se diz…?":modoCur==="cloze"?"Complete a frase":modoCur==="forma"?"Escreva as formas do verbo":"Complete a estrutura"}</div>
                 <div style={{...serif,fontSize:modoCur==="prod"?(isMobile?34:44):(isMobile?24:30),lineHeight:1.25,wordBreak:"break-word"}}>
                   {modoCur==="prod"?cur.trad:modoCur==="cloze"?clozeVer(cur.ex,false):cur.termo}
                 </div>
                 <div style={{fontSize:13,opacity:.6,marginTop:10}}>
-                  {modoCur==="prod"?(cur.art?"substantivo: escreva com o artigo":""):modoCur==="cloze"?"dica: "+cur.trad:(chunkV.d?"("+chunkV.d+") · ":"")+cur.trad}
+                  {modoCur==="prod"?(cur.art?"substantivo: escreva com o artigo":""):modoCur==="cloze"?"dica: "+cur.trad:(chunkV&&chunkV.d?"("+chunkV.d+") · ":"")+cur.trad}
                 </div>
                 {!rs.res?(<>
                   <div style={{marginTop:22,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>
-                    <input autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,maxWidth:340,textAlign:"center"}} value={rs.resp} onChange={e=>setRs({...rs,resp:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")verificar();}} placeholder={modoCur==="prod"&&cur.art?G.ph:"sua resposta"}/>
+                    <input autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,maxWidth:340,textAlign:"center"}} value={rs.resp} onChange={e=>setRs({...rs,resp:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")verificar();}} placeholder={modoCur==="prod"&&cur.art?G.ph:modoCur==="forma"?(cur.lang==="fr"?"ex.: est allé":"ex.: ging, ist gegangen"):"sua resposta"}/>
                     <button style={{...btnP,opacity:rs.resp.trim()?1:.4}} disabled={!rs.resp.trim()} onClick={verificar}>Verificar</button>
                   </div>
                   <div style={{marginTop:14}}><button onClick={()=>setRs({...rs,res:{r:"er",msg:"",skip:true}})} style={{background:"none",border:"none",cursor:"pointer",fontSize:12.5,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)"}}>não lembro</button></div>
@@ -5463,6 +5645,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                     {rs.res.r!=="ok"&&!rs.res.skip&&<div style={{fontSize:13,opacity:.6,marginTop:6}}>você escreveu: {rs.resp}</div>}
                   </div>
                   {cur.plural&&<div style={{fontSize:14,marginTop:12,opacity:.65}}>plural: {(GEN[cur.lang]||G).plArt} {cur.plural}</div>}
+                  {cur.formas&&modoCur!=="forma"&&<div style={{fontSize:14,marginTop:12,opacity:.65}}>formas: {cur.formas}</div>}
                   {cur.ex&&<div style={{fontSize:14,marginTop:10,fontStyle:"italic",opacity:.75,lineHeight:1.5}}>{clozeVer(cur.ex,true)}</div>}
                   {cur.fonte&&<div style={{...lab,marginTop:8,fontSize:9.5}}>{cur.fonte}{cur.tempo?" · "+cur.tempo:""}</div>}
                   {caixaMinha()}
@@ -5544,7 +5727,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           {palavrasLista.length===0?<Vazio>{vocSel.length===0?"Nenhuma palavra cadastrada.":"Nada encontrado."}</Vazio>:(verTodas?palavrasLista:palavrasLista.slice(0,30)).map(v=>(
             <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)"}}>
               <i style={{width:10,height:10,borderRadius:"50%",background:L(v.lang).cor,flexShrink:0}}/>
-              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}><Nome v={v}/>{v.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {v.plural}</span>}</div><div style={{fontSize:13,opacity:.6,marginTop:2}}>{v.trad}{(v.tema||v.tipo==="chunk"||temCloze(v.ex)||isNova(v))&&<span style={{...lab,fontSize:9.5,marginLeft:8}}>{[isNova(v)?"nova":"",v.tipo==="chunk"?"chunk":"",temCloze(v.ex)?"lacuna":"",v.tema||""].filter(Boolean).join(" · ")}</span>}</div></div>
+              <div style={{flex:1,minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}><Nome v={v}/>{v.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {v.plural}</span>}</div><div style={{fontSize:13,opacity:.6,marginTop:2}}>{v.trad}{(v.tema||v.tipo==="chunk"||v.tipo==="verbo"||temCloze(v.ex)||isNova(v))&&<span style={{...lab,fontSize:9.5,marginLeft:8}}>{[isNova(v)?"nova":"",v.tipo==="chunk"?"chunk":"",v.tipo==="verbo"?"verbo":"",temCloze(v.ex)?"lacuna":"",v.tema||""].filter(Boolean).join(" · ")}</span>}</div></div>
               <div style={{display:"flex",gap:3}} title={"nível "+(v.box||0)+" de 5"}>{[0,1,2,3,4].map(i=><i key={i} style={{width:6,height:6,borderRadius:"50%",background:i<(v.box||0)?T.ink:"rgba(var(--idi-rgb),.15)"}}/>)}</div>
               <button onClick={()=>setVocab(vocab.filter(x=>x.id!==v.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
             </div>))}
