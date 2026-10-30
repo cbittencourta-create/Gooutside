@@ -1315,6 +1315,36 @@ const HAB=[["ouvir","Ouvir"],["falar","Falar"],["ler","Ler"],["escrever","Escrev
 const IDI_TIPOS=[...HAB,["aula","Aula"],["kursbuch","Livro - Kursbuch"],["ubungsbuch","Livro - Übungsbuch"]];
 const IDI_LIVROS=["kursbuch","ubungsbuch"];
 const LEIT=[1,3,7,14,30,60];
+const PAST={butter:"#F3D88A",butterD:"#E9C45A",rose:"#F1B9AE",roseD:"#E39A8C",sage:"#BDC795",sageD:"#A2B070",sky:"#BFCAF1",skyD:"#9DAEE6",peach:"#F6D2B0",peachD:"#EDB98A"};
+function Forma({t,cor,style}){
+  return (
+    <svg viewBox="0 0 100 100" aria-hidden="true" style={style}>
+      {t==="flor"&&<g>{[0,60,120,180,240,300].map(a=><circle key={a} cx={50+27*Math.cos(a*Math.PI/180)} cy={50+27*Math.sin(a*Math.PI/180)} r="20" fill={cor}/>)}<circle cx="50" cy="50" r="13" fill="#fff" opacity=".5"/></g>}
+      {t==="sol"&&<polygon fill={cor} points={Array.from({length:24},(_,i)=>{const r=i%2?33:48,a=i*Math.PI/12;return (50+r*Math.cos(a)).toFixed(1)+","+(50+r*Math.sin(a)).toFixed(1);}).join(" ")}/>}
+      {t==="tri"&&<polygon points="50,12 92,86 8,86" fill={cor} stroke={cor} strokeWidth="12" strokeLinejoin="round"/>}
+      {t==="folha"&&<path d="M10 90C10 42 40 10 92 8c0 52-30 82-82 82z" fill={cor}/>}
+    </svg>);
+}
+function Ico({k,size=18}){
+  const P={
+    hoje:<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>,
+    aula:<g><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></g>,
+    prova:<path d="M12 3l2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.2l-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/>,
+    pratica:<g><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/></g>,
+    palavras:<g><rect x="4" y="6" width="16" height="12" rx="2.5"/><path d="M8 10.5h8M8 14h5"/></g>,
+    mapa:<g><circle cx="12" cy="12" r="2.6"/><circle cx="5" cy="6" r="2"/><circle cx="19" cy="7" r="2"/><circle cx="6" cy="19" r="2"/><circle cx="19" cy="18" r="2"/><path d="M10.2 10.8L6.4 7.4M13.8 10.8l3.6-2.6M10.4 13.8l-3.2 3.8M13.8 13.6l3.7 3"/></g>,
+    subst:<path d="M4 7h16M4 12h10M4 17h6"/>,
+    gram:<path d="M5 19l5.5-14L16 19M7.3 14h6.4M19 8v11"/>,
+    ler:<path d="M12 6C10 4.6 7 4 4 4v14c3 0 6 .6 8 2 2-1.4 5-2 8-2V4c-3 0-6 .6-8 2zM12 6v14"/>,
+    midia:<g><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4" height="6" rx="1.6"/><rect x="17" y="14" width="4" height="6" rx="1.6"/></g>,
+    evol:<path d="M4 19V5M4 19h16M8 15l4-5 3 3 5-7"/>,
+    mais:<g><rect x="4" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.8"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.8"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.8"/></g>,
+    cal:<g><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M4 10h16M9 3v4M15 3v4"/></g>,
+  };
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{flexShrink:0}}>{P[k]||P.hoje}</svg>;
+}
+const IDI_GRUPOS=[["Geral",["hoje","aula","prova","pratica"]],["Estudo",["palavras","mapa","subst","gram","ler","midia"]],["Progresso",["evol"]]];
+const IDI_BNAV=["hoje","aula","prova","pratica"];
 const LEIT_P=[1,2,4,7,14,30], GLAD_P=[1,2,4,7,14,30];
 const temProva=v=>(v.tags||[]).includes("prova");
 const ETAPAS=[["ouvir","Ouvir","#2a78d6"],["ler","Ler","#eb6834"],["escrever","Escrever","#1baf7a"],["falar","Falar","#eda100"],["revisar","Revisar","#e87ba4"]];
@@ -3778,7 +3808,11 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [aulaTema,setAulaTema]=useState("");
   const [aulaBusy,setAulaBusy]=useState(false);
   const [aulaErr,setAulaErr]=useState("");
-  const [aulaVer,setAulaVer]=useState("");
+  const [aulaOpen,setAulaOpen]=useState({});
+  const [wLarg,setWLarg]=useState(typeof window!=="undefined"?window.innerWidth:1200);
+  const [maisOpen,setMaisOpen]=useState(false);
+  useEffect(()=>{const f=()=>setWLarg(window.innerWidth);window.addEventListener("resize",f);return()=>window.removeEventListener("resize",f);},[]);
+  const [aulaEdT,setAulaEdT]=useState("");
   const [aulaProva,setAulaProva]=useState(false);
   const [evHov,setEvHov]=useState(null);
   const [mdEd,setMdEd]=useState(null);
@@ -3989,12 +4023,12 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         const i=ex.toLowerCase().indexOf(x.termo.toLowerCase());
         if(i>=0)ex=ex.slice(0,i)+"[["+ex.slice(i,i+x.termo.length)+"]]"+ex.slice(i+x.termo.length);
       }
-      novos.push({id:uid(),lang,termo:x.termo,trad:x.trad,ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,aula:data,...(tg.length?{tags:tg}:{}),...(x.art?{art:x.art,plural:x.plural}:{}),...(aulaTipo==="verbo"?{tipo:"verbo",formas:x.formas}:{})});
+      novos.push({id:uid(),lang,termo:x.termo,trad:x.trad,ex,criada:hoje,box:0,prox:hoje,ok:0,er:0,aula:data,...(aulaTipo==="expr"?{at:"expr"}:{}),...(tg.length?{tags:tg}:{}),...(x.art?{art:x.art,plural:x.plural}:{}),...(aulaTipo==="verbo"?{tipo:"verbo",formas:x.formas}:{})});
     });
     const velhos=vocab.map(v=>{const x=marcar[v.id];if(!x)return v;const tg=[...new Set([...(v.tags||[]),...(x.tags||[]),...(aulaProva?["prova"]:[])])];return {...v,aula:data,...(tg.length?{tags:tg}:{}),...(aulaTipo==="verbo"&&x.formas&&!v.formas?{formas:x.formas}:{})};});
     setVocab([...novos,...velhos]);
     if(aulaTema.trim())setAulaNotas({...aulaNotas,[lang+"|"+data]:aulaTema.trim()});
-    setAulaTxt(""); setAulaTema(""); setAulaVer(data); setAulaErr("");
+    setAulaTxt(""); setAulaTema(""); setAulaOpen({...aulaOpen,[data]:true}); setAulaErr("");
     setToast(novos.length+(novos.length===1?" item salvo":" itens salvos")+(jaTinha?" · "+jaTinha+(jaTinha===1?" já estava":" já estavam")+" na lista (marcado nesta aula)":""));
   };
   const completarAula=async()=>{
@@ -4019,8 +4053,6 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setSub("palavras"); setRs({fila,i:0,show:false,ok:0,er:0,rep:{},fim:false,resp:"",res:null,m5:false});
   };
   const aulaDatas=[...new Set(vocSel.filter(v=>v.aula).map(v=>v.aula))].sort().reverse();
-  const aulaVerD=aulaDatas.includes(aulaVer)?aulaVer:(aulaDatas[0]||"");
-  const aulaItensD=vocSel.filter(v=>v.aula===aulaVerD);
   const dBR=d=>d?d.slice(8,10)+"/"+d.slice(5,7):"";
   // ── Substantivos (artigos e plurais) ──
   const G=GEN[sel]||GEN.de;
@@ -4403,12 +4435,11 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
 
   const lab={fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10,letterSpacing:".12em",textTransform:"uppercase",color:"rgba(var(--idi-rgb),.6)"};
   const serif={fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,letterSpacing:"-.03em"};
-  const chipBtn=ativo=>({background:ativo?T.sheet:"rgba(var(--idi-hrgb),.1)",color:ativo?T.ink:"rgba(var(--idi-hrgb),.88)",border:"1px solid "+(ativo?T.sheet:"rgba(var(--idi-hrgb),.3)"),borderRadius:999,padding:"0 16px",height:36,fontSize:12.5,fontWeight:ativo?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'DM Sans',sans-serif",display:"inline-flex",alignItems:"center",gap:7});
   const inp={background:"#fff",border:"1px solid rgba(var(--idi-rgb),.18)",borderRadius:12,padding:"11px 14px",fontSize:14,fontFamily:"'DM Sans',sans-serif",color:T.ink,width:"100%",minWidth:0,outline:"none"};
   const btnP={background:T.ink,color:T.sheet,border:"none",borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
   const btnS={background:"transparent",color:T.ink,border:"1px solid rgba(var(--idi-rgb),.25)",borderRadius:999,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
   const CardR2=useRef(null);
-  CardR2.current=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(var(--idi-rgb),.1)",borderRadius:24,padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  CardR2.current=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(var(--idi-rgb),.07)",borderRadius:28,boxShadow:"0 10px 30px -22px rgba(42,30,20,.35)",padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
   const Card=useRef(pp=>CardR2.current(pp)).current;
   const Titulo=({k,t,dir})=><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,marginBottom:18}}><div><div style={lab}>{k}</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:6,lineHeight:1,color:T.ink}}>{t}</div></div>{dir}</div>;
   const Vazio=({children})=><div style={{fontSize:14,lineHeight:1.45,color:"rgba(var(--idi-rgb),.62)"}}>{children}</div>;
@@ -4497,6 +4528,15 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setMdEd(null);
   };
   const goalDia=mdTot>0?mdTot:(L(sel).metaSem>0?Math.round(L(sel).metaSem*60/7):0);
+  const lado=!isMobile&&wLarg>=960;
+  const sp=n=>lado?"span "+n:"span 12";
+  const pastCard=bg=>({background:bg,border:"none",position:"relative",overflow:"hidden",isolation:"isolate"});
+  const nomeU=(()=>{try{return (localStorage.getItem("velara_user_name")||"").trim().split(/\s+/)[0]||"";}catch{return "";}})();
+  const hr=new Date().getHours();
+  const saud=hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite";
+  const dataHoje=new Date().toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
+  const feitoMinT=ETAPAS.reduce((a,[k])=>a+Math.min(mdHoje[k],mdv(k)),0);
+  const pad2=n=>String(n).padStart(2,"0");
   // ── Prova ──
   const provaCfg=L(sel);
   const diasProva=provaCfg.prova?Math.ceil((new Date(provaCfg.prova+"T12:00:00")-new Date(hoje+"T12:00:00"))/86400000):null;
@@ -5090,50 +5130,108 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   );
 
   return (
-    <div className="idi" data-lang={sel} style={{"--idi-rgb":T.rgb,"--idi-hrgb":T.hrgb,minHeight:"100vh",background:T.ink,position:"relative",zIndex:1,color:T.ink,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
+    <div className="idi" data-lang={sel} style={{"--idi-rgb":T.rgb,"--idi-hrgb":T.hrgb,minHeight:"100vh",background:T.sheet,position:"relative",zIndex:1,color:T.ink,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
       <style>{`
-        .idi .idi-hero{position:relative;overflow:hidden;background:${T.ink};color:${T.sheet}}
-        .idi .idi-scrim{position:absolute;inset:0;background:${T.scrim}}
-        .idi .idi-hero,.idi .idi-sheet{animation:idiFade .5s ease both}
         @keyframes idiFade{from{opacity:0}to{opacity:1}}
         @keyframes idiPulse{0%,100%{opacity:1}50%{opacity:.25}}
         @keyframes idiFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(3px,-6px)}}
         .idi .idi-float{animation:idiFloat 5s ease-in-out infinite}
         @media (prefers-reduced-motion:reduce){.idi .idi-float{animation:none}}
-        body:has(.idi[data-lang="fr"]){background:#17213F!important}
-        .idi .idi-in{position:relative;max-width:1100px;margin:0 auto;padding:${isMobile?"18px 18px 54px":"26px 28px 62px"}}
-        .idi .idi-sheet{position:relative;background:${T.sheet};border-radius:30px 30px 0 0;margin-top:-28px;min-height:70vh;padding:${isMobile?"26px 14px 110px":"34px 28px 110px"}}
-        .idi .idi-wrap{max-width:1100px;margin:0 auto}
-        .idi .idi-grid4{display:grid;grid-template-columns:repeat(${isMobile?2:4},1fr);gap:14px;margin-bottom:16px}
+        body:has(.idi){background:${T.sheet}!important}
+        .idi .idi-shell{display:grid;grid-template-columns:${lado?"248px minmax(0,1fr)":"minmax(0,1fr)"};gap:24px;max-width:1400px;margin:0 auto;padding:${isMobile?"14px 14px 0":"20px 22px 0"}}
+        .idi .idi-side{position:sticky;top:20px;align-self:start;height:calc(100vh - 40px);background:${T.ink};color:${T.sheet};border-radius:30px;padding:24px 16px 16px;display:flex;flex-direction:column;overflow:auto;scrollbar-width:none}
+        .idi .idi-side::-webkit-scrollbar{display:none}
+        .idi .idi-main{min-width:0}
+        .idi .idi-sheet{position:relative;padding:${isMobile?"18px 0 130px":"22px 0 110px"};animation:idiFade .5s ease both}
+        .idi .idi-wrap{max-width:1180px}
+        .idi .idi-bento{display:grid;grid-template-columns:repeat(12,1fr);gap:${isMobile?14:16}px;margin-bottom:16px}
+        .idi .idi-bento>*{margin-bottom:0!important}
+        .idi .idi-bento .idi-grid4,.idi .idi-bento .idi-grid2{display:contents}
         .idi .idi-grid2{display:grid;grid-template-columns:${isMobile?"1fr":"1fr 1fr"};gap:16px}
         .idi .idi-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
         .idi .idi-row::-webkit-scrollbar{display:none}
-        .idi input:focus,.idi select:focus{border-color:${T.ink}!important}
+        .idi .idi-nav-i:hover{background:rgba(var(--idi-hrgb),.1)}
+        .idi .idi-bnav{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;width:min(430px,calc(100% - 24px));height:64px;border-radius:999px;background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 14px 40px -14px rgba(42,30,20,.45),0 0 0 1px rgba(var(--idi-rgb),.06);display:flex;align-items:center;justify-content:space-between;padding:0 10px;z-index:55}
+        .idi .idi-bnav button{border:none;background:transparent;cursor:pointer;height:44px;min-width:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;color:${T.ink};font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700}
+        .idi .idi-bnav button .l{display:none}
+        .idi .idi-bnav button[aria-current=page]{background:${T.ink};color:${T.sheet}}
+        .idi .idi-bnav button[aria-current=page] .l{display:inline}
+        .idi .idi-mais{position:fixed;inset:0;z-index:80;pointer-events:none}
+        .idi .idi-mais .bg{position:absolute;inset:0;background:rgba(32,21,12,.4);opacity:0;transition:opacity .25s}
+        .idi .idi-mais .pn{position:absolute;left:0;right:0;bottom:0;background:${T.sheet};border-radius:28px 28px 0 0;padding:22px 16px 34px;transform:translateY(105%);visibility:hidden;transition:transform .3s cubic-bezier(.3,.7,.2,1),visibility 0s .3s}
+        .idi .idi-mais.on{pointer-events:auto}
+        .idi .idi-mais.on .bg{opacity:1}
+        .idi .idi-mais.on .pn{transform:translateY(0);visibility:visible;transition-delay:0s}
+        .idi input:focus,.idi select:focus,.idi textarea:focus{border-color:${T.ink}!important}
         .idi input[type=range]{accent-color:${T.ink};width:100%}
         .idi button:active{transform:scale(.98)}
       `}</style>
-      <div className="idi-hero" key={"h"+sel}>
-        <Motif s={T.hero.s} z={T.hero.z} x={T.hero.x} y={T.hero.y} style={{position:"absolute",inset:0,opacity:.95}}/>
-        <div className="idi-scrim"/>
-        <div className="idi-in">
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:isMobile?22:30}}>
-            <button onClick={onMenu} aria-label="Abrir menu" style={{background:"rgba(var(--idi-hrgb),.12)",border:"1px solid rgba(var(--idi-hrgb),.3)",borderRadius:99,width:40,height:40,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5}}>{[0,1,2].map(i=><i key={i} style={{width:16,height:1.5,background:T.sheet,display:"block"}}/>)}</button>
-            <AppSwitch atual="idi" onTrocar={onTrocar}/>
-            <span style={{width:40,height:40}}/>
+      <div className="idi-shell">
+      {lado&&(
+        <aside className="idi-side" aria-label="Navegação de Idiomas">
+          <div style={{display:"flex",alignItems:"baseline",gap:10,padding:"0 8px 14px"}}><span style={{...serif,fontSize:30,color:T.sheet,fontWeight:400}}>velara</span><span style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:9.5,letterSpacing:".16em",textTransform:"uppercase",opacity:.55}}>idiomas</span></div>
+          <div style={{display:"flex",gap:4,background:"rgba(var(--idi-hrgb),.1)",borderRadius:999,padding:4,marginBottom:16}}>
+            {cfg.map(l=>{const on=l.id===sel;return <button key={l.id} onClick={()=>trocarIdioma(l.id)} aria-pressed={on} style={{flex:1,height:36,borderRadius:999,border:"none",cursor:"pointer",background:on?T.sheet:"transparent",color:on?T.ink:"rgba(var(--idi-hrgb),.85)",fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:on?700:500}}>{l.nome}</button>;})}
           </div>
-          <div style={{display:"flex",gap:isMobile?26:38,alignItems:"flex-end",marginBottom:14}}>
-            {cfg.map(l=>{const on=l.id===sel;return <button key={l.id} onClick={()=>trocarIdioma(l.id)} aria-pressed={on} style={{background:"none",border:"none",padding:"0 0 6px",cursor:"pointer",color:T.sheet,fontFamily:"'Fraunces',Georgia,serif",fontWeight:on?400:300,fontSize:isMobile?34:46,letterSpacing:"-.03em",lineHeight:1,opacity:on?1:.4,borderBottom:"2px solid "+(on?T.acc:"transparent"),transition:"opacity .3s,border-color .3s"}}>{(IDI_TEMAS[l.id]||{}).nome||l.nome}</button>;})}
+          <nav className="idi-nav" style={{flex:1,minHeight:0,overflowY:"auto",scrollbarWidth:"none"}}>
+            {IDI_GRUPOS.map(([gn,ids])=>(
+              <div key={gn} style={{marginBottom:8}}>
+                <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:9.5,letterSpacing:".16em",textTransform:"uppercase",opacity:.45,padding:"0 12px 8px"}}>{gn}</div>
+                {ids.map(id=>{
+                  const it=subs.find(x=>x[0]===id); if(!it)return null;
+                  const [base,badge]=it[1].split(" · "); const on=sub===id;
+                  return (
+                    <button key={id} className="idi-nav-i" onClick={()=>setSub(id)} aria-current={on?"page":undefined} style={{display:"flex",alignItems:"center",gap:12,width:"100%",height:38,padding:"0 12px",border:"none",borderRadius:13,cursor:"pointer",textAlign:"left",background:on?PAST.rose:"transparent",color:on?T.ink:"rgba(var(--idi-hrgb),.88)",fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:on?700:500,marginBottom:2}}>
+                      <Ico k={id}/><span style={{flex:1}}>{base}</span>
+                      {badge&&<span style={{fontSize:11,fontWeight:700,minWidth:20,height:20,borderRadius:99,display:"inline-flex",alignItems:"center",justifyContent:"center",background:on?T.ink:PAST.rose,color:on?T.sheet:T.ink,padding:"0 6px"}}>{badge}</span>}
+                    </button>);
+                })}
+              </div>))}
+          </nav>
+          <div style={{...pastCard(PAST.butter),color:T.ink,borderRadius:22,padding:"12px 14px 11px",flexShrink:0,marginTop:8}}>
+            <Forma t="sol" cor={PAST.butterD} style={{position:"absolute",right:-18,top:-18,width:84,height:84,zIndex:-1}}/>
+            <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:9.5,letterSpacing:".14em",textTransform:"uppercase",opacity:.65}}>sequência</div>
+            <div style={{display:"flex",alignItems:"baseline",gap:8,marginTop:4}}><span style={{...serif,fontWeight:400,fontSize:34,lineHeight:1}}>{streak}</span><span style={{fontSize:13,opacity:.75}}>{streak===1?"dia":"dias"} de prática</span></div>
+            <div style={{height:5,borderRadius:99,background:"rgba(255,255,255,.6)",overflow:"hidden",marginTop:9}}><div style={{width:Math.min(100,metaTot>0?hSem/metaTot*100:0)+"%",height:"100%",background:T.ink,borderRadius:99}}/></div>
+            <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:9.5,letterSpacing:".1em",textTransform:"uppercase",opacity:.7,marginTop:7}}>{hSem.toFixed(1).replace(".0","")}h de {metaTot}h na semana</div>
           </div>
-          <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".16em",textTransform:"uppercase",opacity:.75,marginBottom:6,lineHeight:1.5}}>{nomeSel}</div>
-          <div style={{display:"flex",alignItems:"baseline",gap:14,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?104:150,lineHeight:.85,color:T.sheet}}>{streak}</span><span style={{...serif,fontSize:isMobile?22:30,opacity:.85}}>{streak===1?"dia":"dias"}<br/>de prática</span></div>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginTop:20}}>
-            <div style={{width:isMobile?150:200,height:6,borderRadius:99,background:"rgba(var(--idi-hrgb),.2)",overflow:"hidden"}}><div style={{width:Math.min(100,metaTot>0?hSem/metaTot*100:0)+"%",height:"100%",background:T.acc,borderRadius:99,transition:"width .5s"}}/></div>
-            <span style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".1em",opacity:.85}}>{hSem.toFixed(1).replace(".0","")}H DE {metaTot}H NA SEMANA</span>
-          </div>
-          <div className="idi-row" style={{marginTop:20}}>{subs.map(([id,l])=><button key={id} onClick={()=>setSub(id)} style={chipBtn(sub===id)}>{l}</button>)}</div>
+        </aside>)}
+      <div className="idi-main">
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
+          <button onClick={onMenu} aria-label="Abrir menu" style={{width:42,height:42,borderRadius:"50%",border:"none",background:lado?T.ink:"#fff",boxShadow:lado?"none":"0 6px 20px -10px rgba(42,30,20,.45)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5,flexShrink:0}}>{[0,1,2].map(i=><i key={i} style={{width:16,height:1.6,background:lado?T.sheet:T.ink,borderRadius:2,display:"block"}}/>)}</button>
+          <div style={{background:T.ink,borderRadius:999}}><AppSwitch atual="idi" onTrocar={onTrocar}/></div>
+          <span style={{width:42,height:42,flexShrink:0}}/>
         </div>
-      </div>
-
+        {!lado&&<div style={{display:"inline-flex",gap:4,background:"#fff",borderRadius:999,padding:4,marginTop:18,boxShadow:"0 6px 20px -12px rgba(42,30,20,.4)"}}>
+          {cfg.map(l=>{const on=l.id===sel;return <button key={l.id} onClick={()=>trocarIdioma(l.id)} aria-pressed={on} style={{height:34,padding:"0 16px",borderRadius:999,border:"none",cursor:"pointer",background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:on?700:500}}>{l.nome}</button>;})}
+        </div>}
+        <div style={{position:"relative",margin:isMobile?"20px 2px 4px":"28px 2px 6px"}}>
+          <div aria-hidden="true" style={{position:"absolute",right:isMobile?-60:40,top:isMobile?10:-60,width:isMobile?300:460,height:isMobile?300:460,borderRadius:"50%",background:"radial-gradient(circle,rgba(244,196,110,.5) 0%,rgba(244,196,110,0) 65%)",pointerEvents:"none"}}/>
+          <div style={{position:"relative"}}>
+            <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".16em",textTransform:"uppercase",color:"rgba(var(--idi-rgb),.6)",lineHeight:1.6}}>{dataHoje} · {nomeSel}</div>
+            {sub==="hoje"?(<>
+              <h1 style={{...serif,fontWeight:400,fontSize:isMobile?38:54,lineHeight:1.04,margin:"10px 0 0"}}>{saud}{nomeU?", "+nomeU:""}</h1>
+              <div style={{...serif,fontWeight:300,fontSize:isMobile?30:40,lineHeight:1.1,opacity:.55}}>Resumo de hoje</div>
+              <div style={{display:"flex",alignItems:"center",gap:16,marginTop:isMobile?22:26}}>
+                {mdTot>0?(<>
+                  <div style={{display:"flex",alignItems:"stretch",gap:14}}>
+                    <span style={{...serif,fontWeight:500,fontSize:isMobile?52:68,lineHeight:1,letterSpacing:"-.04em"}}>{pad2(feitoMinT)}</span>
+                    <span style={{width:1.5,background:"rgba(var(--idi-rgb),.22)"}}/>
+                    <span style={{...serif,fontWeight:500,fontSize:isMobile?52:68,lineHeight:1,letterSpacing:"-.04em",opacity:.3}}>{pad2(mdTot)}</span>
+                  </div>
+                  <div style={{fontSize:12.5,lineHeight:1.4,opacity:.65}}>min de estudo<br/>hoje · meta</div>
+                </>):(<>
+                  <span style={{...serif,fontWeight:500,fontSize:isMobile?52:68,lineHeight:1,letterSpacing:"-.04em"}}>{pad2(totHoje)}</span>
+                  <div style={{fontSize:12.5,lineHeight:1.4,opacity:.65}}>palavras para<br/>rever hoje</div>
+                </>)}
+                <button onClick={()=>setSub("evol")} aria-label="Ver evolução" style={{marginLeft:"auto",width:46,height:46,borderRadius:"50%",border:"none",background:"#fff",boxShadow:"0 8px 22px -12px rgba(42,30,20,.5)",cursor:"pointer",display:"inline-flex",alignItems:"center",justifyContent:"center",color:T.ink,flexShrink:0}}><Ico k="cal" size={20}/></button>
+              </div>
+              <div style={{fontSize:isMobile?13.5:15,opacity:.7,lineHeight:1.55,marginTop:16,maxWidth:640}}>{[mdTot>0?"Metas: "+feitoMinT+" de "+mdTot+" min":"Defina suas metas diárias",totHoje>0?totHoje+(totHoje===1?" palavra":" palavras")+" para revisar":"",(diasProva!==null&&diasProva>=0)?(provaCfg.exame||"Prova")+" em "+diasProva+(diasProva===1?" dia":" dias"):""].filter(Boolean).join(" · ")}</div>
+            </>):(
+              <h1 style={{...serif,fontWeight:400,fontSize:isMobile?36:48,lineHeight:1.05,margin:"10px 0 0"}}>{((subs.find(x=>x[0]===sub)||[0,"Idiomas"])[1]).split(" · ")[0]}</h1>
+            )}
+          </div>
+        </div>
       <div className="idi-sheet" key={"s"+sel}><div className="idi-wrap">
 
       {dia&&dia.ativo&&dia.passos[dia.i]&&<div style={{background:T.ink,color:T.sheet,borderRadius:20,padding:"14px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
@@ -5150,8 +5248,9 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
 
       {/* ═ HOJE ═ */}
       {sub==="hoje"&&(<>
+        <div className="idi-bento">
         {(()=>{
-          const tem=mdTot>0;
+          const tem=mdTot>0; const pl0=planoDia(); const sVis=!(dia&&dia.ativo)&&(pl0.passos.length>0||!!(dia&&dia.fim));
           const feitoMin=ETAPAS.reduce((a,[k])=>a+Math.min(mdHoje[k],mdv(k)),0);
           const pct=tem?Math.round(feitoMin/mdTot*100):0;
           const faltam=ETAPAS.filter(([k])=>mdv(k)>0&&mdHoje[k]<mdv(k));
@@ -5164,22 +5263,23 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             return ()=>{setFp({...fp,tipo:k});setSub("pratica");};
           };
           return (
-            <Card>
+            <Card style={{...pastCard(PAST.butter),gridColumn:sp(sVis?7:12),order:1}}>
+              <Forma t="sol" cor={PAST.butterD} style={{position:"absolute",right:-30,top:-34,width:150,height:150,zIndex:-1,pointerEvents:"none"}}/>
               <Titulo k="Metas de hoje" t={tem?(faltam.length?"O que falta hoje":"Metas de hoje cumpridas"):"Defina suas metas diárias"} dir={tem?<div style={{textAlign:"right"}}><div style={lab}>feito</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:4}}>{pct}%</div></div>:null}/>
               {!tem&&!mdEd&&<><Vazio>Quanto tempo por dia você quer dedicar a ouvir, ler, escrever, falar e revisar? Defina uma vez: o app mostra aqui o que já fez e o que está ficando para trás.</Vazio><div style={{marginTop:14}}><button style={btnP} onClick={abrirMd}>Definir metas</button></div></>}
               {tem&&!mdEd&&ETAPAS.filter(([k])=>mdv(k)>0).map(([k,nm,cor],i)=>{
                 const g=mdv(k), f=mdHoje[k], ok=f>=g, sd=semDias(k), ac=ok?null:acaoDe(k);
                 return (
-                  <div key={k} style={{padding:"12px 0",borderTop:i===0?"none":"1px solid rgba(var(--idi-rgb),.08)"}}>
+                  <div key={k} style={{padding:"12px 0",borderTop:i===0?"none":"1px solid rgba(var(--idi-rgb),.1)"}}>
                     <div style={{display:"flex",alignItems:"center",gap:10}}>
-                      <i style={{width:10,height:10,borderRadius:"50%",background:cor,flexShrink:0}}/>
+                      <i style={{width:10,height:10,borderRadius:"50%",background:cor,boxShadow:"0 0 0 2px rgba(255,255,255,.7)",flexShrink:0}}/>
                       <span style={{fontSize:14.5,fontWeight:600,flex:1}}>{nm}</span>
                       <span style={{...lab,color:ok?"#3C7030":T.ink,whiteSpace:"nowrap"}}>{ok?"✓ ":""}{f}/{g} min</span>
                       {ac&&<button style={{...btnS,padding:"6px 14px",fontSize:12}} onClick={ac}>{k==="revisar"?"Revisar":"Registrar"}</button>}
                     </div>
-                    <div style={{height:6,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden",marginTop:9}}><div style={{width:Math.min(100,f/g*100)+"%",height:"100%",background:cor,borderRadius:99}}/></div>
+                    <div style={{height:6,borderRadius:99,background:"rgba(255,255,255,.65)",overflow:"hidden",marginTop:9}}><div style={{width:Math.min(100,f/g*100)+"%",height:"100%",background:T.ink,borderRadius:99}}/></div>
                     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:9,gap:8}}>
-                      <div style={{display:"flex",gap:3}} aria-label="últimos 7 dias">{serie14.slice(7,14).map(d=>{const m=d[k];return <i key={d.d} title={dBR(d.d)+" · "+m+" min"} style={{width:11,height:11,borderRadius:3,boxSizing:"border-box",background:m>=g?cor:m>0?cor+"55":"transparent",border:"1px solid "+(m>0?cor:"rgba(var(--idi-rgb),.2)")}}/>;})}</div>
+                      <div style={{display:"flex",gap:3}} aria-label="últimos 7 dias">{serie14.slice(7,14).map(d=>{const m=d[k];return <i key={d.d} title={dBR(d.d)+" · "+m+" min"} style={{width:11,height:11,borderRadius:3,boxSizing:"border-box",background:m>=g?T.ink:m>0?"rgba(var(--idi-rgb),.32)":"rgba(255,255,255,.5)",border:"1px solid "+(m>0?T.ink:"rgba(var(--idi-rgb),.2)")}}/>;})}</div>
                       <span style={{...lab,fontSize:9.5,color:(!ok&&sd>=2)?IDI_RED:undefined}}>{ok?"feito hoje":sd>=2?sd+" dias sem":"faltam "+(g-f)+" min"}</span>
                     </div>
                   </div>);
@@ -5199,18 +5299,19 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             </Card>);
         })()}
         {(provaV.length>0||provaE.length>0||provaCfg.prova)&&(
-          <button onClick={()=>setSub("prova")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",border:"1px solid rgba(var(--idi-rgb),.1)",background:"#fff",borderRadius:24,padding:isMobile?"16px 18px":"20px 24px",cursor:"pointer",marginBottom:16,fontFamily:"inherit",color:T.ink}}>
+          <button onClick={()=>setSub("prova")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",...pastCard(PAST.sage),gridColumn:sp(6),order:7,borderRadius:28,padding:isMobile?"18px 20px":"22px 26px",cursor:"pointer",marginBottom:0,fontFamily:"inherit",color:T.ink}}>
+            <Forma t="tri" cor={PAST.sageD} style={{position:"absolute",right:-14,bottom:-18,width:120,height:120,zIndex:-1,pointerEvents:"none"}}/>
             <div style={{minWidth:0}}>
               <div style={lab}>{provaCfg.exame||"Prova"}{diasProva!==null?(diasProva>=0?" · faltam "+diasProva+" dias":" · data passou"):""}</div>
               <div style={{...serif,fontSize:isMobile?22:26,marginTop:6,lineHeight:1.1}}>{provaV.length+provaE.length} itens que vão cair</div>
               <div style={{fontSize:12.5,opacity:.65,marginTop:6}}>{provaVDom} palavras dominadas · {provaDueN} para treinar hoje</div>
             </div>
-            <span style={{fontSize:22,color:IDI_GOLD}}>★</span>
+            <span style={{fontSize:22,color:T.ink}}>★</span>
           </button>)}
         {!(dia&&dia.ativo)&&(()=>{
           const pl=planoDia(); const feito=(diaLog[hoje]||{})[sel];
           if(dia&&dia.fim)return (
-            <Card>
+            <Card style={{...pastCard(PAST.sky),gridColumn:sp(5),order:2}}>
               <Titulo k="Sessão do dia" t="Sessão concluída"/>
               {dia.res.length===0?<Vazio>Nenhum passo foi concluído.</Vazio>:dia.res.map((r,k)=>(
                 <div key={k} style={{padding:"9px 0",borderTop:k===0?"none":"1px solid rgba(var(--idi-rgb),.08)",fontSize:14}}><b>{DIA_NOMES[r.t]}</b><span style={{opacity:.75}}> · {r.txt}</span></div>))}
@@ -5220,7 +5321,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             </Card>);
           if(!pl.passos.length)return null;
           return (
-            <Card>
+            <Card style={{...pastCard(PAST.sky),gridColumn:sp(5),order:2}}>
+              <div aria-hidden="true" style={{position:"absolute",right:-20,top:-26,width:130,height:130,borderRadius:"50%",background:"radial-gradient(circle at 30% 30%,#F7B58C 0%,rgba(247,181,140,0) 55%),radial-gradient(circle at 72% 38%,#7D80EE 0%,rgba(125,128,238,0) 58%),#F1E2D4",filter:"blur(2px)",opacity:.85,zIndex:-1}}/>
               <Titulo k="Sessão do dia" t="Seu treino de hoje" dir={<span style={{...lab,whiteSpace:"nowrap"}}>≈ {pl.min} min</span>}/>
               {feito&&<div style={{...lab,marginBottom:10,color:"#3C7030"}}>✓ Você já fez uma sessão hoje · {feito.n} {feito.n===1?"passo":"passos"} · {feito.min} min</div>}
               {pl.passos.map((q,k)=>(
@@ -5228,22 +5330,22 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                   <span style={{...serif,fontSize:20,opacity:.45,width:20,flexShrink:0}}>{k+1}</span>
                   <div style={{minWidth:0}}><div style={{fontSize:14.5,fontWeight:600}}>{DIA_NOMES[q.t]}</div><div style={{fontSize:12.5,opacity:.7,marginTop:2,lineHeight:1.45}}>{q.por}</div></div>
                 </div>))}
-              <div style={{marginTop:14}}><button style={btnP} onClick={comecarDia}>{feito?"Fazer outra sessão":"Começar"}</button></div>
-              <div style={{...lab,fontSize:9.5,marginTop:10,lineHeight:1.6,whiteSpace:"normal"}}>O app escolhe pelo que está vencido, pelo que você errou e pelo seu ponto mais fraco. Passos sem nada para fazer são pulados.</div>
+              <button onClick={comecarDia} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,width:"calc(100% + "+(isMobile?36:56)+"px)",margin:"18px "+(isMobile?-18:-28)+"px "+(isMobile?-20:-26)+"px",padding:isMobile?"17px 18px":"19px 28px",border:"none",borderTop:"1px solid rgba(var(--idi-rgb),.1)",background:"linear-gradient(90deg,rgba(255,255,255,.9),rgba(255,255,255,.35))",color:T.ink,fontFamily:"'DM Sans',sans-serif",fontSize:14.5,fontWeight:700,cursor:"pointer",textAlign:"left"}}><span>{feito?"Fazer outra sessão":"Começar a sessão de hoje"}</span><span style={{fontSize:20}}>→</span></button>
             </Card>);
         })()}
         <div className="idi-grid4">
-          {tiles.map(t=>(
-            <div key={t.l} className="bento-tile" onClick={()=>setSub(t.to)} style={{background:STY[t.s].paper,cursor:"pointer",minHeight:isMobile?132:170}}>
-              <Motif s={t.s} z={t.z} x={t.x} y={t.y} style={{position:"absolute",inset:0,zIndex:0,pointerEvents:"none"}}/>
-              <div className="tile-panel" style={{marginTop:"auto"}}>
-                <div style={{...lab,fontSize:9.5,color:"rgba(var(--idi-rgb),.65)"}}>{t.l}</div>
-                <div style={{display:"flex",alignItems:"baseline",gap:6,marginTop:6,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?34:42,lineHeight:1,color:T.ink}}>{t.v}</span><span style={{fontSize:11.5,opacity:.6}}>{t.u}</span></div>
-              </div>
-            </div>))}
+          {tiles.map((t,i)=>{
+            const cs=[PAST.butter,PAST.rose,PAST.sage,PAST.sky][i%4], cd=[PAST.butterD,PAST.roseD,PAST.sageD,PAST.skyD][i%4], fm=["flor","sol","tri","folha"][i%4];
+            return (
+              <div key={t.l} role="button" tabIndex={0} onClick={()=>setSub(t.to)} onKeyDown={e=>{if(e.key==="Enter")setSub(t.to);}} style={{...pastCard(cs),gridColumn:lado?"span 3":"span 6",order:3+i,borderRadius:28,padding:isMobile?"16px 16px 18px":"20px 22px 22px",minHeight:isMobile?132:156,cursor:"pointer",display:"flex",flexDirection:"column",justifyContent:"flex-end"}}>
+                <Forma t={fm} cor={cd} style={{position:"absolute",right:-22,top:-22,width:isMobile?100:124,height:isMobile?100:124,zIndex:-1,pointerEvents:"none"}}/>
+                <div style={{...lab,fontSize:9.5,color:"rgba(var(--idi-rgb),.7)"}}>{t.l}</div>
+                <div style={{display:"flex",alignItems:"baseline",gap:6,marginTop:6,flexWrap:"wrap"}}><span style={{...serif,fontWeight:400,fontSize:isMobile?36:46,lineHeight:1}}>{t.v}</span><span style={{fontSize:11.5,opacity:.7}}>{t.u}</span></div>
+              </div>);})}
         </div>
         {(
-          <button onClick={()=>setSub("subst")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",border:"1px solid rgba(var(--idi-rgb),.1)",background:"#fff",borderRadius:24,padding:isMobile?"16px 18px":"20px 26px",marginBottom:16,cursor:"pointer",fontFamily:"inherit",color:T.ink}}>
+          <button onClick={()=>setSub("subst")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",...pastCard(PAST.peach),gridColumn:sp(6),order:8,borderRadius:28,padding:isMobile?"18px 20px":"22px 26px",marginBottom:0,cursor:"pointer",fontFamily:"inherit",color:T.ink}}>
+            <Forma t="folha" cor={PAST.peachD} style={{position:"absolute",left:-16,bottom:-22,width:110,height:110,zIndex:-1,pointerEvents:"none"}}/>
             <div style={{minWidth:0}}>
               <div style={lab}>{unica.nome} · substantivos</div>
               <div style={{...serif,fontSize:isMobile?22:26,marginTop:6,lineHeight:1.1}}>Treino de artigos</div>
@@ -5251,8 +5353,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             </div>
             <div style={{display:"flex",gap:6,flexShrink:0}}>{ARTS.map(a=><span key={a} style={{background:ART_BG[a],color:ART_COR[a],fontWeight:700,fontSize:isMobile?12:13,padding:"7px 11px",borderRadius:999}}>{a}</span>)}</div>
           </button>)}
-        {folgaRec&&<div style={{...lab,textAlign:"center",marginBottom:14}}>1 dia de folga perdoado esta semana · a sequência continua</div>}
-        <Card>
+        {folgaRec&&<div style={{...lab,textAlign:"center",gridColumn:"span 12",order:15}}>1 dia de folga perdoado esta semana · a sequência continua</div>}
+        <Card style={{gridColumn:sp(12),order:9}}>
           <Titulo k="Prioridades" t="Dificuldades a serem sanadas" dir={nDif>0?<span style={{...lab,whiteSpace:"nowrap"}}>{nDif} {nDif===1?"ponto":"pontos"}</span>:null}/>
           {nDif===0?<Vazio>Nada crítico por enquanto. Conforme você errar em gramática, substantivos e palavras, os pontos fracos aparecem aqui para você atacar.</Vazio>:(
             <div style={{display:"grid",gap:16}}>
@@ -5264,7 +5366,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               {leeches.length>0&&<div><div style={{...lab,marginBottom:8}}>Palavras que não fixam</div><div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{leeches.map(v=><button key={v.id} style={pillD} onClick={()=>setSub("palavras")}><Nome v={v}/><span style={{color:IDI_RED}}>×{v.er}</span></button>)}</div></div>}
             </div>)}
         </Card>
-        <Card>
+        <Card style={{gridColumn:sp(12),order:9}}>
           <Titulo k="Hábito" t="Quando… então…" dir={iiEd?null:<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setIiEd({q:(ii[sel]||{}).q||"",f:(ii[sel]||{}).f||""})}>{ii[sel]&&ii[sel].q?"editar":"definir"}</button>}/>
           {iiEd?(<>
             <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:12}}>
@@ -5280,7 +5382,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             :<Vazio>Um gatilho concreto (“quando eu… faço…”) aumenta muito a chance de você cumprir. Defina o seu para {unica.nome}.</Vazio>)}
         </Card>
         <div className="idi-grid2">
-          <Card>
+          <Card style={{gridColumn:sp(7),order:10}}>
             <Titulo k="Níveis" t="Onde você está"/>
             {ativas.map((l,k)=>{
               const iN=NIVEIS.indexOf(l.nivel), iA=NIVEIS.indexOf(l.alvo);
@@ -5350,7 +5452,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                     </div>);})()}
                 </div>);})}
           </Card>
-          <Card>
+          <Card style={{...pastCard(PAST.rose),gridColumn:sp(5),order:11}}>
+            <Forma t="sol" cor={PAST.roseD} style={{position:"absolute",right:-26,top:-26,width:120,height:120,zIndex:-1,pointerEvents:"none"}}/>
             <Titulo k="Memória" t="Palavras de hoje" dir={totHoje>0?<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={()=>{setSub("palavras");iniciarRev();}}>Revisar</button>:null}/>
             {totHoje===0
               ? <div style={{display:"flex",alignItems:"center",gap:16}}><div style={{width:84,height:84,borderRadius:22,overflow:"hidden",flexShrink:0}}><Motif s={T.tiles[1]} z={1.55} x={0} y={36}/></div><Vazio>{vocSel.length===0?"Nenhuma palavra ainda. Cadastre em Palavras e elas voltam na hora certa.":"Nada para revisar hoje. Volte amanhã ou adicione palavras novas."}</Vazio></div>
@@ -5365,7 +5468,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             {bloqueioNov&&<div style={{fontSize:12.5,marginTop:10,color:IDI_RED}}>{bloqueioNov}</div>}
           </Card>
         </div>
-        <Card>
+        <Card style={{gridColumn:sp(7),order:12}}>
           <Titulo k="Semana" t="Ritmo de prática" dir={<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>setSub("pratica")}>{cronRodando?"● cronometrando":"Cronometrar"}</button>}/>
           <div style={{display:"flex",gap:isMobile?6:14,justifyContent:"space-between"}}>
             {semana.map((d,i)=>(
@@ -5375,10 +5478,11 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               </div>))}
           </div>
         </Card>
-        <Card>
+        <Card style={{gridColumn:sp(5),order:13}}>
           <Titulo k="Recentes" t="Últimas práticas"/>
           {logSel.length===0?<Vazio>Nada registrado ainda. Use “Praticar” para lançar seu primeiro estudo.</Vazio>:Hist({lista:logSel.slice(0,5)})}
         </Card>
+        </div>
       </>)}
 
       {/* ═ PRATICAR ═ */}
@@ -5669,6 +5773,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           ?"Uma linha por verbo: infinitivo = tradução ; formas | frase (formas e frase são opcionais)."
           :"Uma linha por item: "+(aulaTipo==="palavra"?"der Pullover = tradução | frase. Para o plural: der Pullover, die Pullover = …":"expressão = tradução | frase")+". Só a palavra também vale: use “Completar com "+(iaNome||"Claude")+"”.";
         return (<>
+        <div id="idi-aula-form">
         <Card>
           <Titulo k="Aula" t="O que você viu na aula"/>
           <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
@@ -5677,7 +5782,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           </div>
           <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 2fr",gap:12,marginTop:16}}>
             <div><div style={{...lab,marginBottom:6}}>Data da aula</div><input type="date" style={inp} value={aulaData||hoje} max={hoje} onChange={e=>setAulaData(e.target.value)}/></div>
-            <div><div style={{...lab,marginBottom:6}}>Assunto (opcional)</div><input style={inp} value={aulaTema} onChange={e=>setAulaTema(e.target.value)} placeholder="ex.: roupas, Perfekt, no restaurante"/></div>
+            <div><div style={{...lab,marginBottom:6}}>Título da aula (opcional)</div><input style={inp} value={aulaTema} onChange={e=>setAulaTema(e.target.value)} placeholder={aulaNotas[sel+"|"+(aulaData||hoje)]||"ex.: Kapitel 9, roupas, Perfekt"}/></div>
           </div>
           <div style={{...lab,margin:"16px 0 6px"}}>{aulaTipo==="verbo"?"Verbos":aulaTipo==="expr"?"Expressões":"Palavras"} da aula</div>
           <textarea autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,minHeight:150,resize:"vertical",lineHeight:1.6,fontFamily:"'DM Sans','Segoe UI',sans-serif"}} value={aulaTxt} onChange={e=>setAulaTxt(e.target.value)} placeholder={ph}/>
@@ -5704,29 +5809,65 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           </div>
           {!iaNome&&itens.length>0&&faltam>0&&<div style={{fontSize:12,opacity:.6,marginTop:10}}>Sem a tradução o item não é salvo. Para o app completar sozinho, cadastre uma chave em Gramática › Registrar erros.</div>}
         </Card>
-        <Card>
-          <Titulo k="Aulas" t="Histórico da aula"/>
-          {aulaDatas.length===0?<Vazio>Nenhuma aula registrada ainda. O que você salvar aqui entra no seu vocabulário e nas revisões.</Vazio>:(<>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{aulaDatas.slice(0,10).map(d=><button key={d} onClick={()=>setAulaVer(d)} style={pillA(d===aulaVerD)}>{dBR(d)}</button>)}</div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap",marginTop:16}}>
-              <div>
-                <div style={{fontSize:14,fontWeight:600}}>Aula de {dBR(aulaVerD)}{aulaNotas[sel+"|"+aulaVerD]?" · "+aulaNotas[sel+"|"+aulaVerD]:""}</div>
-                <div style={{fontSize:12.5,opacity:.6,marginTop:2}}>{aulaItensD.length} itens · {aulaItensD.filter(v=>v.tipo==="verbo").length} verbos · {aulaItensD.filter(v=>(v.box||0)>=4).length} dominados</div>
-              </div>
-              <button style={btnP} onClick={()=>iniciarAula(aulaVerD)}>Praticar esta aula</button>
-            </div>
-            {aulaItensD.map(v=>(
-              <div key={v.id} style={{display:"flex",alignItems:"center",gap:12,padding:"11px 0",borderTop:"1px solid rgba(var(--idi-rgb),.08)",marginTop:aulaItensD[0]===v?14:0}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:14.5,fontWeight:600}}><Nome v={v}/>{v.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {v.plural}</span>}{v.tipo==="verbo"&&<span style={{...lab,fontSize:9.5,marginLeft:8}}>verbo</span>}</div>
-                  <div style={{fontSize:13,opacity:.6,marginTop:2}}>{v.trad}{v.formas&&<span style={{fontStyle:"italic"}}> · {v.formas}</span>}{(v.tags||[]).length>0&&<span style={{...lab,fontSize:9.5,marginLeft:8}}>{v.tags.map(t=>"#"+t).join(" ")}</span>}</div>
+        </div>
+        {aulaDatas.length===0?(
+          <Card><Titulo k="Aulas" t="Suas aulas"/><Vazio>Nenhuma aula registrada ainda. Cada aula que você salvar vira um bloco aqui, com tudo o que você viu nela.</Vazio></Card>
+        ):aulaDatas.map((d,idx)=>{
+          const chave=sel+"|"+d;
+          const itens=vocSel.filter(v=>v.aula===d);
+          const grupos=[["Palavras",itens.filter(v=>v.tipo!=="verbo"&&v.at!=="expr")],["Verbos",itens.filter(v=>v.tipo==="verbo")],["Expressões",itens.filter(v=>v.at==="expr"&&v.tipo!=="verbo")]].filter(g=>g[1].length);
+          const aberta=aulaOpen[d]===undefined?idx===0:aulaOpen[d];
+          const titulo=aulaNotas[chave]||"";
+          const dom=itens.filter(v=>(v.box||0)>=4).length, nProva=itens.filter(temProva).length;
+          const dt=new Date(d+"T12:00:00");
+          const semana=dt.toLocaleDateString("pt-BR",{weekday:"long"});
+          const mes=dt.toLocaleDateString("pt-BR",{month:"short"}).replace(".","");
+          const stats=[itens.length+(itens.length===1?" item":" itens"),...grupos.map(g=>g[1].length+" "+(g[1].length===1?({Palavras:"palavra",Verbos:"verbo",Expressões:"expressão"})[g[0]]:g[0].toLowerCase())),nProva?"★ "+nProva+" na prova":""].filter(Boolean).join(" · ");
+          return (
+            <Card key={d} style={{padding:isMobile?"18px 16px":"22px 26px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:14}}>
+                <div style={{width:58,flexShrink:0,textAlign:"center",borderRadius:16,background:"rgba(var(--idi-rgb),.06)",padding:"9px 0 8px"}}>
+                  <div style={{...serif,fontSize:28,lineHeight:1}}>{d.slice(8)}</div>
+                  <div style={{...lab,fontSize:9,marginTop:5}}>{mes}</div>
                 </div>
-                <button onClick={()=>toggleProva(v.id)} aria-label={temProva(v)?"tirar da prova":"marcar como prova"} title={temProva(v)?"Cai na prova (toque para tirar)":"Marcar como “cai na prova”"} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,lineHeight:1,padding:0,color:temProva(v)?IDI_GOLD:"rgba(var(--idi-rgb),.3)"}}>{temProva(v)?"★":"☆"}</button>
-                <div style={{display:"flex",gap:3}} title={"nível "+(v.box||0)+" de 5"}>{[0,1,2,3,4].map(i=><i key={i} style={{width:6,height:6,borderRadius:"50%",background:i<(v.box||0)?T.ink:"rgba(var(--idi-rgb),.15)"}}/>)}</div>
-                <button onClick={()=>setVocab(vocab.filter(x=>x.id!==v.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
-              </div>))}
-          </>)}
-        </Card>
+                <div style={{flex:1,minWidth:0}}>
+                  {aulaEdT===d
+                    ?<input autoFocus style={inp} value={titulo} onChange={e=>setAulaNotas({...aulaNotas,[chave]:e.target.value})} onBlur={()=>setAulaEdT("")} onKeyDown={e=>{if(e.key==="Enter")setAulaEdT("");}} placeholder="Título da aula (ex.: Kapitel 9)"/>
+                    :<div style={{...serif,fontSize:isMobile?22:26,lineHeight:1.15,wordBreak:"break-word"}}>{titulo||"Aula de "+semana}</div>}
+                  <div style={{fontSize:12.5,opacity:.65,marginTop:5,lineHeight:1.45}}>{stats}</div>
+                </div>
+                <button onClick={()=>setAulaOpen({...aulaOpen,[d]:!aberta})} aria-label={aberta?"recolher":"abrir"} aria-expanded={aberta} style={{width:36,height:36,borderRadius:"50%",border:"1px solid rgba(var(--idi-rgb),.2)",background:"transparent",cursor:"pointer",fontSize:13,color:T.ink,flexShrink:0}}>{aberta?"▴":"▾"}</button>
+              </div>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginTop:14}}>
+                <div style={{flex:1,height:6,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden"}}><div style={{width:(itens.length?dom/itens.length*100:0)+"%",height:"100%",background:L(sel).cor,borderRadius:99}}/></div>
+                <span style={{...lab,fontSize:9.5,whiteSpace:"nowrap"}}>{dom}/{itens.length} dominados</span>
+              </div>
+              {aberta&&(<>
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:16}}>
+                  <button style={{...btnP,padding:"9px 18px",fontSize:12.5}} onClick={()=>iniciarAula(d)}>Praticar esta aula</button>
+                  <button style={{...btnS,padding:"9px 16px",fontSize:12.5}} onClick={()=>{setAulaData(d);setAulaTema(titulo);const el=document.getElementById("idi-aula-form");if(el)el.scrollIntoView({behavior:"smooth",block:"start"});}}>+ Adicionar nesta aula</button>
+                  <button style={{...btnS,padding:"9px 16px",fontSize:12.5}} onClick={()=>setAulaEdT(d)}>{titulo?"Editar título":"Dar um título"}</button>
+                </div>
+                {grupos.map(([nome,lista])=>(
+                  <div key={nome} style={{marginTop:20}}>
+                    <div style={{...lab,paddingBottom:8,borderBottom:"1px solid rgba(var(--idi-rgb),.14)"}}>{nome} · {lista.length}</div>
+                    {lista.map(v=>(
+                      <div key={v.id} style={{display:"flex",alignItems:"center",gap:10,padding:"11px 0",borderBottom:"1px solid rgba(var(--idi-rgb),.07)"}}>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:14.5,fontWeight:600,wordBreak:"break-word"}}><Nome v={v}/>{v.plural&&<span style={{fontWeight:400,opacity:.5,fontSize:12.5}}> · pl. {v.plural}</span>}</div>
+                          <div style={{fontSize:13,opacity:.65,marginTop:2}}>{v.trad}</div>
+                          {v.formas&&<div style={{fontSize:12.5,marginTop:2,fontStyle:"italic",opacity:.75}}>{v.formas}</div>}
+                          {v.ex&&<div style={{fontSize:12.5,marginTop:3,opacity:.5,lineHeight:1.45}}>{v.ex.replace(/\[\[|\]\]/g,"")}</div>}
+                          {(v.tags||[]).filter(t=>t!=="prova").length>0&&<div style={{...lab,fontSize:9.5,marginTop:4}}>{v.tags.filter(t=>t!=="prova").map(t=>"#"+t).join(" ")}</div>}
+                        </div>
+                        <button onClick={()=>toggleProva(v.id)} aria-label={temProva(v)?"tirar da prova":"marcar como prova"} title={temProva(v)?"Cai na prova (toque para tirar)":"Marcar como “cai na prova”"} style={{background:"none",border:"none",cursor:"pointer",fontSize:18,lineHeight:1,padding:0,color:temProva(v)?IDI_GOLD:"rgba(var(--idi-rgb),.3)"}}>{temProva(v)?"★":"☆"}</button>
+                        <div style={{display:"flex",gap:3}} title={"nível "+(v.box||0)+" de 5"}>{[0,1,2,3,4].map(i=><i key={i} style={{width:6,height:6,borderRadius:"50%",background:i<(v.box||0)?T.ink:"rgba(var(--idi-rgb),.15)"}}/>)}</div>
+                        <button onClick={()=>setVocab(vocab.filter(x=>x.id!==v.id))} aria-label="remover" style={{background:"none",border:"none",cursor:"pointer",fontSize:18,color:"rgba(var(--idi-rgb),.35)"}}>×</button>
+                      </div>))}
+                  </div>))}
+              </>)}
+            </Card>);
+        })}
         </>);
       })()}
 
@@ -6585,9 +6726,29 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       </>)}
 
       </div></div>
+      </div>
+      </div>
+
+      {!lado&&(<>
+        <nav className="idi-bnav idi-nav" aria-label="Seções">
+          {IDI_BNAV.map(id=>{const it=subs.find(x=>x[0]===id);const on=sub===id;return (
+            <button key={id} onClick={()=>{setSub(id);setMaisOpen(false);}} aria-current={on?"page":undefined} aria-label={it[1].split(" · ")[0]}><Ico k={id} size={20}/><span className="l">{it[1].split(" · ")[0]}</span></button>);})}
+          {(()=>{const fora=!IDI_BNAV.includes(sub);return <button onClick={()=>setMaisOpen(true)} aria-current={fora?"page":undefined} aria-label="Mais seções"><Ico k={fora?sub:"mais"} size={20}/><span className="l">{fora?((subs.find(x=>x[0]===sub)||[0,""])[1]).split(" · ")[0]:"Mais"}</span></button>;})()}
+        </nav>
+        <div className={"idi-mais"+(maisOpen?" on":"")} aria-hidden={!maisOpen}>
+          <div className="bg" onClick={()=>setMaisOpen(false)}/>
+          <div className="pn">
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}><div style={{...serif,fontSize:26,fontWeight:400}}>Mais seções</div><button onClick={()=>setMaisOpen(false)} aria-label="Fechar" style={{width:36,height:36,borderRadius:"50%",border:"none",background:"#fff",cursor:"pointer",fontSize:18,color:T.ink}}>×</button></div>
+            <div className="idi-nav" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              {subs.filter(x=>!IDI_BNAV.includes(x[0])).map(([id,l],i)=>{const [base,badge]=l.split(" · ");const cs=[PAST.butter,PAST.rose,PAST.sage,PAST.sky,PAST.peach][i%5];return (
+                <button key={id} onClick={()=>{setSub(id);setMaisOpen(false);}} style={{display:"flex",alignItems:"center",gap:10,height:56,padding:"0 16px",borderRadius:20,border:"none",background:sub===id?T.ink:cs,color:sub===id?T.sheet:T.ink,fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:700,cursor:"pointer",textAlign:"left"}}><Ico k={id}/><span style={{flex:1}}>{base}</span>{badge&&<span style={{fontSize:11}}>{badge}</span>}</button>);})}
+            </div>
+          </div>
+        </div>
+      </>)}
 
       {cron&&sub!=="pratica"&&(
-        <div style={{position:"fixed",left:"50%",transform:"translateX(-50%)",bottom:16,width:"min(520px, calc(100% - 28px))",zIndex:60,background:T.ink,color:T.sheet,borderRadius:999,padding:"8px 8px 8px 18px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 18px 40px -12px rgba(0,0,0,.55)",border:"1px solid rgba(var(--idi-hrgb),.25)"}}>
+        <div style={{position:"fixed",left:"50%",transform:"translateX(-50%)",bottom:lado?16:88,width:"min(520px, calc(100% - 28px))",zIndex:60,background:T.ink,color:T.sheet,borderRadius:999,padding:"8px 8px 8px 18px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 18px 40px -12px rgba(0,0,0,.55)",border:"1px solid rgba(var(--idi-hrgb),.25)"}}>
           <i style={{width:9,height:9,borderRadius:"50%",background:L(cron.lang).cor,flexShrink:0,animation:cronRodando?"idiPulse 1.4s ease-in-out infinite":"none"}}/>
           <div style={{flex:1,minWidth:0}}>
             <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:17,letterSpacing:".04em",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{fmtT(decorrido)}</div>
