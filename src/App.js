@@ -1309,13 +1309,13 @@ function EstudosApp({userId,isMobile,onMenu,onTrocar}){
 // ═══════════════════════════════════════════════════════════════════
 // IDIOMAS — mini-plataforma de alemão e francês dentro do Velara
 // ═══════════════════════════════════════════════════════════════════
-const IDI_INK="#2A1E14", IDI_CREAM="#F6EBD3", IDI_PAPER="#FCF6E8", IDI_GOLD="#D9A441", IDI_BLUE="#6F86D6", IDI_RED="#C4503A";
+const IDI_GOLD="#D9A441", IDI_BLUE="#6F86D6", IDI_RED="#C4503A";
 const NIVEIS=["A1","A2","B1","B2","C1","C2"];
 const HAB=[["ouvir","Ouvir"],["falar","Falar"],["ler","Ler"],["escrever","Escrever"],["gramatica","Gramática"],["vocab","Vocabulário"]];
 const IDI_TIPOS=[...HAB,["aula","Aula"],["kursbuch","Livro - Kursbuch"],["ubungsbuch","Livro - Übungsbuch"]];
 const IDI_LIVROS=["kursbuch","ubungsbuch"];
 const LEIT=[1,3,7,14,30,60];
-const PAST={butter:"#F3D88A",butterD:"#E9C45A",rose:"#F1B9AE",roseD:"#E39A8C",sage:"#BDC795",sageD:"#A2B070",sky:"#BFCAF1",skyD:"#9DAEE6",peach:"#F6D2B0",peachD:"#EDB98A"};
+const PAST={butter:"#D8B45E",butterD:"#BE9A41",rose:"#E0B8AB",roseD:"#C99486",sage:"#AEB07A",sageD:"#8F9358",sky:"#9DB3A8",skyD:"#7F988C",peach:"#D99C7F",peachD:"#C27F60"};
 function petTint(h,q){const n=parseInt(h.slice(1),16);const m=v=>Math.round(v+(255-v)*q);return "rgb("+m(n>>16)+","+m((n>>8)&255)+","+m(n&255)+")";}
 function Petalas({itens,centro,ink,fam,label,semOk,fundo}){
   const n=itens.length; if(n<2)return null;
@@ -1352,12 +1352,13 @@ function Petalas({itens,centro,ink,fam,label,semOk,fundo}){
 }
 
 function Forma({t,cor,style}){
+  const fol=(x,y,r,k)=><path key={x+"-"+y} d="M0 0C6-10 18-14 30-10C24 2 10 6 0 0Z" fill={cor} transform={"translate("+x+" "+y+") rotate("+r+") scale("+k+")"}/>;
   return (
     <svg viewBox="0 0 100 100" aria-hidden="true" style={style}>
-      {t==="flor"&&<g>{[0,60,120,180,240,300].map(a=><circle key={a} cx={50+27*Math.cos(a*Math.PI/180)} cy={50+27*Math.sin(a*Math.PI/180)} r="20" fill={cor}/>)}<circle cx="50" cy="50" r="13" fill="#fff" opacity=".5"/></g>}
-      {t==="sol"&&<polygon fill={cor} points={Array.from({length:24},(_,i)=>{const r=i%2?33:48,a=i*Math.PI/12;return (50+r*Math.cos(a)).toFixed(1)+","+(50+r*Math.sin(a)).toFixed(1);}).join(" ")}/>}
-      {t==="tri"&&<polygon points="50,12 92,86 8,86" fill={cor} stroke={cor} strokeWidth="12" strokeLinejoin="round"/>}
-      {t==="folha"&&<path d="M10 90C10 42 40 10 92 8c0 52-30 82-82 82z" fill={cor}/>}
+      {t==="flor"&&<g>{[0,60,120,180,240,300].map(a=><path key={a} d="M50 50C41 33 43 14 50 3C57 14 59 33 50 50Z" fill={cor} transform={"rotate("+a+" 50 50)"}/>)}<circle cx="50" cy="50" r="6" fill={cor}/></g>}
+      {t==="sol"&&<g><path d="M52 98C50 70 56 42 78 8" fill="none" stroke={cor} strokeWidth="2.6" strokeLinecap="round"/>{fol(52,84,-155,1)}{fol(53,70,-15,1.05)}{fol(55,56,-160,1)}{fol(60,42,-20,.95)}{fol(66,28,-165,.85)}{fol(72,17,-25,.7)}</g>}
+      {t==="tri"&&<g>{[[-40,0,.7],[-18,0,.95],[6,0,1],[28,0,.9],[52,0,.65]].map(([a,,k],i)=><path key={i} d="M50 96C38 70 40 36 50 8C60 36 62 70 50 96Z" fill={cor} transform={"rotate("+a+" 50 96) scale("+k+")"} style={{transformOrigin:"50px 96px"}}/>)}</g>}
+      {t==="folha"&&<g><path d="M8 92C8 44 40 10 94 6C94 58 62 92 8 92Z" fill={cor}/><path d="M12 88C38 62 62 36 88 12" fill="none" stroke="rgba(255,255,255,.28)" strokeWidth="1.6" strokeLinecap="round"/></g>}
     </svg>);
 }
 function Ico({k,size=18}){
@@ -1383,8 +1384,8 @@ const IDI_GRUPOS=[["Geral",["hoje","aula","diario","prova","pratica"]],["Estudo"
 const IDI_BNAV=["hoje","aula","diario","prova","pratica"];
 const LEIT_P=[1,2,4,7,14,30], GLAD_P=[1,2,4,7,14,30];
 const temProva=v=>(v.tags||[]).includes("prova");
-const ETAPAS=[["ouvir","Ouvir","#2a78d6"],["ler","Ler","#eb6834"],["escrever","Escrever","#1baf7a"],["falar","Falar","#eda100"],["revisar","Revisar","#e87ba4"]];
-const ETAPA_OUT="#9a948a";
+const ETAPAS=[["ouvir","Ouvir","#2F6F9F"],["ler","Ler","#C4622D"],["escrever","Escrever","#2E9E86"],["falar","Falar","#D1A12E"],["revisar","Revisar","#B0487A"]];
+const ETAPA_OUT="#8C8279";
 const MD_PADRAO={ouvir:20,ler:15,escrever:10,falar:10,revisar:15};
 const PARTES_PROVA=["Ouvir","Ler","Escrever","Falar","Gramática","Vocabulário","Outro"];
 const IDI_LANGS=[
@@ -1392,8 +1393,8 @@ const IDI_LANGS=[
   {id:"fr",nome:"Francês",cod:"FR",cor:IDI_BLUE,nivel:"A2",alvo:"B1",prova:"",metaSem:3},
 ];
 const IDI_TEMAS={
-  de:{ink:IDI_INK,sheet:IDI_CREAM,paper:IDI_PAPER,acc:IDI_GOLD,rgb:"42,30,20",hrgb:"246,235,211",hero:{s:"manteiga",z:1.2,x:45,y:15},scrim:"linear-gradient(95deg,rgba(32,21,12,.96) 0%,rgba(32,21,12,.8) 45%,rgba(32,21,12,.28) 100%)",tiles:["tulipa","manteiga","noite","veludo"],nome:"Deutsch"},
-  fr:{ink:"#17213F",sheet:"#EAEEF9",paper:"#F6F8FD",acc:IDI_BLUE,rgb:"23,33,63",hrgb:"234,238,249",hero:{s:"marinho",z:1.2,x:30,y:20},scrim:"linear-gradient(95deg,rgba(11,17,42,.96) 0%,rgba(11,17,42,.8) 45%,rgba(11,17,42,.3) 100%)",tiles:["marinho","tulipa","veludo","manteiga"],nome:"Français"},
+  de:{ink:"#2B1116",sheet:"#F2E4D8",card:"#F6EADF",bg:"#561A24",paper:"#F6EADF",acc:"#C9A24A",rgb:"43,17,22",hrgb:"242,228,216",hero:{s:"veludo",z:1.1,x:30,y:10},scrim:"",tiles:["veludo","tulipa","manteiga","petroleo"],nome:"Deutsch"},
+  fr:{ink:"#10282C",sheet:"#E6EEEA",card:"#EEF3F0",bg:"#143B42",paper:"#EEF3F0",acc:"#7FB2AA",rgb:"16,40,44",hrgb:"230,238,234",hero:{s:"petroleo",z:1.2,x:30,y:20},scrim:"",tiles:["petroleo","tulipa","veludo","manteiga"],nome:"Français"},
 };
 
 // ── Substantivos alemães: cores por artigo, regras de terminação e banco básico ──
@@ -2079,14 +2080,22 @@ function iaJson(txt){
   const i0=t.search(/[[{]/); const e=t.lastIndexOf(t[i0]==="["?"]":"}");
   return JSON.parse(i0>=0?t.slice(i0,e+1):t);
 }
+function aplicarCorrecoes(texto,erros){
+  return marcarTrechos(texto,erros,"trecho").map(x=>x.n===null?x.t:(erros[x.n].correcao||"")).join("");
+}
 async function gCorrigirTexto(lang,areas,nivel,tema,texto){
   const idioma=lang==="de"?"alemão":"francês";
   const chaves=areas.map(a=>a[0]).join(", ");
-  const prompt="Você é professor de "+idioma+" de uma aluna brasileira, médica, nível "+nivel+", que treina escrita para um exame de proficiência. "+(tema?"Tema ou tarefa: "+tema+". ":"")+"Texto dela: «"+texto+"». Corrija com precisão e sem condescendência, apontando TODOS os erros (gramática, artigos e casos, conjugação, ordem das palavras, preposições, ortografia, acentos, maiúsculas, vocabulário inadequado, coesão e coerência). Cada trecho em \"trecho\" deve ser copiado EXATAMENTE como ela escreveu, curto (a palavra ou expressão errada, não a frase inteira). Responda SOMENTE com JSON: {\"correta\":\"o texto inteiro corrigido, mantendo ao máximo o sentido e as palavras dela\",\"erros\":[{\"tipo\":\"artigo_caso|gramatica|ortografia|coesao|coerencia|vocabulario\",\"area\":\"uma destas chaves: "+chaves+"\",\"trecho\":\"trecho exato dela\",\"correcao\":\"trecho corrigido\",\"porque\":\"explicação curta em português, citando a regra\"}],\"comentario\":\"2 frases em português: o que ela fez bem e a prioridade para o próximo texto\"}. Se estiver tudo certo, erros vazio e correta igual ao texto dela.";
-  const obj=iaJson(await iaChamar(prompt,null,true));
+  const prompt="Você é professor de "+idioma+" de uma aluna brasileira, médica, nível "+nivel+", que treina escrita para um exame de proficiência. "+(tema?"Tema ou tarefa: "+tema+". ":"")+"Texto dela:\n<<<\n"+texto+"\n>>>\nCorrija com precisão e sem condescendência, apontando TODOS os erros (gramática, artigos e casos, conjugação, ordem das palavras, preposições, ortografia, acentos, maiúsculas, vocabulário inadequado, coesão e coerência). Cada \"trecho\" deve ser copiado EXATAMENTE como ela escreveu, curto (a palavra ou expressão errada, não a frase inteira). Responda SOMENTE com JSON válido, sem nenhum texto fora do JSON, sem quebras de linha dentro das strings e sem aspas duplas dentro dos textos: {\"erros\":[{\"tipo\":\"artigo_caso|gramatica|ortografia|coesao|coerencia|vocabulario\",\"area\":\"uma destas chaves: "+chaves+"\",\"trecho\":\"trecho exato dela\",\"correcao\":\"trecho corrigido\",\"porque\":\"explicação curta em português, citando a regra\"}],\"comentario\":\"2 frases em português: o que ela fez bem e a prioridade para o próximo texto\"}. Se estiver tudo certo, erros vazio.";
+  let obj=null, ultimo=null;
+  for(let k=0;k<2&&!obj;k++){
+    try{ obj=iaJson(await iaChamar(k?prompt+" ATENÇÃO: a resposta anterior não era JSON válido. Devolva apenas o JSON.":prompt,null,true)); }
+    catch(e){ ultimo=e; if(e.message==="SEM_CHAVE")throw e; }
+  }
+  if(!obj||typeof obj!=="object")throw new Error("a resposta da IA veio incompleta ("+((ultimo&&ultimo.message)||"sem detalhes")+")");
   const ok=new Set(areas.map(a=>a[0])), tp=new Set(FR_TIPOS.map(x=>x[0]));
   const erros=(Array.isArray(obj.erros)?obj.erros:[]).filter(e=>e&&typeof e.porque==="string"&&typeof e.trecho==="string"&&e.trecho.trim()).map(e=>({tipo:tp.has(e.tipo)?e.tipo:"gramatica",area:ok.has(e.area)?e.area:"outro",trecho:String(e.trecho),correcao:String(e.correcao||""),porque:e.porque}));
-  return {correta:typeof obj.correta==="string"&&obj.correta.trim()?obj.correta.trim():texto,erros,comentario:typeof obj.comentario==="string"?obj.comentario:""};
+  return {correta:aplicarCorrecoes(texto,erros),erros,comentario:typeof obj.comentario==="string"?obj.comentario:""};
 }
 function marcarTrechos(texto,erros,campo){
   const usados=[]; const ach=[];
@@ -2106,7 +2115,7 @@ function marcarTrechos(texto,erros,campo){
 }
 async function gAnaliseDiario(lang,ent,ant){
   const idioma=lang==="de"?"alemão":"francês";
-  const lista=x=>x.erros.length?x.erros.map(e=>frTipoNome(e.tipo)+" («"+e.trecho+"» → «"+e.correcao+"»)").join("; "):"sem erros";
+  const lista=x=>(x.erros&&x.erros.length)?x.erros.map(e=>frTipoNome(e.tipo)+" («"+e.trecho+"» → «"+e.correcao+"»)").join("; "):"sem erros";
   const antTxt=ant.length?ant.map(x=>x.data+": "+lista(x)).join("\n"):"nenhum texto anterior";
   const prompt="Você é professor de "+idioma+" de uma aluna brasileira, médica, que escreve um diário todos os dias para evoluir. Texto de hoje: «"+ent.texto+"». Erros de hoje: "+lista(ent)+". Erros dos textos anteriores:\n"+antTxt+"\n\nFaça uma análise, em português do Brasil, sem markdown e sem elogios vazios, em até 170 palavras, com estes três títulos em linhas separadas, cada um seguido de 1 a 2 frases citando exemplos dela: Onde você errou hoje. Padrão recorrente. Foco de amanhã. Em Padrão recorrente compare com os textos anteriores e diga se o mesmo erro se repete ou se melhorou; se não houver texto anterior, diga que ainda não há padrão e aponte o que mais pesou. Em Foco de amanhã dê 1 ou 2 ações concretas.";
   return (await iaChamar(prompt,null,false)).trim();
@@ -3828,9 +3837,14 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [escritos,setEscritos]=useLS("v5_idi_escritos",[],userId);
   const [diario,setDiario]=useLS("v5_idi_diario",[],userId);
   const [dcfg,setDcfg]=useLS("v5_idi_diacfg",{on:true,hora:"20:00",notif:false},userId);
-  const [drEd,setDrEd]=useState({texto:"",min:"",load:false,msg:"",edit:false,foco:null,ver:null,anaLoad:false});
+  const [drEd,setDrEd]=useState({texto:"",data:"",load:"",erro:"",edit:false,foco:null,ver:null,anaLoad:false,conf:"",todos:false,salvo:""});
   const diarioRef=useRef(diario); diarioRef.current=diario;
   const drInfo=useRef({pend:false,hora:"20:00",nome:""});
+  useEffect(()=>{
+    if(sub!=="diario")return;
+    const k="idi_dr_"+userId+"_"+sel+"_"+(drEd.data||today());
+    try{ const d=localStorage.getItem(k); if(d)setDrEd(q=>q.texto.trim()?q:{...q,texto:d}); }catch{ /* sem rascunho */ }
+  },[sub,sel,userId,drEd.data,drEd.edit,drEd.ver]);
   useEffect(()=>{
     if(!dcfg.on||!dcfg.notif||typeof Notification==="undefined"||Notification.permission!=="granted")return;
     const iv=setInterval(()=>{
@@ -4095,32 +4109,52 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     if(!novos.length)return;
     setMeus([...novos,...meus]); setEsc({...esc,salvo:novos.length});
   };
-  const corrigirDiario=async()=>{
-    const t=drEd.texto.trim(); if(drEd.load||t.length<20)return;
-    setDrEd({...drEd,load:true,msg:"",foco:null,ver:null});
+  const drChave=d=>"idi_dr_"+userId+"_"+sel+"_"+d;
+  const corrigirEntrada=async ent=>{
+    setDrEd(q=>({...q,load:ent.id,erro:""}));
     try{
       const nv=(L(sel)||{}).nivel||"A2";
-      const r=await gCorrigirTexto(sel,gAreas,nv,"Diário pessoal do dia (texto livre)",t);
-      const palavras=t.split(/\s+/).filter(Boolean).length;
-      const ent={id:uid(),lang:sel,data:hoje,texto:t,correta:r.correta,erros:r.erros,comentario:r.comentario,palavras};
-      const ant=diarioRef.current.filter(x=>x.lang===sel&&x.data!==hoje).sort((a,b)=>b.data.localeCompare(a.data)).slice(0,5);
-      const outros=diarioRef.current.filter(x=>!(x.lang===sel&&x.data===hoje));
-      setDiario([ent,...outros].slice(0,500));
-      const min=+drEd.min;
-      if(min>0)setLog([{id:uid(),lang:sel,tipo:"escrever",min,nota:"Diário",data:hoje},...log]);
-      setDrEd({...drEd,load:false,edit:false,msg:"",foco:null,ver:null,min:"",anaLoad:true});
-      gAnaliseDiario(sel,ent,ant).then(txt=>{
+      const r=await gCorrigirTexto(sel,gAreas,nv,"Diário pessoal (texto livre)",ent.texto);
+      const novo={...ent,erros:r.erros,correta:r.correta,comentario:r.comentario,analise:""};
+      setDiario(diarioRef.current.map(x=>x.id===ent.id?novo:x));
+      setDrEd(q=>({...q,load:"",erro:"",anaLoad:true}));
+      const ant=diarioRef.current.filter(x=>x.lang===sel&&x.id!==ent.id&&x.erros).sort((a,b)=>b.data.localeCompare(a.data)).slice(0,5);
+      gAnaliseDiario(sel,novo,ant).then(txt=>{
         setDiario(diarioRef.current.map(x=>x.id===ent.id?{...x,analise:txt}:x));
         setDrEd(q=>({...q,anaLoad:false}));
       }).catch(()=>setDrEd(q=>({...q,anaLoad:false})));
     }catch(err){
-      setDrEd({...drEd,load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave de IA (campo de chave do app) para receber a correção.":"Não consegui corrigir ("+err.message+"). Seu texto continua aí, tente de novo."});
+      setDrEd(q=>({...q,load:"",erro:err.message==="SEM_CHAVE"?"Cadastre uma chave de IA (campo de chave do app) para receber a correção. Seu texto está salvo.":"Não consegui corrigir agora: "+err.message+". Seu texto está salvo; toque em Corrigir agora para tentar de novo."}));
     }
   };
+  const salvarDiario=corrigir=>{
+    const t=drEd.texto.trim(); if(t.length<10||drEd.load)return;
+    const data=drEd.data||hoje;
+    const antes=diarioRef.current.find(x=>x.lang===sel&&x.data===data);
+    const igual=antes&&antes.texto===t;
+    const ent={id:antes?antes.id:uid(),lang:sel,data,texto:t,palavras:t.split(/\s+/).filter(Boolean).length,
+      erros:igual?(antes.erros||null):null,correta:igual?(antes.correta||null):null,comentario:igual?(antes.comentario||""):"",analise:igual?(antes.analise||""):"",criada:antes&&antes.criada?antes.criada:Date.now(),editada:Date.now()};
+    setDiario([ent,...diarioRef.current.filter(x=>x.id!==ent.id)].slice(0,800));
+    try{localStorage.removeItem(drChave(data));}catch{ /* sem rascunho */ }
+    setDrEd({...drEd,texto:"",data:"",edit:false,ver:ent.id,foco:null,erro:"",conf:"",salvo:""});
+    if(corrigir&&!(igual&&ent.erros))corrigirEntrada(ent);
+  };
+  const excluirEntrada=id=>{
+    setDiario(diarioRef.current.filter(x=>x.id!==id));
+    setDrEd({...drEd,ver:null,edit:false,conf:"",foco:null,erro:""});
+  };
   const salvarErrosDiario=ent=>{
-    const novos=ent.erros.filter(e=>e.correcao&&e.correcao!==e.trecho).map(e=>({id:uid(),lang:sel,area:e.area||"outro",errada:e.trecho,certa:e.correcao,fonte:"diário",data:ent.data}));
+    const novos=(ent.erros||[]).filter(e=>e.correcao&&e.correcao!==e.trecho).map(e=>({id:uid(),lang:sel,area:e.area||"outro",errada:e.trecho,certa:e.correcao,fonte:"diário",data:ent.data}));
     if(!novos.length)return;
     setMeus([...novos,...meus]); setDrEd({...drEd,salvo:ent.id});
+  };
+  const baixarTextos=()=>{
+    try{
+      const txt=[...dSel].sort((a,b)=>a.data.localeCompare(b.data)).map(x=>"=== "+x.data+" ===\n"+x.texto+((x.erros&&x.erros.length&&x.correta)?"\n\n--- Corrigido ---\n"+x.correta:"")).join("\n\n\n");
+      const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="diario-"+sel+".txt";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    }catch{ /* download indisponível */ }
   };
   const baixarIcs=()=>{
     try{
@@ -4593,11 +4627,11 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
 
   const lab={fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10,letterSpacing:".12em",textTransform:"uppercase",color:"rgba(var(--idi-rgb),.6)"};
   const serif={fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,letterSpacing:"-.03em"};
-  const inp={background:"#fff",border:"1px solid rgba(var(--idi-rgb),.18)",borderRadius:12,padding:"11px 14px",fontSize:14,fontFamily:"'DM Sans',sans-serif",color:T.ink,width:"100%",minWidth:0,outline:"none"};
-  const btnP={background:T.ink,color:T.sheet,border:"none",borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
-  const btnS={background:"transparent",color:T.ink,border:"1px solid rgba(var(--idi-rgb),.25)",borderRadius:999,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
+  const inp={background:"rgba(255,255,255,.6)",border:"1px solid rgba(var(--idi-rgb),.2)",borderRadius:10,padding:"11px 14px",fontSize:14,fontFamily:"'DM Sans',sans-serif",color:T.ink,width:"100%",minWidth:0,outline:"none"};
+  const btnP={background:T.ink,color:T.sheet,border:"none",borderRadius:12,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
+  const btnS={background:"transparent",color:T.ink,border:"1px solid rgba(var(--idi-rgb),.3)",borderRadius:12,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"};
   const CardR2=useRef(null);
-  CardR2.current=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(var(--idi-rgb),.07)",borderRadius:28,boxShadow:"0 10px 30px -22px rgba(42,30,20,.35)",padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  CardR2.current=({children,style})=><div style={{background:T.card,color:T.ink,border:"1px solid rgba(var(--idi-hrgb),.1)",borderRadius:20,boxShadow:"0 18px 40px -26px rgba(0,0,0,.65)",padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
   const Card=useRef(pp=>CardR2.current(pp)).current;
   const Titulo=({k,t,dir})=><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,marginBottom:18}}><div><div style={lab}>{k}</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:6,lineHeight:1,color:T.ink}}>{t}</div></div>{dir}</div>;
   const Vazio=({children})=><div style={{fontSize:14,lineHeight:1.45,color:"rgba(var(--idi-rgb),.62)"}}>{children}</div>;
@@ -4688,7 +4722,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const goalDia=mdTot>0?mdTot:(L(sel).metaSem>0?Math.round(L(sel).metaSem*60/7):0);
   const lado=!isMobile&&wLarg>=960;
   const sp=n=>lado?"span "+n:"span 12";
-  const pastCard=bg=>({background:bg,border:"none",position:"relative",overflow:"hidden",isolation:"isolate"});
+  const pastCard=bg=>({background:bg,color:T.ink,border:"none",position:"relative",overflow:"hidden",isolation:"isolate",boxShadow:"0 18px 40px -26px rgba(0,0,0,.65)"});
   const nomeU=(()=>{try{return (localStorage.getItem("velara_user_name")||"").trim().split(/\s+/)[0]||"";}catch{return "";}})();
   const hr=new Date().getHours();
   const saud=hr<12?"Bom dia":hr<18?"Boa tarde":"Boa noite";
@@ -5296,16 +5330,16 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   );
 
   return (
-    <div className="idi" data-lang={sel} style={{"--idi-rgb":T.rgb,"--idi-hrgb":T.hrgb,minHeight:"100vh",background:T.sheet,position:"relative",zIndex:1,color:T.ink,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
+    <div className="idi" data-lang={sel} style={{"--idi-rgb":T.rgb,"--idi-hrgb":T.hrgb,minHeight:"100vh",background:T.bg,backgroundImage:"radial-gradient(1000px 560px at 92% -6%,rgba(255,255,255,.08),transparent 62%)",position:"relative",zIndex:1,color:T.sheet,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
       <style>{`
         @keyframes idiFade{from{opacity:0}to{opacity:1}}
         @keyframes idiPulse{0%,100%{opacity:1}50%{opacity:.25}}
         @keyframes idiFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(3px,-6px)}}
         .idi .idi-float{animation:idiFloat 5s ease-in-out infinite}
         @media (prefers-reduced-motion:reduce){.idi .idi-float{animation:none}}
-        body:has(.idi){background:${T.sheet}!important}
+        body:has(.idi){background:${T.bg}!important}
         .idi .idi-shell{display:grid;grid-template-columns:${lado?"248px minmax(0,1fr)":"minmax(0,1fr)"};gap:24px;max-width:1400px;margin:0 auto;padding:${isMobile?"14px 14px 0":"20px 22px 0"}}
-        .idi .idi-side{position:sticky;top:20px;align-self:start;height:calc(100vh - 40px);background:${T.ink};color:${T.sheet};border-radius:30px;padding:24px 16px 16px;display:flex;flex-direction:column;overflow:auto;scrollbar-width:none}
+        .idi .idi-side{position:sticky;top:20px;align-self:start;height:calc(100vh - 40px);background:${T.ink};box-shadow:0 0 0 1px rgba(var(--idi-hrgb),.1);color:${T.sheet};border-radius:24px;padding:24px 16px 16px;display:flex;flex-direction:column;overflow:auto;scrollbar-width:none}
         .idi .idi-side::-webkit-scrollbar{display:none}
         .idi .idi-main{min-width:0}
         .idi .idi-sheet{position:relative;padding:${isMobile?"18px 0 130px":"22px 0 110px"};animation:idiFade .5s ease both}
@@ -5317,14 +5351,14 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         .idi .idi-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
         .idi .idi-row::-webkit-scrollbar{display:none}
         .idi .idi-nav-i:hover{background:rgba(var(--idi-hrgb),.1)}
-        .idi .idi-bnav{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;width:min(430px,calc(100% - 24px));height:64px;border-radius:999px;background:rgba(255,255,255,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 14px 40px -14px rgba(42,30,20,.45),0 0 0 1px rgba(var(--idi-rgb),.06);display:flex;align-items:center;justify-content:space-between;padding:0 10px;z-index:55}
+        .idi .idi-bnav{position:fixed;left:50%;transform:translateX(-50%);bottom:14px;width:min(430px,calc(100% - 24px));height:64px;border-radius:999px;background:rgba(246,234,223,.95);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);box-shadow:0 14px 40px -14px rgba(0,0,0,.7),0 0 0 1px rgba(var(--idi-rgb),.06);display:flex;align-items:center;justify-content:space-between;padding:0 10px;z-index:55}
         .idi .idi-bnav button{border:none;background:transparent;cursor:pointer;height:44px;min-width:44px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:0 12px;color:${T.ink};font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700}
         .idi .idi-bnav button .l{display:none}
         .idi .idi-bnav button[aria-current=page]{background:${T.ink};color:${T.sheet}}
         .idi .idi-bnav button[aria-current=page] .l{display:inline}
         .idi .idi-mais{position:fixed;inset:0;z-index:80;pointer-events:none}
         .idi .idi-mais .bg{position:absolute;inset:0;background:rgba(32,21,12,.4);opacity:0;transition:opacity .25s}
-        .idi .idi-mais .pn{position:absolute;left:0;right:0;bottom:0;background:${T.sheet};border-radius:28px 28px 0 0;padding:22px 16px 34px;transform:translateY(105%);visibility:hidden;transition:transform .3s cubic-bezier(.3,.7,.2,1),visibility 0s .3s}
+        .idi .idi-mais .pn{position:absolute;left:0;right:0;bottom:0;background:${T.sheet};border-radius:22px 22px 0 0;padding:22px 16px 34px;transform:translateY(105%);visibility:hidden;transition:transform .3s cubic-bezier(.3,.7,.2,1),visibility 0s .3s}
         .idi .idi-mais.on{pointer-events:auto}
         .idi .idi-mais.on .bg{opacity:1}
         .idi .idi-mais.on .pn{transform:translateY(0);visibility:visible;transition-delay:0s}
@@ -5364,16 +5398,16 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         </aside>)}
       <div className="idi-main">
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12}}>
-          <button onClick={onMenu} aria-label="Abrir menu" style={{width:42,height:42,borderRadius:"50%",border:"none",background:lado?T.ink:"#fff",boxShadow:lado?"none":"0 6px 20px -10px rgba(42,30,20,.45)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5,flexShrink:0}}>{[0,1,2].map(i=><i key={i} style={{width:16,height:1.6,background:lado?T.sheet:T.ink,borderRadius:2,display:"block"}}/>)}</button>
-          <div style={{background:T.ink,borderRadius:999}}><AppSwitch atual="idi" onTrocar={onTrocar}/></div>
+          <button onClick={onMenu} aria-label="Abrir menu" style={{width:42,height:42,borderRadius:"50%",border:"none",background:lado?T.ink:T.card,boxShadow:"0 6px 20px -10px rgba(0,0,0,.55)",cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5,flexShrink:0}}>{[0,1,2].map(i=><i key={i} style={{width:16,height:1.6,background:lado?T.sheet:T.ink,borderRadius:2,display:"block"}}/>)}</button>
+          <div style={{background:T.ink,borderRadius:999,boxShadow:"0 0 0 1px rgba(var(--idi-hrgb),.16)"}}><AppSwitch atual="idi" onTrocar={onTrocar}/></div>
           <span style={{width:42,height:42,flexShrink:0}}/>
         </div>
-        {!lado&&<div style={{display:"inline-flex",gap:4,background:"#fff",borderRadius:999,padding:4,marginTop:18,boxShadow:"0 6px 20px -12px rgba(42,30,20,.4)"}}>
+        {!lado&&<div style={{display:"inline-flex",gap:4,background:T.card,borderRadius:999,padding:4,marginTop:18,boxShadow:"0 6px 20px -12px rgba(0,0,0,.55)"}}>
           {cfg.map(l=>{const on=l.id===sel;return <button key={l.id} onClick={()=>trocarIdioma(l.id)} aria-pressed={on} style={{height:34,padding:"0 16px",borderRadius:999,border:"none",cursor:"pointer",background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontFamily:"'DM Sans',sans-serif",fontSize:13,fontWeight:on?700:500}}>{l.nome}</button>;})}
         </div>}
-        <div key={"h"+sel+sub} style={{position:"relative",overflow:"hidden",isolation:"isolate",borderRadius:isMobile?30:38,background:STY[T.hero.s].paper,color:T.sheet,"--idi-rgb":T.hrgb,margin:isMobile?"18px 0 4px":"26px 0 6px",padding:sub==="hoje"?(isMobile?"24px 20px 26px":"34px 38px 36px"):(isMobile?"22px 20px 24px":"30px 38px 32px"),boxShadow:"0 18px 40px -28px rgba(42,30,20,.55)"}}>
+        <div key={"h"+sel+sub} style={{position:"relative",overflow:"hidden",isolation:"isolate",borderRadius:isMobile?22:28,background:STY[T.hero.s].paper,color:T.sheet,"--idi-rgb":T.hrgb,margin:isMobile?"18px 0 4px":"26px 0 6px",padding:sub==="hoje"?(isMobile?"24px 20px 26px":"34px 38px 36px"):(isMobile?"22px 20px 24px":"30px 38px 32px"),boxShadow:"0 18px 40px -28px rgba(42,30,20,.55)"}}>
           <Motif s={T.hero.s} z={T.hero.z} x={T.hero.x} y={T.hero.y} style={{position:"absolute",inset:0,opacity:.95,zIndex:-2}}/>
-          <div aria-hidden="true" style={{position:"absolute",inset:0,zIndex:-1,background:isMobile?"linear-gradient(180deg,rgba("+T.rgb+",.86) 0%,rgba("+T.rgb+",.62) 52%,rgba("+T.rgb+",.12) 100%)":"linear-gradient(95deg,rgba("+T.rgb+",.92) 0%,rgba("+T.rgb+",.74) 36%,rgba("+T.rgb+",.06) 72%)"}}/>
+          <div aria-hidden="true" style={{position:"absolute",inset:0,zIndex:-1,background:isMobile?"linear-gradient(180deg,rgba("+T.rgb+",.88) 0%,rgba("+T.rgb+",.74) 55%,rgba("+T.rgb+",.58) 100%)":"linear-gradient(95deg,rgba("+T.rgb+",.92) 0%,rgba("+T.rgb+",.74) 36%,rgba("+T.rgb+",.06) 72%)"}}/>
           <div style={{position:"relative"}}>
             <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".16em",textTransform:"uppercase",color:"rgba(var(--idi-rgb),.6)",lineHeight:1.6}}>{dataHoje} · {nomeSel}</div>
             {sub==="hoje"?(<>
@@ -5417,12 +5451,12 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       {/* ═ HOJE ═ */}
       {sub==="hoje"&&(<>
         <div className="idi-bento">
-        <button onClick={()=>setSub("diario")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",...pastCard(entHoje?PAST.sage:(drPend?PAST.rose:PAST.peach)),gridColumn:sp(12),order:0,borderRadius:28,padding:isMobile?"18px 20px":"20px 26px",cursor:"pointer",marginBottom:0,fontFamily:"inherit",color:T.ink}}>
+        <button onClick={()=>setSub("diario")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",...pastCard(entHoje?PAST.sage:(drPend?PAST.rose:PAST.peach)),gridColumn:sp(12),order:0,borderRadius:20,padding:isMobile?"18px 20px":"20px 26px",cursor:"pointer",marginBottom:0,fontFamily:"inherit",color:T.ink}}>
           <Forma t="flor" cor={entHoje?PAST.sageD:(drPend?PAST.roseD:PAST.peachD)} style={{position:"absolute",right:-18,top:-20,width:110,height:110,zIndex:-1,pointerEvents:"none"}}/>
           <div style={{minWidth:0}}>
             <div style={lab}>Diário em {drNome}{drStreak>0?" · "+drStreak+(drStreak===1?" dia":" dias")+" seguidos":""}</div>
-            <div style={{...serif,fontSize:isMobile?22:26,marginTop:6,lineHeight:1.1}}>{entHoje?"Diário de hoje escrito":(drPend?"Hora de escrever seu diário":"Escreva seu diário de hoje")}</div>
-            <div style={{fontSize:12.5,opacity:.7,marginTop:6}}>{entHoje?(entHoje.palavras||0)+" palavras · "+entHoje.erros.length+(entHoje.erros.length===1?" erro":" erros")+" corrigidos":(dcfg.on?"Lembrete às "+dcfg.hora+". ":"")+"Escreva, receba a correção e veja onde você erra."}</div>
+            <div style={{...serif,fontSize:isMobile?22:26,marginTop:6,lineHeight:1.1}}>{entHoje?"Diário de hoje salvo":(drPend?"Hora de escrever seu diário":"Escreva seu diário de hoje")}</div>
+            <div style={{fontSize:12.5,opacity:.7,marginTop:6}}>{entHoje?(entHoje.palavras||0)+" palavras · "+(entHoje.erros?(entHoje.erros.length+(entHoje.erros.length===1?" erro corrigido":" erros corrigidos")):"salvo, ainda sem correção"):(dcfg.on?"Lembrete às "+dcfg.hora+". ":"")+"Escreva, receba a correção e veja onde você erra."}</div>
           </div>
           <span style={{fontSize:20,flexShrink:0}}>{entHoje?"✓":"→"}</span>
         </button>
@@ -5480,7 +5514,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             </Card>);
         })()}
         {(provaV.length>0||provaE.length>0||provaCfg.prova)&&(
-          <button onClick={()=>setSub("prova")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",...pastCard(PAST.sage),gridColumn:sp(6),order:7,borderRadius:28,padding:isMobile?"18px 20px":"22px 26px",cursor:"pointer",marginBottom:0,fontFamily:"inherit",color:T.ink}}>
+          <button onClick={()=>setSub("prova")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",...pastCard(PAST.sage),gridColumn:sp(6),order:7,borderRadius:20,padding:isMobile?"18px 20px":"22px 26px",cursor:"pointer",marginBottom:0,fontFamily:"inherit",color:T.ink}}>
             <Forma t="tri" cor={PAST.sageD} style={{position:"absolute",right:-14,bottom:-18,width:120,height:120,zIndex:-1,pointerEvents:"none"}}/>
             <div style={{minWidth:0}}>
               <div style={lab}>{provaCfg.exame||"Prova"}{diasProva!==null?(diasProva>=0?" · faltam "+diasProva+" dias":" · data passou"):""}</div>
@@ -5503,7 +5537,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           if(!pl.passos.length)return null;
           return (
             <Card style={{...pastCard(PAST.sky),gridColumn:sp(5),order:2}}>
-              <div aria-hidden="true" style={{position:"absolute",right:-20,top:-26,width:130,height:130,borderRadius:"50%",background:"radial-gradient(circle at 30% 30%,#F7B58C 0%,rgba(247,181,140,0) 55%),radial-gradient(circle at 72% 38%,#7D80EE 0%,rgba(125,128,238,0) 58%),#F1E2D4",filter:"blur(2px)",opacity:.85,zIndex:-1}}/>
+              <Forma t="sol" cor={PAST.skyD} style={{position:"absolute",right:-10,top:-14,width:130,height:130,zIndex:-1,pointerEvents:"none"}}/>
               <Titulo k="Sessão do dia" t="Seu treino de hoje" dir={<span style={{...lab,whiteSpace:"nowrap"}}>≈ {pl.min} min</span>}/>
               {feito&&<div style={{...lab,marginBottom:10,color:"#3C7030"}}>✓ Você já fez uma sessão hoje · {feito.n} {feito.n===1?"passo":"passos"} · {feito.min} min</div>}
               {pl.passos.map((q,k)=>(
@@ -5516,16 +5550,16 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         })()}
         <div className="idi-grid4">
           {tiles.map((t,i)=>(
-            <div key={t.l} role="button" tabIndex={0} onClick={()=>setSub(t.to)} onKeyDown={e=>{if(e.key==="Enter")setSub(t.to);}} style={{position:"relative",overflow:"hidden",isolation:"isolate",background:STY[t.s].paper,gridColumn:lado?"span 3":"span 6",order:3+i,borderRadius:28,padding:isMobile?8:10,minHeight:isMobile?156:190,cursor:"pointer",display:"flex",flexDirection:"column",boxShadow:"0 10px 30px -22px rgba(42,30,20,.4)"}}>
+            <div key={t.l} role="button" tabIndex={0} onClick={()=>setSub(t.to)} onKeyDown={e=>{if(e.key==="Enter")setSub(t.to);}} style={{position:"relative",overflow:"hidden",isolation:"isolate",background:STY[t.s].paper,gridColumn:lado?"span 3":"span 6",order:3+i,borderRadius:20,padding:isMobile?8:10,minHeight:isMobile?156:190,cursor:"pointer",display:"flex",flexDirection:"column",boxShadow:"0 10px 30px -22px rgba(42,30,20,.4)"}}>
               <Motif s={t.s} z={t.z} x={t.x} y={t.y} style={{position:"absolute",inset:0,zIndex:-1,pointerEvents:"none"}}/>
-              <div style={{marginTop:"auto",background:"#FBF4E2",color:T.ink,borderRadius:isMobile?17:20,padding:isMobile?"10px 12px":"12px 15px",position:"relative"}}>
+              <div style={{marginTop:"auto",background:"#FBF4E2",color:T.ink,borderRadius:isMobile?12:14,padding:isMobile?"10px 12px":"12px 15px",position:"relative"}}>
                 <div style={{...lab,fontSize:9.5,color:"rgba(var(--idi-rgb),.65)"}}>{t.l}</div>
                 <div style={{display:"flex",alignItems:"baseline",gap:6,marginTop:6,flexWrap:"wrap"}}><span style={{...serif,fontWeight:400,fontSize:isMobile?34:42,lineHeight:1}}>{t.v}</span><span style={{fontSize:11.5,opacity:.65}}>{t.u}</span></div>
               </div>
             </div>))}
         </div>
         {(
-          <button onClick={()=>setSub("subst")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",...pastCard(PAST.peach),gridColumn:sp(6),order:8,borderRadius:28,padding:isMobile?"18px 20px":"22px 26px",marginBottom:0,cursor:"pointer",fontFamily:"inherit",color:T.ink}}>
+          <button onClick={()=>setSub("subst")} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:14,width:"100%",textAlign:"left",...pastCard(PAST.peach),gridColumn:sp(6),order:8,borderRadius:20,padding:isMobile?"18px 20px":"22px 26px",marginBottom:0,cursor:"pointer",fontFamily:"inherit",color:T.ink}}>
             <Forma t="folha" cor={PAST.peachD} style={{position:"absolute",left:-16,bottom:-22,width:110,height:110,zIndex:-1,pointerEvents:"none"}}/>
             <div style={{minWidth:0}}>
               <div style={lab}>{unica.nome} · substantivos</div>
@@ -5668,15 +5702,23 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
 
       {/* ═ DIÁRIO ═ */}
       {sub==="diario"&&(()=>{
-        const drEnt=drEd.ver?(dSel.find(x=>x.id===drEd.ver)||null):((!drEd.edit&&entHoje)?entHoje:null);
+        const dataSel=drEd.data||hoje;
+        const dk=drChave(dataSel);
+        const entData=dSel.find(x=>x.data===dataSel)||null;
+        const verEnt=drEd.ver?(dSel.find(x=>x.id===drEd.ver)||null):null;
+        const drEnt=drEd.edit?null:(verEnt||entHoje||null);
+        const busy=!!drEd.load;
         const sug=(DIARIO_SUG[sel]||DIARIO_SUG.de)[Math.floor((new Date(hoje+"T12:00:00")-new Date(hoje.slice(0,4)+"-01-01T12:00:00"))/864e5)%((DIARIO_SUG[sel]||DIARIO_SUG.de).length)];
-        const ers=drEnt?drEnt.erros:[];
-        const segO=drEnt?marcarTrechos(drEnt.texto,ers,"trecho"):null;
-        const segC=drEnt?marcarTrechos(drEnt.correta,ers,"correcao"):null;
+        const corr=!!(drEnt&&Array.isArray(drEnt.erros));
+        const ers=corr?drEnt.erros:[];
+        const segO=corr?marcarTrechos(drEnt.texto,ers,"trecho"):null;
+        const segC=corr?marcarTrechos(drEnt.correta||drEnt.texto,ers,"correcao"):null;
         const mk=(seg,cor,bg)=>seg.map((x,i)=>x.n===null?<span key={i}>{x.t}</span>:<mark key={i} onClick={()=>setDrEd({...drEd,foco:drEd.foco===x.n?null:x.n})} style={{background:drEd.foco===x.n?bg:"transparent",color:"inherit",cursor:"pointer",borderRadius:4,padding:"1px 2px",textDecoration:"underline wavy "+cor,textUnderlineOffset:4,textDecorationThickness:1.5,fontWeight:drEd.foco===x.n?700:400}}>{x.t}<sup style={{fontSize:"62%",fontWeight:700,marginLeft:1,color:cor}}>{x.n+1}</sup></mark>);
         const pal=drEd.texto.trim()?drEd.texto.trim().split(/\s+/).length:0;
-        // agregados
-        const todos=dSel.slice(0,30);
+        const diaLongo=d=>new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"long",day:"numeric",month:"long"});
+        const diaCurto=d=>new Date(d+"T12:00:00").toLocaleDateString("pt-BR",{weekday:"short",day:"2-digit",month:"2-digit"}).replace(".","");
+        // agregados (só textos corrigidos)
+        const todos=dSel.filter(x=>Array.isArray(x.erros)).slice(0,30);
         const totErros=todos.reduce((a,x)=>a+x.erros.length,0);
         const porTipo=FR_TIPOS.map(([k,nm],i)=>({k,nm,cor:DIARIO_CORES[i%6],n:todos.reduce((a,x)=>a+x.erros.filter(e=>e.tipo===k).length,0)}));
         const maxT=Math.max(1,...porTipo.map(x=>x.n));
@@ -5688,76 +5730,89 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         const taxa=[...todos].reverse().slice(-10).map(x=>({d:x.data,r:x.palavras>0?+(x.erros.length/x.palavras*100).toFixed(1):0}));
         const maxR=Math.max(1,...taxa.map(x=>x.r));
         let tend=null; if(taxa.length>=4){const h=Math.floor(taxa.length/2);const av=a=>a.reduce((s,x)=>s+x.r,0)/a.length;const a1=av(taxa.slice(0,h)),a2=av(taxa.slice(h)); if(a1>0)tend=Math.round((a2-a1)/a1*100);}
-        const anaLinhas=(drEnt&&drEnt.analise)?drEnt.analise.replace(/\s*(Onde você errou hoje\.|Padrão recorrente\.|Foco de amanhã\.)/g,"\n$1").split(/\n+/).filter(Boolean):[];
+        const anaLinhas=(corr&&drEnt.analise)?drEnt.analise.replace(/\s*(Onde você errou hoje\.|Padrão recorrente\.|Foco de amanhã\.)/g,"\n$1").split(/\n+/).filter(Boolean):[];
+        const totPal=dSel.reduce((a,x)=>a+(x.palavras||0),0);
         return (<>
           <Card>
-            <Titulo k="Diário" t={"Escreva em "+drNome+" todos os dias"} dir={<div style={{textAlign:"right"}}><div style={lab}>sequência</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:4}}>{drStreak}<small style={{fontSize:"45%",opacity:.5}}> {drStreak===1?"dia":"dias"}</small></div></div>}/>
+            <Titulo k="Diário" t={"Seu diário em "+drNome} dir={<div style={{textAlign:"right"}}><div style={lab}>sequência</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:4}}>{drStreak}<small style={{fontSize:"45%",opacity:.5}}> {drStreak===1?"dia":"dias"}</small></div></div>}/>
             <div style={{display:"flex",gap:4}} aria-label="últimos 14 dias">
-              {drSerie.map(d=><i key={d.d} title={dBR(d.d)+(d.ok?" · escrito":" · sem diário")} style={{flex:1,height:20,borderRadius:6,background:d.ok?T.ink:"rgba(var(--idi-rgb),.08)",border:d.d===hoje?"1.5px solid "+T.ink:"1.5px solid transparent",boxSizing:"border-box"}}/>)}
+              {drSerie.map(d=>{const e=dSel.find(x=>x.data===d.d);return <button key={d.d} onClick={()=>{if(e)setDrEd({...drEd,ver:e.id,edit:false,foco:null,erro:"",conf:""});}} title={dBR(d.d)+(d.ok?" · texto salvo":" · sem diário")} aria-label={dBR(d.d)} style={{flex:1,height:22,borderRadius:6,background:d.ok?T.ink:"rgba(var(--idi-rgb),.1)",border:d.d===hoje?"1.5px solid "+T.ink:"1.5px solid transparent",boxSizing:"border-box",padding:0,cursor:e?"pointer":"default"}}/>;})}
             </div>
-            <div style={{...lab,fontSize:9.5,marginTop:8}}>últimos 14 dias · {drSerie.filter(d=>d.ok).length} com diário</div>
-          </Card>
-          <Card>
-            {!drEnt&&<>
-              <Titulo k={dBR(hoje)+" · hoje"} t="Seu texto de hoje"/>
-              <div style={{padding:"12px 14px",borderRadius:16,background:"rgba(var(--idi-rgb),.05)",fontSize:14,lineHeight:1.55,marginBottom:12}}><span style={{...lab,fontSize:9.5}}>sugestão</span><div style={{marginTop:4,fontStyle:"italic"}}>{sug}</div></div>
-              <textarea autoCapitalize="off" autoCorrect="off" spellCheck={false} disabled={drEd.load} style={{...inp,minHeight:isMobile?200:240,resize:"vertical",lineHeight:1.65,fontSize:16}} value={drEd.texto} onChange={e=>setDrEd({...drEd,texto:e.target.value})} placeholder={sel==="de"?"Heute …":"Aujourd'hui …"}/>
-              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginTop:12}}>
-                <button style={{...btnP,opacity:(drEd.texto.trim().length>=20&&!drEd.load)?1:.4}} disabled={drEd.texto.trim().length<20||drEd.load} onClick={corrigirDiario}>{drEd.load?"Corrigindo…":"Corrigir e analisar"}</button>
-                <input style={{...inp,width:120}} type="number" min="0" max="240" value={drEd.min} onChange={e=>setDrEd({...drEd,min:e.target.value})} placeholder="min gastos" aria-label="Minutos gastos escrevendo (opcional, entra na meta de escrever)"/>
-                <span style={{...lab,fontSize:9.5}}>{pal} {pal===1?"palavra":"palavras"}</span>
-              </div>
-              {drEd.texto.trim().length>0&&drEd.texto.trim().length<20&&<div style={{...lab,fontSize:9.5,marginTop:8}}>escreva pelo menos 20 caracteres</div>}
-              {drEd.msg&&<div style={{marginTop:12,fontSize:13.5,color:IDI_RED,lineHeight:1.5}}>{drEd.msg}</div>}
-            </>}
-            {drEnt&&<>
-              <Titulo k={dBR(drEnt.data)+(drEnt.data===hoje?" · hoje":"")} t="Correção do diário" dir={drEd.ver?<button style={{...btnS,padding:"6px 14px",fontSize:12}} onClick={()=>setDrEd({...drEd,ver:null,foco:null})}>Voltar</button>:null}/>
-              <div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap",marginBottom:18}}>
-                <span style={{...serif,fontSize:isMobile?34:42,lineHeight:1,color:ers.length?IDI_RED:"#3C7030"}}>{ers.length}</span>
-                <span style={{fontSize:14,fontWeight:600}}>{ers.length===0?"nenhum erro. Texto correto.":(ers.length===1?"erro encontrado":"erros encontrados")}</span>
-                <span style={{...lab,fontSize:9.5}}>{drEnt.palavras||0} palavras</span>
-              </div>
-              <div style={lab}>Seu texto</div>
-              <div style={{marginTop:8,padding:"14px 16px",borderRadius:16,background:"rgba(var(--idi-rgb),.04)",fontSize:16,lineHeight:1.9,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{mk(segO,IDI_RED,"rgba(196,80,58,.18)")}</div>
-              {ers.length>0&&<><div style={{...lab,marginTop:16}}>Texto corrigido</div>
-              <div style={{marginTop:8,padding:"14px 16px",borderRadius:16,background:"rgba(60,112,48,.08)",fontSize:16,lineHeight:1.9,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{mk(segC,"#3C7030","rgba(60,112,48,.2)")}</div>
-              <div style={{marginTop:16}}>
-                {ers.map((e,i)=>(
-                  <div key={i} onClick={()=>setDrEd({...drEd,foco:drEd.foco===i?null:i})} style={{padding:"12px 14px",marginBottom:8,borderRadius:16,cursor:"pointer",background:drEd.foco===i?"rgba(196,80,58,.1)":"rgba(var(--idi-rgb),.04)",border:"1px solid "+(drEd.foco===i?"rgba(196,80,58,.4)":"transparent")}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                      <span style={{width:20,height:20,borderRadius:"50%",background:IDI_RED,color:"#fff",fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{i+1}</span>
-                      <span style={{...lab,fontSize:9.5}}>{frTipoNome(e.tipo)}{e.area&&e.area!=="outro"&&areaNome[e.area]?" · "+areaNome[e.area].replace(/ \(.*\)/,""):""}</span>
-                    </div>
-                    <div style={{marginTop:8,fontSize:15,lineHeight:1.5}}><span style={{textDecoration:"line-through",textDecorationColor:IDI_RED,opacity:.8}}>{e.trecho}</span><span style={{margin:"0 8px",opacity:.5}}>→</span><b style={{color:"#3C7030"}}>{e.correcao||"(retirar)"}</b></div>
-                    <div style={{marginTop:6,fontSize:13.5,lineHeight:1.55,opacity:.78}}>{e.porque}</div>
-                  </div>))}
-              </div></>}
-              {drEnt.comentario&&<div style={{marginTop:6,fontSize:14,lineHeight:1.6,opacity:.85}}>{drEnt.comentario}</div>}
-              <div style={{marginTop:16,padding:"16px 18px",borderRadius:20,background:PAST.butter}}>
-                <div style={lab}>Onde você está errando</div>
-                {anaLinhas.length>0?anaLinhas.map((l,i)=>{const m=l.match(/^(Onde você errou hoje|Padrão recorrente|Foco de amanhã)\.?\s*(.*)$/);return <div key={i} style={{fontSize:14,lineHeight:1.6,marginTop:i===0?10:8}}>{m?<><b>{m[1]}. </b>{m[2]}</>:l}</div>;}):<div style={{fontSize:13.5,opacity:.75,marginTop:8}}>{(drEnt.id===(entHoje&&entHoje.id)&&drEd.anaLoad)?"Analisando seus erros…":"Análise indisponível para este texto. A análise geral abaixo continua valendo."}</div>}
-              </div>
-              <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16}}>
-                {ers.length>0&&(drEd.salvo===drEnt.id?<span style={{...lab,color:"#3C7030",alignSelf:"center"}}>✓ erros enviados para Gramática</span>:<button style={btnS} onClick={()=>salvarErrosDiario(drEnt)}>Guardar erros em Gramática</button>)}
-                {!drEd.ver&&drEnt.data===hoje&&<button style={btnS} onClick={()=>setDrEd({...drEd,edit:true,texto:drEnt.texto,foco:null})}>Editar e corrigir de novo</button>}
-              </div>
-            </>}
-          </Card>
-          <Card>
-            <Titulo k="Lembrete" t="Hora do diário"/>
-            <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-              <label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!dcfg.on} onChange={e=>setDcfg({...dcfg,on:e.target.checked})} style={{width:18,height:18,accentColor:T.ink}}/>Lembrar todos os dias às</label>
-              <input type="time" style={{...inp,width:160}} value={dcfg.hora} onChange={e=>setDcfg({...dcfg,hora:e.target.value||"20:00"})} aria-label="Hora do lembrete"/>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap",marginTop:10}}>
+              <span style={{...lab,fontSize:9.5}}>{dSel.length} {dSel.length===1?"texto salvo":"textos salvos"} · {totPal} palavras</span>
+              <button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={()=>setDrEd({...drEd,edit:true,ver:null,texto:"",data:"",foco:null,erro:"",conf:""})}>+ Novo texto</button>
             </div>
-            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>
-              <button style={btnP} onClick={baixarIcs}>Adicionar ao calendário</button>
-              {typeof Notification!=="undefined"&&!dcfg.notif&&<button style={btnS} onClick={pedirNotif}>Ativar notificação</button>}
-              {dcfg.notif&&<span style={{...lab,color:"#3C7030",alignSelf:"center"}}>✓ notificação ativada</span>}
-            </div>
-            <div style={{fontSize:12.5,opacity:.65,lineHeight:1.55,marginTop:12}}>O app avisa no topo de todas as abas e na tela Hoje quando passa do horário e o diário ainda não foi escrito. O arquivo do calendário cria um evento diário com alarme no seu celular, que funciona mesmo com o app fechado. A notificação só chega com o app aberto.</div>
           </Card>
+          {!drEnt&&<Card>
+            <Titulo k={dBR(dataSel)+(dataSel===hoje?" · hoje":"")} t={entData?"Editar texto":"Escrever no diário"} dir={(drEd.edit&&(entHoje||dSel.length>0))?<button style={{...btnS,padding:"6px 14px",fontSize:12}} onClick={()=>setDrEd({...drEd,edit:false,texto:"",data:"",ver:null,erro:""})}>Cancelar</button>:null}/>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:12}}>
+              <span style={{...lab,fontSize:9.5}}>Data do texto</span>
+              <input type="date" max={hoje} style={{...inp,width:170}} value={dataSel} onChange={e=>setDrEd({...drEd,data:e.target.value&&e.target.value!==hoje?e.target.value:"",texto:""})} aria-label="Data do texto"/>
+            </div>
+            {entData&&!drEd.edit&&<div style={{padding:"10px 14px",borderRadius:14,background:"rgba(var(--idi-rgb),.06)",fontSize:13.5,marginBottom:12}}>Já existe um texto neste dia. <button onClick={()=>setDrEd({...drEd,ver:entData.id,data:"",texto:""})} style={{background:"none",border:"none",padding:0,textDecoration:"underline",cursor:"pointer",color:"inherit",fontFamily:"inherit",fontSize:"inherit"}}>Abrir</button></div>}
+            <div style={{padding:"12px 14px",borderRadius:14,background:"rgba(var(--idi-rgb),.05)",fontSize:14,lineHeight:1.55,marginBottom:12}}><span style={{...lab,fontSize:9.5}}>sugestão</span><div style={{marginTop:4,fontStyle:"italic"}}>{sug}</div></div>
+            <textarea autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,minHeight:isMobile?220:260,resize:"vertical",lineHeight:1.65,fontSize:16}} value={drEd.texto} onChange={e=>{const v=e.target.value;setDrEd({...drEd,texto:v});try{if(v.trim())localStorage.setItem(dk,v);else localStorage.removeItem(dk);}catch{ /* sem rascunho */ }}} placeholder={sel==="de"?"Heute …":"Aujourd'hui …"}/>
+            <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginTop:12}}>
+              <button style={{...btnP,opacity:(pal>0&&drEd.texto.trim().length>=10&&!busy)?1:.4}} disabled={drEd.texto.trim().length<10||busy} onClick={()=>salvarDiario(true)}>Salvar e corrigir</button>
+              <button style={{...btnS,opacity:(drEd.texto.trim().length>=10&&!busy)?1:.4}} disabled={drEd.texto.trim().length<10||busy} onClick={()=>salvarDiario(false)}>Só salvar</button>
+              <span style={{...lab,fontSize:9.5}}>{pal} {pal===1?"palavra":"palavras"}</span>
+            </div>
+            <div style={{...lab,fontSize:9.5,marginTop:10,lineHeight:1.6,whiteSpace:"normal"}}>{drEd.texto.trim()?"Rascunho guardado neste aparelho enquanto você escreve. ":""}Ao salvar, o texto fica no seu diário mesmo que a correção falhe.</div>
+          </Card>}
+          {drEnt&&<Card>
+            <Titulo k={diaLongo(drEnt.data)} t={drEnt.data===hoje?"Diário de hoje":"Texto do diário"} dir={(drEd.ver&&!(entHoje&&entHoje.id===drEnt.id))?<button style={{...btnS,padding:"6px 14px",fontSize:12}} onClick={()=>setDrEd({...drEd,ver:null,foco:null,erro:"",conf:""})}>Voltar</button>:null}/>
+            {corr?<div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap",marginBottom:18}}>
+              <span style={{...serif,fontSize:isMobile?34:42,lineHeight:1,color:ers.length?IDI_RED:"#3C7030"}}>{ers.length}</span>
+              <span style={{fontSize:14,fontWeight:600}}>{ers.length===0?"nenhum erro. Texto correto.":(ers.length===1?"erro encontrado":"erros encontrados")}</span>
+              <span style={{...lab,fontSize:9.5}}>{drEnt.palavras||0} palavras</span>
+            </div>:<div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginBottom:14}}>
+              <span style={{...lab,fontSize:9.5,padding:"4px 10px",borderRadius:99,background:"rgba(var(--idi-rgb),.08)"}}>salvo · sem correção</span>
+              <span style={{...lab,fontSize:9.5}}>{drEnt.palavras||0} palavras</span>
+            </div>}
+            <div style={lab}>Seu texto</div>
+            <div style={{marginTop:8,padding:"14px 16px",borderRadius:16,background:"rgba(var(--idi-rgb),.04)",fontSize:16,lineHeight:1.9,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{corr?mk(segO,IDI_RED,"rgba(196,80,58,.18)"):drEnt.texto}</div>
+            {!corr&&<div style={{marginTop:14,padding:"14px 16px",borderRadius:16,background:PAST.butter}}>
+              <div style={{fontSize:14,lineHeight:1.55}}>{busy&&drEd.load===drEnt.id?"Corrigindo seu texto…":"Este texto ainda não foi corrigido."}</div>
+              {drEd.erro&&<div style={{fontSize:13,lineHeight:1.5,marginTop:8,color:IDI_RED}}>{drEd.erro}</div>}
+              <div style={{marginTop:10}}><button style={{...btnP,opacity:busy?.5:1}} disabled={busy} onClick={()=>corrigirEntrada(drEnt)}>{busy&&drEd.load===drEnt.id?"Corrigindo…":"Corrigir agora"}</button></div>
+            </div>}
+            {corr&&ers.length>0&&<><div style={{...lab,marginTop:16}}>Texto corrigido</div>
+            <div style={{marginTop:8,padding:"14px 16px",borderRadius:16,background:"rgba(60,112,48,.08)",fontSize:16,lineHeight:1.9,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{mk(segC,"#3C7030","rgba(60,112,48,.2)")}</div>
+            <div style={{marginTop:16}}>
+              {ers.map((e,i)=>(
+                <div key={i} onClick={()=>setDrEd({...drEd,foco:drEd.foco===i?null:i})} style={{padding:"12px 14px",marginBottom:8,borderRadius:16,cursor:"pointer",background:drEd.foco===i?"rgba(196,80,58,.1)":"rgba(var(--idi-rgb),.04)",border:"1px solid "+(drEd.foco===i?"rgba(196,80,58,.4)":"transparent")}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                    <span style={{width:20,height:20,borderRadius:"50%",background:IDI_RED,color:"#fff",fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{i+1}</span>
+                    <span style={{...lab,fontSize:9.5}}>{frTipoNome(e.tipo)}{e.area&&e.area!=="outro"&&areaNome[e.area]?" · "+areaNome[e.area].replace(/ \(.*\)/,""):""}</span>
+                  </div>
+                  <div style={{marginTop:8,fontSize:15,lineHeight:1.5}}><span style={{textDecoration:"line-through",textDecorationColor:IDI_RED,opacity:.8}}>{e.trecho}</span><span style={{margin:"0 8px",opacity:.5}}>→</span><b style={{color:"#3C7030"}}>{e.correcao||"(retirar)"}</b></div>
+                  <div style={{marginTop:6,fontSize:13.5,lineHeight:1.55,opacity:.78}}>{e.porque}</div>
+                </div>))}
+            </div></>}
+            {corr&&drEnt.comentario&&<div style={{marginTop:6,fontSize:14,lineHeight:1.6,opacity:.85}}>{drEnt.comentario}</div>}
+            {corr&&<div style={{marginTop:16,padding:"16px 18px",borderRadius:20,background:PAST.butter}}>
+              <div style={lab}>Onde você está errando</div>
+              {anaLinhas.length>0?anaLinhas.map((l,i)=>{const m=l.match(/^(Onde você errou hoje|Padrão recorrente|Foco de amanhã)\.?\s*(.*)$/);return <div key={i} style={{fontSize:14,lineHeight:1.6,marginTop:i===0?10:8}}>{m?<><b>{m[1]}. </b>{m[2]}</>:l}</div>;}):<div style={{fontSize:13.5,opacity:.75,marginTop:8}}>{drEd.anaLoad?"Analisando seus erros…":"Análise indisponível para este texto. A análise geral abaixo continua valendo."}</div>}
+            </div>}
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16,alignItems:"center"}}>
+              <button style={btnS} onClick={()=>setDrEd({...drEd,edit:true,ver:null,data:drEnt.data===hoje?"":drEnt.data,texto:drEnt.texto,foco:null,erro:"",conf:""})}>Editar texto</button>
+              {corr&&ers.length>0&&(drEd.salvo===drEnt.id?<span style={{...lab,color:"#3C7030"}}>✓ erros enviados para Gramática</span>:<button style={btnS} onClick={()=>salvarErrosDiario(drEnt)}>Guardar erros em Gramática</button>)}
+              {corr&&<button style={btnS} disabled={busy} onClick={()=>corrigirEntrada(drEnt)}>{busy&&drEd.load===drEnt.id?"Corrigindo…":"Corrigir de novo"}</button>}
+              {drEd.conf===drEnt.id?<><button style={{...btnS,color:IDI_RED,borderColor:IDI_RED}} onClick={()=>excluirEntrada(drEnt.id)}>Confirmar exclusão</button><button style={btnS} onClick={()=>setDrEd({...drEd,conf:""})}>Não excluir</button></>:<button style={{...btnS,opacity:.75}} onClick={()=>setDrEd({...drEd,conf:drEnt.id})}>Excluir</button>}
+            </div>
+          </Card>}
+          {dSel.length>0&&<Card>
+            <Titulo k={dSel.length+(dSel.length===1?" texto":" textos")} t="Meu diário" dir={<button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={baixarTextos}>Baixar .txt</button>}/>
+            {dSel.slice(0,drEd.todos?dSel.length:10).map(x=>{const on=drEnt&&drEnt.id===x.id;return (
+              <button key={x.id} onClick={()=>{setDrEd({...drEd,ver:x.id,edit:false,foco:null,erro:"",conf:""});try{window.scrollTo({top:0,behavior:"smooth"});}catch{ /* sem scroll */ }}} style={{display:"flex",alignItems:"flex-start",gap:12,width:"100%",textAlign:"left",background:on?"rgba(var(--idi-rgb),.06)":"none",border:"none",borderBottom:"1px solid rgba(var(--idi-rgb),.08)",padding:"12px 6px",cursor:"pointer",fontFamily:"inherit",color:T.ink,borderRadius:on?10:0}}>
+                <span style={{...lab,fontSize:9.5,flexShrink:0,width:62,paddingTop:3}}>{diaCurto(x.data)}</span>
+                <span style={{flex:1,minWidth:0,fontSize:14,lineHeight:1.5,display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical",overflow:"hidden"}}>{x.texto}</span>
+                <span style={{...lab,fontSize:9.5,flexShrink:0,paddingTop:3,textAlign:"right",color:Array.isArray(x.erros)?(x.erros.length?IDI_RED:"#3C7030"):undefined}}>{Array.isArray(x.erros)?x.erros.length+(x.erros.length===1?" erro":" erros"):"sem correção"}</span>
+              </button>);})}
+            {dSel.length>10&&<div style={{marginTop:12}}><button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={()=>setDrEd({...drEd,todos:!drEd.todos})}>{drEd.todos?"Mostrar menos":"Ver todos os "+dSel.length}</button></div>}
+          </Card>}
           {todos.length>0&&<Card>
-            <Titulo k={"Últimos "+todos.length+(todos.length===1?" texto":" textos")} t="Onde você mais erra" dir={<div style={{textAlign:"right"}}><div style={lab}>erros</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:4}}>{totErros}</div></div>}/>
+            <Titulo k={"Últimos "+todos.length+(todos.length===1?" texto corrigido":" textos corrigidos")} t="Onde você mais erra" dir={<div style={{textAlign:"right"}}><div style={lab}>erros</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:4}}>{totErros}</div></div>}/>
             {totErros===0?<Vazio>Nenhum erro registrado nos seus diários até agora.</Vazio>:(<>
               <Petalas semOk fundo="#EFE9DD" ink={T.ink} fam={serif.fontFamily} label="Quantidade de erros por tipo nos seus diários" centro={[totErros,"erros"]} itens={porTipo.map(x=>({k:x.k,nm:x.nm.replace("Artigo e caso","Artigo"),cor:x.cor,f:x.n,g:maxT,l1:x.n,l2:x.n===1?"erro":"erros"}))}/>
               {porArea.length>0&&<div style={{marginTop:18}}>
@@ -5790,15 +5845,19 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               </div>}
             </>)}
           </Card>}
-          {dSel.length>0&&<Card>
-            <Titulo k="Histórico" t="Textos anteriores"/>
-            {dSel.slice(0,12).map(x=>(
-              <button key={x.id} onClick={()=>{setDrEd({...drEd,ver:x.id,foco:null});try{window.scrollTo({top:0,behavior:"smooth"});}catch{ /* sem scroll */ }}} style={{display:"flex",alignItems:"center",gap:10,width:"100%",textAlign:"left",background:"none",border:"none",borderBottom:"1px solid rgba(var(--idi-rgb),.07)",padding:"11px 0",cursor:"pointer",fontFamily:"inherit",color:T.ink}}>
-                <span style={{...lab,fontSize:9.5,flexShrink:0}}>{dBR(x.data)}</span>
-                <span style={{flex:1,minWidth:0,fontSize:13.5,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.texto}</span>
-                <span style={{...lab,fontSize:9.5,flexShrink:0,color:x.erros.length?IDI_RED:"#3C7030"}}>{x.erros.length} {x.erros.length===1?"erro":"erros"}</span>
-              </button>))}
-          </Card>}
+          <Card>
+            <Titulo k="Lembrete" t="Hora do diário"/>
+            <div style={{display:"flex",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+              <label style={{display:"flex",alignItems:"center",gap:8,fontSize:14,cursor:"pointer"}}><input type="checkbox" checked={!!dcfg.on} onChange={e=>setDcfg({...dcfg,on:e.target.checked})} style={{width:18,height:18,accentColor:T.ink}}/>Lembrar todos os dias às</label>
+              <input type="time" style={{...inp,width:160}} value={dcfg.hora} onChange={e=>setDcfg({...dcfg,hora:e.target.value||"20:00"})} aria-label="Hora do lembrete"/>
+            </div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>
+              <button style={btnP} onClick={baixarIcs}>Adicionar ao calendário</button>
+              {typeof Notification!=="undefined"&&!dcfg.notif&&<button style={btnS} onClick={pedirNotif}>Ativar notificação</button>}
+              {dcfg.notif&&<span style={{...lab,color:"#3C7030",alignSelf:"center"}}>✓ notificação ativada</span>}
+            </div>
+            <div style={{fontSize:12.5,opacity:.65,lineHeight:1.55,marginTop:12}}>O app avisa no topo de todas as abas e na tela Hoje quando passa do horário e o diário ainda não foi escrito. O arquivo do calendário cria um evento diário com alarme no seu celular, que funciona mesmo com o app fechado. A notificação só chega com o app aberto.</div>
+          </Card>
         </>);
       })()}
 
@@ -6970,7 +7029,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
           return (
             <Card>
               <Titulo k="Últimos 14 dias" t="Tempo por dia" dir={<div style={{textAlign:"right"}}><div style={lab}>{goalDia>0?"meta por dia":"média por dia"}</div><div style={{...serif,fontSize:isMobile?24:30,marginTop:4}}>{goalDia>0?goalDia:Math.round(total14/14)}<small style={{fontSize:"45%",opacity:.5}}> min</small></div></div>}/>
-              <svg viewBox={"0 0 "+W+" "+H} width="100%" style={{display:"block",overflow:"visible"}} role="img" aria-label="Minutos estudados por dia, por etapa, com a linha da meta diária">
+              <svg viewBox={"0 0 "+W+" "+H} width="100%" style={{display:"block",overflow:"visible",maxWidth:820}} role="img" aria-label="Minutos estudados por dia, por etapa, com a linha da meta diária">
                 {[0,top/2,top].map((v,i)=><g key={i}><line x1={pl} x2={W} y1={y(v)} y2={y(v)} stroke="rgba(var(--idi-rgb),.1)"/><text x={pl-5} y={y(v)+3} textAnchor="end" fontSize="8" fill="rgba(var(--idi-rgb),.55)">{Math.round(v)}</text></g>)}
                 {eh!==null&&<rect x={pl+eh*step+1} y={pt-4} width={step-2} height={ph+4} rx="4" fill="rgba(var(--idi-rgb),.06)"/>}
                 {serie14.map((d,i)=>{let acc=0;return (
@@ -7033,7 +7092,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <Card>
               <Titulo k="Últimos 14 dias" t="Acerto nas revisões" dir={<div style={{textAlign:"right"}}><div style={lab}>último dia</div><div style={{...serif,fontSize:isMobile?24:30,marginTop:4}}>{ult===undefined?"—":ult+"%"}</div></div>}/>
               {acerto.every(v=>v===null)?<Vazio>Faça pelo menos 3 revisões num dia para ele entrar no gráfico.</Vazio>:(<>
-                <svg viewBox={"0 0 "+W+" "+H} width="100%" style={{display:"block",overflow:"visible"}} role="img" aria-label="Percentual de acerto nas revisões por dia">
+                <svg viewBox={"0 0 "+W+" "+H} width="100%" style={{display:"block",overflow:"visible",maxWidth:820}} role="img" aria-label="Percentual de acerto nas revisões por dia">
                   {[0,50,100].map(v=><g key={v}><line x1={pl} x2={W} y1={y(v)} y2={y(v)} stroke="rgba(var(--idi-rgb),.1)"/><text x={pl-5} y={y(v)+3} textAnchor="end" fontSize="8" fill="rgba(var(--idi-rgb),.55)">{v}</text></g>)}
                   <line x1={pl} x2={W} y1={y(80)} y2={y(80)} stroke={T.ink} strokeWidth="1.2" strokeDasharray="4 3"/>
                   <text x={W} y={y(80)+11} textAnchor="end" fontSize="8" fontWeight="700" fill={T.ink}>referência 80%</text>
