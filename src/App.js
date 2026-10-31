@@ -1316,6 +1316,41 @@ const IDI_TIPOS=[...HAB,["aula","Aula"],["kursbuch","Livro - Kursbuch"],["ubungs
 const IDI_LIVROS=["kursbuch","ubungsbuch"];
 const LEIT=[1,3,7,14,30,60];
 const PAST={butter:"#F3D88A",butterD:"#E9C45A",rose:"#F1B9AE",roseD:"#E39A8C",sage:"#BDC795",sageD:"#A2B070",sky:"#BFCAF1",skyD:"#9DAEE6",peach:"#F6D2B0",peachD:"#EDB98A"};
+function petTint(h,q){const n=parseInt(h.slice(1),16);const m=v=>Math.round(v+(255-v)*q);return "rgb("+m(n>>16)+","+m((n>>8)&255)+","+m(n&255)+")";}
+function Petalas({itens,centro,ink,fam,label}){
+  const n=itens.length; if(n<2)return null;
+  const C=140,R=132,r0=38,gap=5,st=4,h=gap/2+st,D=Math.PI/180;
+  const pol=(r,a)=>[C+r*Math.cos(a*D),C+r*Math.sin(a*D)];
+  const ang=(r,a,hh)=>a+Math.asin(hh/r)/D;
+  const setor=(ra,rb,a0,a1)=>{
+    const P=(r,a,hh)=>pol(r,ang(r,a,hh));
+    const [x1,y1]=P(rb,a0,h),[x2,y2]=P(rb,a1,-h),[x3,y3]=P(ra,a1,-h),[x4,y4]=P(ra,a0,h);
+    const lg=(a1-a0)>180?1:0;
+    return "M"+x1+" "+y1+"A"+rb+" "+rb+" 0 "+lg+" 1 "+x2+" "+y2+"L"+x3+" "+y3+"A"+ra+" "+ra+" 0 "+lg+" 0 "+x4+" "+y4+"Z";
+  };
+  return (
+    <svg viewBox="0 0 280 280" width="100%" style={{display:"block",maxWidth:300,margin:"0 auto"}} role="img" aria-label={label}>
+      {itens.map((it,i)=>{
+        const a0=-90+i*360/n, a1=a0+360/n, am=(a0+a1)/2;
+        const fr=it.g>0?Math.min(1,it.f/it.g):0;
+        const rf=r0+(R-r0)*Math.max(fr,fr>0?.08:0);
+        const ok=it.g>0&&it.f>=it.g;
+        const [tx,ty]=pol((r0+R)/2+4,am);
+        return (
+          <g key={it.k}>
+            <title>{it.nm+": "+it.l1+" "+it.l2}</title>
+            <path d={setor(r0+st,R-st,a0,a1)} fill="#DBC27C" stroke="#DBC27C" strokeWidth={st*2} strokeLinejoin="round"/>
+            {fr>0&&<path d={setor(r0+st,Math.max(r0+st+2,rf-st),a0,a1)} fill={petTint(it.cor,ok?.25:.5)} stroke={petTint(it.cor,ok?.25:.5)} strokeWidth={st*2} strokeLinejoin="round"/>}
+            <text x={tx} y={ty-13} textAnchor="middle" fontSize="8.5" letterSpacing=".6" fill={ink} opacity=".7" style={{textTransform:"uppercase"}}>{(ok?"✓ ":"")+it.nm}</text>
+            <text x={tx} y={ty+6} textAnchor="middle" fontSize="19" fill={ink} style={{fontFamily:fam,fontWeight:500}}>{it.l1}</text>
+            <text x={tx} y={ty+19} textAnchor="middle" fontSize="8.5" fill={ink} opacity=".65">{it.l2}</text>
+          </g>);
+      })}
+      <text x={C} y={C+2} textAnchor="middle" fontSize="17" fill={ink} style={{fontFamily:fam,fontWeight:500}}>{centro[0]}</text>
+      <text x={C} y={C+14} textAnchor="middle" fontSize="7.5" fill={ink} opacity=".65">{centro[1]}</text>
+    </svg>);
+}
+
 function Forma({t,cor,style}){
   return (
     <svg viewBox="0 0 100 100" aria-hidden="true" style={style}>
@@ -5267,7 +5302,10 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               <Forma t="sol" cor={PAST.butterD} style={{position:"absolute",right:-30,top:-34,width:150,height:150,zIndex:-1,pointerEvents:"none"}}/>
               <Titulo k="Metas de hoje" t={tem?(faltam.length?"O que falta hoje":"Metas de hoje cumpridas"):"Defina suas metas diárias"} dir={tem?<div style={{textAlign:"right"}}><div style={lab}>feito</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:4}}>{pct}%</div></div>:null}/>
               {!tem&&!mdEd&&<><Vazio>Quanto tempo por dia você quer dedicar a ouvir, ler, escrever, falar e revisar? Defina uma vez: o app mostra aqui o que já fez e o que está ficando para trás.</Vazio><div style={{marginTop:14}}><button style={btnP} onClick={abrirMd}>Definir metas</button></div></>}
-              {tem&&!mdEd&&ETAPAS.filter(([k])=>mdv(k)>0).map(([k,nm,cor],i)=>{
+              {tem&&!mdEd&&(<div style={{display:"flex",gap:isMobile?8:28,flexWrap:"wrap",alignItems:"center",marginTop:6}}>
+              {ETAPAS.filter(([k])=>mdv(k)>0).length>=2&&<div style={{flex:isMobile?"1 1 100%":"0 0 300px",minWidth:isMobile?0:240,margin:"0 auto"}}><Petalas ink={T.ink} fam={serif.fontFamily} label="Minutos feitos hoje em cada etapa, comparados com a meta" centro={[feitoMin,"de "+mdTot+" min"]} itens={ETAPAS.filter(([k])=>mdv(k)>0).map(([k,nm,cor])=>({k,nm,cor,f:mdHoje[k],g:mdv(k),l1:mdHoje[k],l2:"/ "+mdv(k)+" min"}))}/></div>}
+              <div style={{flex:"1 1 300px",minWidth:0}}>
+              {ETAPAS.filter(([k])=>mdv(k)>0).map(([k,nm,cor],i)=>{
                 const g=mdv(k), f=mdHoje[k], ok=f>=g, sd=semDias(k), ac=ok?null:acaoDe(k);
                 return (
                   <div key={k} style={{padding:"12px 0",borderTop:i===0?"none":"1px solid rgba(var(--idi-rgb),.1)"}}>
@@ -5284,6 +5322,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                     </div>
                   </div>);
               })}
+              </div></div>)}
               {mdEd&&(<div>
                 <div style={{fontSize:13,opacity:.7,lineHeight:1.5,marginBottom:14}}>Minutos por dia em cada etapa. Deixe 0 para não acompanhar a etapa.</div>
                 <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(5,1fr)",gap:12}}>
@@ -6610,6 +6649,30 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               <div style={{fontSize:13.5,marginTop:12,lineHeight:1.55}}><b>{dBR(dh.d)}</b> · {keys.filter(([k])=>dh[k]>0).map(([k,n])=>n+" "+dh[k]+" min").join(" · ")||"nada registrado"} · <b>total {tot(dh)} min</b></div>
               <div style={{display:"flex",gap:14,marginTop:12,flexWrap:"wrap"}}>{keys.map(([k,n,c])=><span key={k} style={{...lab,display:"inline-flex",alignItems:"center",gap:6}}><i style={{width:8,height:8,borderRadius:2,background:c}}/>{n}</span>)}</div>
               {goalDia===0&&<div style={{...lab,fontSize:9.5,marginTop:10,whiteSpace:"normal",lineHeight:1.6}}>Defina metas diárias na aba Hoje para ver a linha da meta aqui.</div>}
+            </Card>);
+        })()}
+        {(()=>{
+          const it=ETAPAS.map(([k,nm,cor])=>({k,nm,cor,f:serie14.reduce((a,d)=>a+d[k],0),g:mdv(k)*14}));
+          const mx=Math.max(1,...it.map(x=>Math.max(x.f,x.g)));
+          const tem=it.some(x=>x.f>0||x.g>0);
+          return (
+            <Card>
+              <Titulo k="Últimos 14 dias" t="Tempo por etapa" dir={<div style={{textAlign:"right"}}><div style={lab}>total</div><div style={{...serif,fontSize:isMobile?24:30,marginTop:4}}>{it.reduce((a,x)=>a+x.f,0)}<small style={{fontSize:"45%",opacity:.5}}> min</small></div></div>}/>
+              {!tem?<Vazio>Registre minutos em cada etapa para ver a comparação aqui.</Vazio>:(<>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:isMobile?6:12}}>
+                  {it.map(x=>{
+                    const alt=Math.max(x.f,0)/mx*100, ok=x.g>0&&x.f>=x.g;
+                    return (
+                      <div key={x.k} title={x.nm+" · "+x.f+" min"+(x.g>0?" de "+x.g:"")} style={{position:"relative",height:isMobile?190:230,borderRadius:isMobile?20:26,background:"rgba(var(--idi-rgb),.05)",overflow:"hidden"}}>
+                        <div style={{position:"absolute",left:0,right:0,bottom:0,height:alt+"%",minHeight:x.f>0?26:0,background:"linear-gradient(180deg,"+petTint(x.cor,ok?.4:.62)+","+petTint(x.cor,ok?.18:.4)+")",borderRadius:isMobile?20:26,transition:"height .4s"}}/>
+                        {x.g>0&&<div aria-hidden="true" style={{position:"absolute",left:8,right:8,bottom:(x.g/mx*100)+"%",borderTop:"1.5px dashed "+T.ink,opacity:.55}}/>}
+                        <div style={{position:"absolute",top:12,left:0,right:0,textAlign:"center",...lab,fontSize:isMobile?8.5:10}}>{x.nm}</div>
+                        <div style={{position:"absolute",bottom:12,left:0,right:0,textAlign:"center",fontWeight:700,fontSize:isMobile?14:17,color:T.ink}}>{x.f}<span style={{fontWeight:500,fontSize:"62%",opacity:.6}}> min</span></div>
+                      </div>);
+                  })}
+                </div>
+                <div style={{...lab,fontSize:9.5,marginTop:12,whiteSpace:"normal",lineHeight:1.6}}>{it.some(x=>x.g>0)?"Linha tracejada = meta dos 14 dias (meta diária × 14). A cápsula enche conforme o tempo feito.":"Defina metas diárias na aba Hoje para ver a linha da meta em cada etapa."}</div>
+              </>)}
             </Card>);
         })()}
         <Card>
