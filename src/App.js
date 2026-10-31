@@ -2078,6 +2078,31 @@ function iaJson(txt){
   const i0=t.search(/[[{]/); const e=t.lastIndexOf(t[i0]==="["?"]":"}");
   return JSON.parse(i0>=0?t.slice(i0,e+1):t);
 }
+async function gCorrigirTexto(lang,areas,nivel,tema,texto){
+  const idioma=lang==="de"?"alemão":"francês";
+  const chaves=areas.map(a=>a[0]).join(", ");
+  const prompt="Você é professor de "+idioma+" de uma aluna brasileira, médica, nível "+nivel+", que treina escrita para um exame de proficiência. "+(tema?"Tema ou tarefa: "+tema+". ":"")+"Texto dela: «"+texto+"». Corrija com precisão e sem condescendência, apontando TODOS os erros (gramática, artigos e casos, conjugação, ordem das palavras, preposições, ortografia, acentos, maiúsculas, vocabulário inadequado, coesão e coerência). Cada trecho em \"trecho\" deve ser copiado EXATAMENTE como ela escreveu, curto (a palavra ou expressão errada, não a frase inteira). Responda SOMENTE com JSON: {\"correta\":\"o texto inteiro corrigido, mantendo ao máximo o sentido e as palavras dela\",\"erros\":[{\"tipo\":\"artigo_caso|gramatica|ortografia|coesao|coerencia|vocabulario\",\"area\":\"uma destas chaves: "+chaves+"\",\"trecho\":\"trecho exato dela\",\"correcao\":\"trecho corrigido\",\"porque\":\"explicação curta em português, citando a regra\"}],\"comentario\":\"2 frases em português: o que ela fez bem e a prioridade para o próximo texto\"}. Se estiver tudo certo, erros vazio e correta igual ao texto dela.";
+  const obj=iaJson(await iaChamar(prompt,null,true));
+  const ok=new Set(areas.map(a=>a[0])), tp=new Set(FR_TIPOS.map(x=>x[0]));
+  const erros=(Array.isArray(obj.erros)?obj.erros:[]).filter(e=>e&&typeof e.porque==="string"&&typeof e.trecho==="string"&&e.trecho.trim()).map(e=>({tipo:tp.has(e.tipo)?e.tipo:"gramatica",area:ok.has(e.area)?e.area:"outro",trecho:String(e.trecho),correcao:String(e.correcao||""),porque:e.porque}));
+  return {correta:typeof obj.correta==="string"&&obj.correta.trim()?obj.correta.trim():texto,erros,comentario:typeof obj.comentario==="string"?obj.comentario:""};
+}
+function marcarTrechos(texto,erros,campo){
+  const usados=[]; const ach=[];
+  erros.forEach((e,i)=>{
+    const t=e[campo]; if(!t)return;
+    const livre=(q)=>!usados.some(u=>q<u[1]&&q+t.length>u[0]);
+    let pos=texto.indexOf(t);
+    while(pos>=0&&!livre(pos))pos=texto.indexOf(t,pos+1);
+    if(pos<0)return;
+    usados.push([pos,pos+t.length]); ach.push({a:pos,b:pos+t.length,n:i});
+  });
+  ach.sort((x,y)=>x.a-y.a);
+  const seg=[]; let c=0;
+  ach.forEach(m=>{if(m.a>c)seg.push({t:texto.slice(c,m.a),n:null});seg.push({t:texto.slice(m.a,m.b),n:m.n});c=m.b;});
+  if(c<texto.length)seg.push({t:texto.slice(c),n:null});
+  return seg;
+}
 async function gCorrigirFrase(lang,areas,n,texto,trad){
   const idioma=lang==="de"?"alemão":"francês";
   const chaves=areas.map(a=>a[0]).join(", ");
@@ -3777,6 +3802,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [chatAll,setChatAll]=useLS("v5_idi_chat",{},userId);
   const [frases,setFrases]=useLS("v5_idi_frases",[],userId);
   const [fq,setFq]=useState(null);
+  const [esc,setEsc]=useState({texto:"",tema:"",min:"",load:false,res:null,msg:"",salvo:0,orig:"",foco:null});
+  const [escritos,setEscritos]=useLS("v5_idi_escritos",[],userId);
   const [estud,setEstud]=useLS("v5_idi_estud",[],userId);
   const [ef2,setEf2]=useState({txt:"",fonte:"",imgs:[]});
   const [eid,setEid]=useState({load:false,msg:"",res:null});
@@ -4010,6 +4037,27 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const erTot=Object.values(rv).reduce((a,o)=>a+ativas.reduce((b,l)=>b+((o[l.id]||{}).er||0),0),0);
   const acertoV=okTot+erTot>0?Math.round(okTot/(okTot+erTot)*100):null;
 
+  const corrigirTexto=async()=>{
+    const t=esc.texto.trim(); if(esc.load||t.length<8)return;
+    setEsc({...esc,load:true,msg:"",res:null,salvo:0,foco:null});
+    try{
+      const nv=(L(sel)||{}).nivel||"A2";
+      const r=await gCorrigirTexto(sel,gAreas,nv,esc.tema.trim(),t);
+      const min=+esc.min;
+      setEscritos([{id:uid(),lang:sel,data:hoje,tema:esc.tema.trim(),texto:t,correta:r.correta,erros:r.erros,comentario:r.comentario},...escritos].slice(0,100));
+      if(min>0)setLog([{id:uid(),lang:sel,tipo:"escrever",min,nota:"Texto corrigido"+(esc.tema.trim()?": "+esc.tema.trim():""),data:hoje},...log]);
+      setEsc({...esc,load:false,res:r,orig:t,min:"",msg:"",salvo:0,foco:null});
+    }catch(err){
+      setEsc({...esc,load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros (ou no campo de chave do app).":"Não consegui corrigir ("+err.message+"). Seu texto continua aí, tente de novo."});
+    }
+  };
+  const abrirEscrito=x=>setEsc({texto:x.texto,tema:x.tema||"",min:"",load:false,res:{correta:x.correta,erros:x.erros,comentario:x.comentario||""},msg:"",salvo:0,orig:x.texto,foco:null});
+  const salvarErrosEsc=()=>{
+    if(!esc.res||!esc.res.erros.length)return;
+    const novos=esc.res.erros.filter(e=>e.correcao&&e.correcao!==e.trecho).map(e=>({id:uid(),lang:sel,area:e.area||"outro",errada:e.trecho,certa:e.correcao,fonte:"escrita livre",data:hoje}));
+    if(!novos.length)return;
+    setMeus([...novos,...meus]); setEsc({...esc,salvo:novos.length});
+  };
   const addPratica=()=>{
     const min=+fp.min; const lang=defLang;
     if(!(min>0)||!lang)return;
@@ -5564,6 +5612,63 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 </div>
                 <div style={{marginTop:14}}><button onClick={descartarCron} style={{background:"none",border:"none",cursor:"pointer",fontSize:12,textDecoration:"underline",textUnderlineOffset:3,color:"rgba(var(--idi-rgb),.55)"}}>descartar</button></div>
               </>)}
+            </Card>);
+        })()}
+        {(()=>{
+          const r=esc.res, ers=r?r.erros:[];
+          const segO=r?marcarTrechos(esc.orig,ers,"trecho"):null;
+          const segC=r?marcarTrechos(r.correta,ers,"correcao"):null;
+          const mk=(seg,cor,bg)=>seg.map((x,i)=>x.n===null?<span key={i}>{x.t}</span>:<mark key={i} onClick={()=>setEsc({...esc,foco:esc.foco===x.n?null:x.n})} style={{background:esc.foco===x.n?bg:"transparent",color:"inherit",cursor:"pointer",borderRadius:4,padding:"1px 2px",textDecoration:"underline wavy "+cor,textUnderlineOffset:4,textDecorationThickness:1.5,fontWeight:esc.foco===x.n?700:400}}>{x.t}<sup style={{fontSize:"62%",fontWeight:700,marginLeft:1,color:cor}}>{x.n+1}</sup></mark>);
+          return (
+            <Card>
+              <Titulo k="Escrita" t="Corrigir meu texto" dir={iaNome?<span style={{...lab,whiteSpace:"nowrap"}}>{iaNome}</span>:null}/>
+              {!r&&<>
+                <div style={{fontSize:13.5,opacity:.72,lineHeight:1.55,marginBottom:12}}>Escreva frases ou um texto em {sel==="de"?"alemão":"francês"}. O {iaNome||"Claude"} corrige, marca cada erro no seu texto e explica a regra.</div>
+                <input style={{...inp,marginBottom:10}} value={esc.tema} onChange={e=>setEsc({...esc,tema:e.target.value})} placeholder="Tema ou tarefa (opcional): ex. e-mail para a escola, descrever meu dia"/>
+                <textarea autoCapitalize="off" autoCorrect="off" spellCheck={false} disabled={esc.load} style={{...inp,minHeight:150,resize:"vertical",lineHeight:1.6,fontSize:16}} value={esc.texto} onChange={e=>setEsc({...esc,texto:e.target.value})} placeholder={sel==="de"?"Heute habe ich …":"Aujourd'hui, j'ai …"}/>
+                <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap",marginTop:12}}>
+                  <button style={{...btnP,opacity:(esc.texto.trim().length>=8&&!esc.load)?1:.4}} disabled={esc.texto.trim().length<8||esc.load} onClick={corrigirTexto}>{esc.load?"Corrigindo…":"Corrigir"}</button>
+                  <input style={{...inp,width:120}} type="number" min="0" max="240" value={esc.min} onChange={e=>setEsc({...esc,min:e.target.value})} placeholder="min gastos" aria-label="Minutos gastos escrevendo (opcional, entra na meta de escrever)"/>
+                  <span style={{...lab,fontSize:9.5}}>{esc.texto.trim().length} caracteres</span>
+                </div>
+                {esc.msg&&<div style={{marginTop:12,fontSize:13.5,color:IDI_RED,lineHeight:1.5}}>{esc.msg}</div>}
+              </>}
+              {r&&<>
+                <div style={{display:"flex",alignItems:"baseline",gap:10,flexWrap:"wrap",marginBottom:18}}>
+                  <span style={{...serif,fontSize:isMobile?34:42,lineHeight:1,color:ers.length?IDI_RED:"#3C7030"}}>{ers.length}</span>
+                  <span style={{fontSize:14,fontWeight:600}}>{ers.length===0?"nenhum erro. Texto correto.":(ers.length===1?"erro encontrado":"erros encontrados")}</span>
+                </div>
+                <div style={lab}>Seu texto</div>
+                <div style={{marginTop:8,padding:"14px 16px",borderRadius:16,background:"rgba(var(--idi-rgb),.04)",fontSize:16,lineHeight:1.9,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{mk(segO,IDI_RED,"rgba(196,80,58,.18)")}</div>
+                {ers.length>0&&<><div style={{...lab,marginTop:16}}>Texto corrigido</div>
+                <div style={{marginTop:8,padding:"14px 16px",borderRadius:16,background:"rgba(60,112,48,.08)",fontSize:16,lineHeight:1.9,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{mk(segC,"#3C7030","rgba(60,112,48,.2)")}</div></>}
+                {ers.length>0&&<div style={{marginTop:16}}>
+                  {ers.map((e,i)=>(
+                    <div key={i} onClick={()=>setEsc({...esc,foco:esc.foco===i?null:i})} style={{padding:"12px 14px",marginBottom:8,borderRadius:16,cursor:"pointer",background:esc.foco===i?"rgba(196,80,58,.1)":"rgba(var(--idi-rgb),.04)",border:"1px solid "+(esc.foco===i?"rgba(196,80,58,.4)":"transparent")}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                        <span style={{width:20,height:20,borderRadius:"50%",background:IDI_RED,color:"#fff",fontSize:11,fontWeight:700,display:"inline-flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{i+1}</span>
+                        <span style={{...lab,fontSize:9.5}}>{frTipoNome(e.tipo)}</span>
+                      </div>
+                      <div style={{marginTop:8,fontSize:15,lineHeight:1.5}}><span style={{textDecoration:"line-through",textDecorationColor:IDI_RED,opacity:.8}}>{e.trecho}</span><span style={{margin:"0 8px",opacity:.5}}>→</span><b style={{color:"#3C7030"}}>{e.correcao||"(retirar)"}</b></div>
+                      <div style={{marginTop:6,fontSize:13.5,lineHeight:1.55,opacity:.78}}>{e.porque}</div>
+                    </div>))}
+                </div>}
+                {r.comentario&&<div style={{marginTop:6,fontSize:14,lineHeight:1.6,opacity:.85}}>{r.comentario}</div>}
+                <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16}}>
+                  {ers.length>0&&(esc.salvo>0?<span style={{...lab,color:"#3C7030",alignSelf:"center"}}>✓ {esc.salvo} {esc.salvo===1?"erro enviado":"erros enviados"} para Gramática</span>:<button style={btnS} onClick={salvarErrosEsc}>Guardar erros em Gramática</button>)}
+                  <button style={btnP} onClick={()=>setEsc({texto:"",tema:esc.tema,min:"",load:false,res:null,msg:"",salvo:0,orig:"",foco:null})}>Escrever outro</button>
+                  <button style={btnS} onClick={()=>setEsc({...esc,res:null,salvo:0,foco:null})}>Editar e corrigir de novo</button>
+                </div>
+              </>}
+              {escritos.filter(x=>x.lang===sel).length>0&&<div style={{marginTop:20,paddingTop:14,borderTop:"1px solid rgba(var(--idi-rgb),.1)"}}>
+                <div style={lab}>Últimos textos</div>
+                {escritos.filter(x=>x.lang===sel).slice(0,4).map(x=>(
+                  <button key={x.id} onClick={()=>abrirEscrito(x)} style={{display:"flex",alignItems:"center",gap:10,width:"100%",textAlign:"left",background:"none",border:"none",borderBottom:"1px solid rgba(var(--idi-rgb),.07)",padding:"10px 0",cursor:"pointer",fontFamily:"inherit",color:T.ink}}>
+                    <span style={{...lab,fontSize:9.5,flexShrink:0}}>{dBR(x.data)}</span>
+                    <span style={{flex:1,minWidth:0,fontSize:13.5,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{x.tema||x.texto}</span>
+                    <span style={{...lab,fontSize:9.5,flexShrink:0,color:x.erros.length?IDI_RED:"#3C7030"}}>{x.erros.length} {x.erros.length===1?"erro":"erros"}</span>
+                  </button>))}
+              </div>}
             </Card>);
         })()}
         {(estDue.length>0||estProx.length>0||rvE)&&<Card>
