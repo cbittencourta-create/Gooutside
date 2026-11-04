@@ -2083,19 +2083,56 @@ function iaJson(txt){
 function aplicarCorrecoes(texto,erros){
   return marcarTrechos(texto,erros,"trecho").map(x=>x.n===null?x.t:(erros[x.n].correcao||"")).join("");
 }
+function errAmigavel(e){
+  const m=String((e&&e.message)||e||"");
+  if(/SEM_CHAVE/.test(m))return "Cadastre uma chave de IA (campo de chave do app).";
+  if(/credit balance|billing|quota|insufficient/i.test(m))return "A conta da API está sem crédito ou sem cota ("+m.slice(0,90)+").";
+  if(/x-api-key|api key|authentication|unauthorized|permission/i.test(m))return "A chave de IA foi recusada ("+m.slice(0,90)+"). Confira a chave cadastrada.";
+  if(/overloaded|rate.?limit|529|429|503/i.test(m))return "O servidor da IA está sobrecarregado agora. Tente de novo em instantes.";
+  if(/failed to fetch|networkerror|load failed|network/i.test(m))return "Sem conexão com a IA (rede ou bloqueio do navegador).";
+  if(/demorou demais/.test(m))return m+".";
+  return m;
+}
+function parseCorrecao(raw,areasOk,tiposOk){
+  const txt=String(raw||"").replace(/```[a-z]*|```/g,"");
+  const erros=[]; let comentario="", achou=false;
+  txt.split(/\r?\n/).forEach(ln=>{
+    const m=ln.match(/^\s*[-*•\d.)\s]*(ERRO|COMENT[AÁ]RIO)\s*\|\s*(.*)$/i);
+    if(!m)return;
+    achou=true;
+    if(/^COMENT/i.test(m[1])){comentario=m[2].trim();return;}
+    const parts=m[2].split("|").map(x=>x.trim());
+    if(parts.length<5||!parts[2])return;
+    erros.push({tipo:tiposOk.has(parts[0])?parts[0]:"gramatica",area:areasOk.has(parts[1])?parts[1]:"outro",trecho:parts[2],correcao:parts[3],porque:parts.slice(4).join(" | ")||"Corrigido."});
+  });
+  if(achou)return {erros,comentario};
+  try{
+    const obj=iaJson(txt);
+    if(obj&&typeof obj==="object"){
+      const er=(Array.isArray(obj.erros)?obj.erros:[]).filter(e=>e&&typeof e.porque==="string"&&typeof e.trecho==="string"&&e.trecho.trim()).map(e=>({tipo:tiposOk.has(e.tipo)?e.tipo:"gramatica",area:areasOk.has(e.area)?e.area:"outro",trecho:String(e.trecho),correcao:String(e.correcao||""),porque:e.porque}));
+      return {erros:er,comentario:typeof obj.comentario==="string"?obj.comentario:""};
+    }
+  }catch{ /* segue para o erro */ }
+  return null;
+}
 async function gCorrigirTexto(lang,areas,nivel,tema,texto){
   const idioma=lang==="de"?"alemão":"francês";
   const chaves=areas.map(a=>a[0]).join(", ");
-  const prompt="Você é professor de "+idioma+" de uma aluna brasileira, médica, nível "+nivel+", que treina escrita para um exame de proficiência. "+(tema?"Tema ou tarefa: "+tema+". ":"")+"Texto dela:\n<<<\n"+texto+"\n>>>\nCorrija com precisão e sem condescendência, apontando TODOS os erros (gramática, artigos e casos, conjugação, ordem das palavras, preposições, ortografia, acentos, maiúsculas, vocabulário inadequado, coesão e coerência). Cada \"trecho\" deve ser copiado EXATAMENTE como ela escreveu, curto (a palavra ou expressão errada, não a frase inteira). Responda SOMENTE com JSON válido, sem nenhum texto fora do JSON, sem quebras de linha dentro das strings e sem aspas duplas dentro dos textos: {\"erros\":[{\"tipo\":\"artigo_caso|gramatica|ortografia|coesao|coerencia|vocabulario\",\"area\":\"uma destas chaves: "+chaves+"\",\"trecho\":\"trecho exato dela\",\"correcao\":\"trecho corrigido\",\"porque\":\"explicação curta em português, citando a regra\"}],\"comentario\":\"2 frases em português: o que ela fez bem e a prioridade para o próximo texto\"}. Se estiver tudo certo, erros vazio.";
-  let obj=null, ultimo=null;
-  for(let k=0;k<2&&!obj;k++){
-    try{ obj=iaJson(await iaChamar(k?prompt+" ATENÇÃO: a resposta anterior não era JSON válido. Devolva apenas o JSON.":prompt,null,true)); }
-    catch(e){ ultimo=e; if(e.message==="SEM_CHAVE")throw e; }
-  }
-  if(!obj||typeof obj!=="object")throw new Error("a resposta da IA veio incompleta ("+((ultimo&&ultimo.message)||"sem detalhes")+")");
+  const prompt="Você é professor de "+idioma+" de uma aluna brasileira, médica, nível "+nivel+", que treina escrita para um exame de proficiência. "+(tema?"Tema ou tarefa: "+tema+". ":"")+"Texto dela:\n<<<\n"+texto+"\n>>>\nCorrija com precisão e sem condescendência, apontando TODOS os erros (gramática, artigos e casos, conjugação, ordem das palavras, preposições, ortografia, acentos, maiúsculas, vocabulário inadequado, coesão e coerência). Responda SOMENTE neste formato de texto puro, uma linha por erro, sem markdown, sem JSON e sem nenhuma outra linha:\nERRO | tipo | area | trecho | correcao | explicacao\nCOMENTARIO | texto\nRegras: tipo é um destes: artigo_caso, gramatica, ortografia, coesao, coerencia, vocabulario. area é uma destas chaves: "+chaves+" (ou outro). trecho é copiado EXATAMENTE como ela escreveu, curto (a palavra ou expressão errada, não a frase inteira). correcao é o trecho corrigido. explicacao é curta, em português, citando a regra, e não pode conter o caractere |. A última linha é COMENTARIO com 2 frases em português: o que ela fez bem e a prioridade para o próximo texto. Se não houver erro, escreva apenas a linha COMENTARIO.";
   const ok=new Set(areas.map(a=>a[0])), tp=new Set(FR_TIPOS.map(x=>x[0]));
-  const erros=(Array.isArray(obj.erros)?obj.erros:[]).filter(e=>e&&typeof e.porque==="string"&&typeof e.trecho==="string"&&e.trecho.trim()).map(e=>({tipo:tp.has(e.tipo)?e.tipo:"gramatica",area:ok.has(e.area)?e.area:"outro",trecho:String(e.trecho),correcao:String(e.correcao||""),porque:e.porque}));
-  return {correta:aplicarCorrecoes(texto,erros),erros,comentario:typeof obj.comentario==="string"?obj.comentario:""};
+  const comTimeout=(pr,ms)=>Promise.race([pr,new Promise((_,rej)=>setTimeout(()=>rej(new Error("a IA demorou demais para responder")),ms))]);
+  let res=null, ultimo=null, raw="";
+  for(let k=0;k<3&&!res;k++){
+    try{
+      if(k>0)await new Promise(r=>setTimeout(r,1200*k));
+      raw=await comTimeout(iaChamar(prompt,null,false),80000);
+      res=parseCorrecao(raw,ok,tp);
+      if(!res)ultimo=new Error("a resposta da IA veio num formato inesperado");
+    }catch(e){ ultimo=e; if(e.message==="SEM_CHAVE")throw e; }
+  }
+  if(!res){ const er=new Error(errAmigavel(ultimo)); er.raw=String(raw||"").slice(0,400); throw er; }
+  const erros=res.erros;
+  return {correta:aplicarCorrecoes(texto,erros),erros,comentario:res.comentario||""};
 }
 function marcarTrechos(texto,erros,campo){
   const usados=[]; const ach=[];
@@ -4099,7 +4136,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       if(min>0)setLog([{id:uid(),lang:sel,tipo:"escrever",min,nota:"Texto corrigido"+(esc.tema.trim()?": "+esc.tema.trim():""),data:hoje},...log]);
       setEsc({...esc,load:false,res:r,orig:t,min:"",msg:"",salvo:0,foco:null});
     }catch(err){
-      setEsc({...esc,load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros (ou no campo de chave do app).":"Não consegui corrigir ("+err.message+"). Seu texto continua aí, tente de novo."});
+      setEsc({...esc,load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros (ou no campo de chave do app).":"Não consegui corrigir: "+errAmigavel(err)+" Seu texto continua aí, tente de novo."});
     }
   };
   const abrirEscrito=x=>setEsc({texto:x.texto,tema:x.tema||"",min:"",load:false,res:{correta:x.correta,erros:x.erros,comentario:x.comentario||""},msg:"",salvo:0,orig:x.texto,foco:null});
@@ -4111,7 +4148,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   };
   const drChave=d=>"idi_dr_"+userId+"_"+sel+"_"+d;
   const corrigirEntrada=async ent=>{
-    setDrEd(q=>({...q,load:ent.id,erro:""}));
+    setDrEd(q=>({...q,load:ent.id,erro:"",det:""}));
     try{
       const nv=(L(sel)||{}).nivel||"A2";
       const r=await gCorrigirTexto(sel,gAreas,nv,"Diário pessoal (texto livre)",ent.texto);
@@ -4124,7 +4161,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         setDrEd(q=>({...q,anaLoad:false}));
       }).catch(()=>setDrEd(q=>({...q,anaLoad:false})));
     }catch(err){
-      setDrEd(q=>({...q,load:"",erro:err.message==="SEM_CHAVE"?"Cadastre uma chave de IA (campo de chave do app) para receber a correção. Seu texto está salvo.":"Não consegui corrigir agora: "+err.message+". Seu texto está salvo; toque em Corrigir agora para tentar de novo."}));
+      setDrEd(q=>({...q,load:"",det:err.raw||"",erro:err.message==="SEM_CHAVE"?"Cadastre uma chave de IA (campo de chave do app) para receber a correção. Seu texto está salvo.":"Não consegui corrigir agora: "+errAmigavel(err)+" Seu texto está salvo; toque em Corrigir agora para tentar de novo."}));
     }
   };
   const salvarDiario=corrigir=>{
@@ -5773,7 +5810,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <div style={{marginTop:8,padding:"14px 16px",borderRadius:16,background:"rgba(var(--idi-rgb),.04)",fontSize:16,lineHeight:1.9,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{corr?mk(segO,IDI_RED,"rgba(196,80,58,.18)"):drEnt.texto}</div>
             {!corr&&<div style={{marginTop:14,padding:"14px 16px",borderRadius:16,background:PAST.butter}}>
               <div style={{fontSize:14,lineHeight:1.55}}>{busy&&drEd.load===drEnt.id?"Corrigindo seu texto…":"Este texto ainda não foi corrigido."}</div>
-              {drEd.erro&&<div style={{fontSize:13,lineHeight:1.5,marginTop:8,color:IDI_RED}}>{drEd.erro}</div>}
+              {drEd.erro&&<div style={{fontSize:13,lineHeight:1.5,marginTop:8,color:IDI_RED}}>{drEd.erro}{drEd.det&&<div style={{...lab,fontSize:9,marginTop:6,textTransform:"none",letterSpacing:0,whiteSpace:"pre-wrap",wordBreak:"break-word",color:"rgba(var(--idi-rgb),.7)"}}>Resposta recebida: {drEd.det}</div>}</div>}
               <div style={{marginTop:10}}><button style={{...btnP,opacity:busy?.5:1}} disabled={busy} onClick={()=>corrigirEntrada(drEnt)}>{busy&&drEd.load===drEnt.id?"Corrigindo…":"Corrigir agora"}</button></div>
             </div>}
             {corr&&ers.length>0&&<><div style={{...lab,marginTop:16}}>Texto corrigido</div>
