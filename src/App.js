@@ -2263,6 +2263,67 @@ async function gAvaliarExercicio(lang,ex,resposta,topico){
   const obj=iaJson(await iaChamar(prompt,null,true));
   return {ok:obj.ok===true,correta:String(obj.correta||""),feedback:String(obj.feedback||"")};
 }
+// ── Exercícios feitos a partir dos erros de um texto do diário ──
+function exDosErros(texto,erros){
+  const frases=(String(texto||"").match(/[^.!?…\n]+[.!?…]*/g)||[]).map(x=>x.trim()).filter(Boolean);
+  const lac=[],cor=[];
+  const validos=(erros||[]).filter(e=>e&&e.trecho&&String(e.trecho).trim()&&String(e.correcao||"").trim()!==String(e.trecho).trim()).slice(0,5);
+  validos.forEach((e,n)=>{
+    const tr=String(e.trecho).trim(), co=String(e.correcao||"").trim();
+    let fr=frases.find(f=>f.includes(tr))||"";
+    if(fr){
+      // corrige os OUTROS erros da frase, para o exercício treinar só este
+      let fr2=fr;
+      validos.forEach(o=>{if(o!==e&&fr2.includes(String(o.trecho).trim()))fr2=fr2.replace(String(o.trecho).trim(),String(o.correcao||"").trim());});
+      if(fr2.includes(tr))fr=fr2.replace(/\s{2,}/g," ").trim();
+    }
+    const certa=fr?fr.replace(tr,co).replace(/\s{2,}/g," ").trim():co;
+    const base={foco:n+1,origem:"texto",dica:"Tipo do erro: "+frTipoNome(e.tipo),expl:String(e.porque||""),erro:tr+" → "+(co||"(retirar)")};
+    if(fr&&co)lac.push({...base,tipo:"lacuna",enun:fr.replace(tr,"___"),resp:[co]});
+    cor.push({...base,tipo:"corrigir",enun:fr||tr,resp:[certa],chk:{tr,co}});
+  });
+  return [...lac,...cor];
+}
+async function gExerciciosErros(lang,erros,texto){
+  const idioma=lang==="de"?"alemão":"francês";
+  const lis=(erros||[]).filter(e=>e&&e.trecho&&String(e.correcao||"")!==String(e.trecho)).slice(0,5);
+  if(!lis.length)return [];
+  const n=Math.min(8,Math.max(4,lis.length*2));
+  const lista=lis.map((e,i)=>(i+1)+". «"+e.trecho+"» → «"+(e.correcao||"(retirar)")+"» ("+String(e.porque||"").replace(/\|/g,"/")+")").join("\n");
+  const prompt="Você é professor de "+idioma+" de uma aluna brasileira, médica, que escreveu este texto: «"+texto+"». Ela errou estes pontos:\n"+lista+"\nCrie EXATAMENTE "+n+" exercícios NOVOS (frases diferentes das do texto dela, vocabulário simples do dia a dia, pode usar contexto de hospital) que treinem exatamente essas regras, distribuídos entre os erros, do mais fácil ao mais difícil. Tipos: lacuna (frase em "+idioma+" com UMA lacuna ___), corrigir (frase em "+idioma+" com UM erro igual ao que ela cometeu; a resposta é a frase inteira corrigida), reordenar (palavras embaralhadas separadas por \" / \"; a resposta é a frase correta), traducao (frase curta em português; a resposta é a tradução). Responda SOMENTE em texto puro, uma linha por exercício, sem markdown e sem JSON, neste formato:\nEX | tipo | enunciado | resposta (se houver variantes aceitas, separe por ;) | dica curta em português sem entregar a resposta | regra em uma frase em português\nNenhum campo pode conter o caractere |.";
+  const raw=await iaChamar(prompt,null,false);
+  const out=[];
+  String(raw||"").replace(/```[a-z]*|```/g,"").split(/\r?\n/).forEach(ln=>{
+    const m=ln.match(/^\s*[-*•\d.)\s]*EX\s*\|\s*(.*)$/i); if(!m)return;
+    const c=m[1].split("|").map(x=>x.trim());
+    if(c.length<4)return;
+    const tipo=c[0].toLowerCase().replace("tradução","traducao");
+    if(!["lacuna","corrigir","reordenar","traducao"].includes(tipo))return;
+    const resp=c[2].split(";").map(x=>x.trim()).filter(Boolean);
+    if(!c[1]||!resp.length||(tipo==="lacuna"&&!c[1].includes("___")))return;
+    out.push({tipo,enun:c[1],resp,dica:c[3]||"",expl:c.slice(4).join(" | "),origem:"novo",foco:0,erro:""});
+  });
+  if(!out.length)throw new Error("a resposta da IA veio num formato inesperado");
+  return out.slice(0,n);
+}
+function exAbrirPdf(titulo,sub,textoOrig,fila){
+  const h=x=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const linhas=n=>Array.from({length:n},()=>'<div class="ln"></div>').join("");
+  const nomeT={lacuna:"Complete a lacuna",corrigir:"Corrija a frase",reordenar:"Ponha na ordem",traducao:"Traduza"};
+  const itens=fila.map((x,i)=>'<div class="ex"><div class="et">'+(i+1)+". "+h(nomeT[x.tipo]||"Exercício")+(x.origem==="texto"?' · <span class="o">do seu texto</span>':"")+'</div><div class="en">'+h(x.enun)+'</div>'+linhas(x.tipo==="lacuna"?1:2)+(x.dica?'<div class="di">Dica: '+h(x.dica)+'</div>':"")+'</div>').join("");
+  const gab=fila.map((x,i)=>'<div class="gb"><b>'+(i+1)+".</b> "+h(x.resp[0])+(x.resp.length>1?' <span class="o">(também vale: '+h(x.resp.slice(1).join("; "))+')</span>':"")+(x.expl?'<div class="di">'+h(x.expl)+'</div>':"")+'</div>').join("");
+  const html='<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+h(titulo)+'</title><style>@page{size:A4;margin:18mm 16mm}*{box-sizing:border-box}body{font-family:Georgia,"Times New Roman",serif;color:#2B1116;margin:0;padding:22px;max-width:760px;margin:0 auto;line-height:1.45}h1{font-size:26px;margin:0 0 4px;color:#561A24}h2{font-size:18px;margin:26px 0 8px;color:#561A24;border-bottom:2px solid #C9A24A;padding-bottom:4px}.sub{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#7a5d38}.orig{background:#F6EADF;border-radius:10px;padding:12px 14px;font-size:14px;white-space:pre-wrap}.ex{break-inside:avoid;page-break-inside:avoid;margin:16px 0 18px}.et{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#7a5d38;font-weight:700}.o{text-transform:none;letter-spacing:0;font-weight:400;font-style:italic}.en{font-size:17px;margin:4px 0 6px}.ln{border-bottom:1px solid #8a7a6a;height:26px}.di{font-size:12px;color:#6b5a50;margin-top:5px;font-style:italic}.gb{break-inside:avoid;margin:9px 0;font-size:15px}.pb{page-break-before:always;break-before:page}.bar{position:sticky;top:0;background:#fff;padding:8px 0;margin-bottom:6px}.bar button{font:600 14px system-ui,sans-serif;padding:10px 18px;border-radius:99px;border:none;background:#561A24;color:#fff;cursor:pointer}@media print{.bar{display:none}body{padding:0}}</style></head><body><div class="bar"><button onclick="window.print()">Imprimir / Salvar como PDF</button></div><div class="sub">'+h(sub)+'</div><h1>'+h(titulo)+'</h1><h2>Seu texto</h2><div class="orig">'+h(textoOrig)+'</div><h2>Exercícios</h2>'+itens+'<div class="pb"></div><h1>Gabarito</h1>'+gab+'</body></html>';
+  try{
+    const w=window.open("","_blank");
+    if(w){w.document.open();w.document.write(html);w.document.close();setTimeout(()=>{try{w.focus();w.print();}catch{ /* o botão da página imprime */ }},600);return "janela";}
+  }catch{ /* segue para o arquivo */ }
+  try{
+    const blob=new Blob([html],{type:"text/html;charset=utf-8"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=titulo.replace(/[^\w-]+/g,"-")+".html";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+    return "arquivo";
+  }catch{ return ""; }
+}
 // ── PDFs dos livros (ficam só no navegador; o texto das páginas citadas vai ao Claude) ──
 const PDFJS_URL="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js";
 const PDFJS_WORKER="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
@@ -3916,6 +3977,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [exerc,setExerc]=useLS("v5_idi_exerc",[],userId);
   const exercRef=useRef(exerc); exercRef.current=exerc;
   const [exS,setExS]=useState(null);
+  const [trn,setTrn]=useState(null);
   const [gerEx,setGerEx]=useState({});
   const [gerMsg,setGerMsg]=useState("");
   const [verTodosEx,setVerTodosEx]=useState(false);
@@ -5028,6 +5090,48 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setExS({...exS,fila,rep:erro?{...exS.rep,[id]:1}:exS.rep,i:p,resp:"",fb:null,dica:false,tentou:false,ok:exS.ok+(erro?0:1),er:exS.er+(erro?1:0),fim:p>=fila.length});
   };
   const corrigirPeloIA=()=>conferirEx(true);
+  // ── Treino com os erros de um texto do diário ──
+  const abrirTreino=ent=>{
+    const local=exDosErros(ent.texto,ent.erros);
+    setTrn({entId:ent.id,fila:local,modo:"lista",i:0,resp:"",fb:null,dica:false,ok:0,er:0,fim:false,load:false,ia:iaNome?"carregando":"sem",iaMsg:"",pdf:""});
+    setTimeout(()=>{try{const el=document.getElementById("idi-treino"); if(el)el.scrollIntoView({behavior:"smooth",block:"start"});}catch{ /* sem scroll */ }},120);
+    if(iaNome){
+      gExerciciosErros(sel,ent.erros,ent.texto).then(novos=>setTrn(q=>q&&q.entId===ent.id?{...q,fila:[...q.fila,...novos],ia:"ok"}:q))
+        .catch(err=>setTrn(q=>q&&q.entId===ent.id?{...q,ia:"falhou",iaMsg:errAmigavel(err)}:q));
+    }
+  };
+  const trnConferir=async forcarIA=>{
+    const q=trn; if(!q||q.fb||q.load)return;
+    const ex=q.fila[q.i]; const t=q.resp.trim(); if(!ex||!t)return;
+    let ok=false,quase=false,ia=null;
+    const loc=exLocal(t,ex.resp);
+    if(loc!=="er"){ok=true;quase=loc==="quase";}
+    else if(ex.chk&&ex.chk.co){
+      const a=exNorm(t),c=exNorm(ex.chk.co),r=exNorm(ex.chk.tr);
+      if(c&&a.includes(c)&&(!r||c.includes(r)||!a.includes(r)))ok=true;
+    }
+    if(!ok&&iaNome&&(ex.tipo==="traducao"||forcarIA===true)){
+      setTrn(x=>({...x,load:true}));
+      try{ia=await gAvaliarExercicio(sel,{tipo:ex.tipo,enun:ex.enun,resp:ex.resp},t,"erros do meu diário");ok=ia.ok;}
+      catch(err){setTrn(x=>({...x,load:false,fb:{ok:false,msg:"Não consegui conferir com a IA ("+errAmigavel(err)+")."}}));return;}
+    }
+    setTrn(x=>({...x,load:false,fb:{ok,quase,ia,pedirIA:!ok&&!!iaNome&&!ia}}));
+  };
+  const trnProx=()=>{
+    const q=trn; if(!q||!q.fb)return;
+    const erro=!q.fb.ok; const ex=q.fila[q.i];
+    const fila=(erro&&!ex.rep)?[...q.fila,{...ex,rep:true}]:q.fila; const n=q.i+1;
+    const np={...q,fila,i:n,resp:"",fb:null,dica:false,ok:q.ok+(!erro&&!ex.rep?1:0),er:q.er+(erro&&!ex.rep?1:0),fim:n>=fila.length};
+    setTrn(np);
+    if(np.fim)setDiario(diarioRef.current.map(x=>x.id===q.entId?{...x,treino:{data:hoje,ok:np.ok,er:np.er}}:x));
+  };
+  const trnPdf=ent=>{
+    if(!trn||!trn.fila.length)return;
+    const base=trn.fila.filter(x=>!x.rep);
+    const titulo="Exercícios do meu diário em "+(sel==="de"?"alemão":"francês")+" · "+ent.data.split("-").reverse().join("/");
+    const r=exAbrirPdf(titulo,"Velara · Idiomas · treino dos meus erros",ent.texto,base);
+    setTrn(x=>({...x,pdf:r||"erro"}));
+  };
   // ── Sessão do dia: monta o treino a partir do que está vencido, errado e fraco ──
   const planoDia=()=>{
     const exOrd=[...exPend].sort((a,b)=>(b.err||0)-(a.err||0)||(b.data||"").localeCompare(a.data||""));
@@ -5832,12 +5936,72 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               {anaLinhas.length>0?anaLinhas.map((l,i)=>{const m=l.match(/^(Onde você errou hoje|Padrão recorrente|Foco de amanhã)\.?\s*(.*)$/);return <div key={i} style={{fontSize:14,lineHeight:1.6,marginTop:i===0?10:8}}>{m?<><b>{m[1]}. </b>{m[2]}</>:l}</div>;}):<div style={{fontSize:13.5,opacity:.75,marginTop:8}}>{drEd.anaLoad?"Analisando seus erros…":"Análise indisponível para este texto. A análise geral abaixo continua valendo."}</div>}
             </div>}
             <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16,alignItems:"center"}}>
+              {corr&&ers.length>0&&<button style={btnP} onClick={()=>abrirTreino(drEnt)}>{drEnt.treino?"Treinar de novo":"Treinar estes erros"}</button>}
               <button style={btnS} onClick={()=>setDrEd({...drEd,edit:true,ver:null,data:drEnt.data===hoje?"":drEnt.data,texto:drEnt.texto,foco:null,erro:"",conf:""})}>Editar texto</button>
               {corr&&ers.length>0&&(drEd.salvo===drEnt.id?<span style={{...lab,color:"#3C7030"}}>✓ erros enviados para Gramática</span>:<button style={btnS} onClick={()=>salvarErrosDiario(drEnt)}>Guardar erros em Gramática</button>)}
               {corr&&<button style={btnS} disabled={busy} onClick={()=>corrigirEntrada(drEnt)}>{busy&&drEd.load===drEnt.id?"Corrigindo…":"Corrigir de novo"}</button>}
               {drEd.conf===drEnt.id?<><button style={{...btnS,color:IDI_RED,borderColor:IDI_RED}} onClick={()=>excluirEntrada(drEnt.id)}>Confirmar exclusão</button><button style={btnS} onClick={()=>setDrEd({...drEd,conf:""})}>Não excluir</button></>:<button style={{...btnS,opacity:.75}} onClick={()=>setDrEd({...drEd,conf:drEnt.id})}>Excluir</button>}
             </div>
           </Card>}
+          {drEnt&&trn&&trn.entId===drEnt.id&&(()=>{
+            const q=trn, ex=q.fila[q.i], tot=q.fila.filter(x=>!x.rep).length;
+            const nTexto=q.fila.filter(x=>x.origem==="texto").length, nNovo=q.fila.filter(x=>x.origem==="novo").length;
+            const sair=<button style={{...btnS,padding:"6px 14px",fontSize:12}} onClick={()=>setTrn(null)}>Fechar</button>;
+            const pdfBtn=<button style={{...btnS,opacity:q.ia==="carregando"?.5:1}} disabled={q.ia==="carregando"} onClick={()=>trnPdf(drEnt)}>{q.ia==="carregando"?"Criando exercícios novos…":"Baixar em PDF"}</button>;
+            const avisoPdf=q.pdf==="janela"?"Abri a folha em outra aba. Se a impressão não abrir sozinha, toque em «Imprimir / Salvar como PDF» e escolha salvar como PDF.":(q.pdf==="arquivo"?"O navegador bloqueou a nova aba, então baixei a folha como arquivo .html. Abra-o e use Imprimir › Salvar como PDF.":(q.pdf==="erro"?"Não consegui gerar a folha agora.":""));
+            return (<div id="idi-treino"><Card>
+              {q.modo==="lista"&&<>
+                <Titulo k="Treino com os erros deste texto" t="Exercícios" dir={sair}/>
+                {q.fila.length===0?<Vazio>Este texto não tem erros que dê para transformar em exercício.</Vazio>:<>
+                  <div style={{fontSize:14,lineHeight:1.6,marginBottom:12}}>{q.fila.length} {q.fila.length===1?"exercício":"exercícios"}: {nTexto} feitos com as frases do seu texto{nNovo>0?" e "+nNovo+" frases novas sobre as mesmas regras":""}.{q.ia==="carregando"&&" Estou criando frases novas sobre as mesmas regras…"}{q.ia==="falhou"&&" Não consegui criar frases novas ("+q.iaMsg+"); os exercícios do seu texto continuam valendo."}{q.ia==="sem"&&" Com uma chave de IA cadastrada eu também crio frases novas."}</div>
+                  {q.fila.map((x,i)=>(<div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderTop:i===0?"none":"1px solid rgba(var(--idi-rgb),.08)",alignItems:"baseline"}}>
+                    <span style={{...lab,fontSize:9.5,width:22,flexShrink:0}}>{i+1}</span>
+                    <span style={{flex:1,minWidth:0,fontSize:14,lineHeight:1.5,wordBreak:"break-word"}}>{x.enun}</span>
+                    <span style={{...lab,fontSize:9,flexShrink:0}}>{EX_TIPOS[x.tipo]}</span>
+                  </div>))}
+                  <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16,alignItems:"center"}}>
+                    <button style={btnP} onClick={()=>setTrn({...q,modo:"treino",i:0,resp:"",fb:null,dica:false,ok:0,er:0,fim:false})}>Começar treino</button>
+                    {pdfBtn}
+                  </div>
+                  {avisoPdf&&<div style={{...lab,fontSize:9.5,marginTop:10,lineHeight:1.6,whiteSpace:"normal"}}>{avisoPdf}</div>}
+                </>}
+              </>}
+              {q.modo==="treino"&&!q.fim&&ex&&<>
+                <Titulo k={ex.rep?"Para refazer · errou antes":"Exercício "+q.fila.slice(0,q.i+1).filter(x=>!x.rep).length+" de "+tot} t={EX_TIPOS[ex.tipo]} dir={<button style={{...btnS,padding:"6px 14px",fontSize:12}} onClick={()=>setTrn({...q,modo:"lista",fb:null,resp:"",dica:false})}>Lista</button>}/>
+                <div style={{height:6,borderRadius:99,background:"rgba(var(--idi-rgb),.08)",overflow:"hidden",marginBottom:16}}><div style={{width:(q.i/q.fila.length*100)+"%",height:"100%",background:T.ink,borderRadius:99}}/></div>
+                <div style={{...serif,fontSize:isMobile?21:24,lineHeight:1.4,wordBreak:"break-word"}}>{ex.enun}</div>
+                {ex.origem==="texto"&&<div style={{...lab,fontSize:9.5,marginTop:6}}>frase do seu texto</div>}
+                {ex.dica&&(q.dica?<div style={{fontSize:13.5,lineHeight:1.5,marginTop:10,opacity:.8}}>Dica: {ex.dica}</div>:(!q.fb&&<button style={{...btnS,padding:"6px 14px",fontSize:12,marginTop:10}} onClick={()=>setTrn({...q,dica:true})}>Ver dica</button>))}
+                {ex.tipo==="lacuna"
+                  ?<input autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,marginTop:14,fontSize:16}} value={q.resp} disabled={!!q.fb||q.load} placeholder="Escreva o que falta" onChange={e=>setTrn({...q,resp:e.target.value})} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(q.fb)trnProx();else trnConferir();}}}/>
+                  :<textarea autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,marginTop:14,minHeight:84,resize:"vertical",lineHeight:1.6,fontSize:16}} value={q.resp} disabled={!!q.fb||q.load} placeholder={ex.tipo==="traducao"?"Escreva a tradução":"Escreva a frase completa e correta"} onChange={e=>setTrn({...q,resp:e.target.value})}/>}
+                {!q.fb&&<div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:12}}>
+                  <button style={{...btnP,opacity:(q.resp.trim()&&!q.load)?1:.4}} disabled={!q.resp.trim()||q.load} onClick={()=>trnConferir()}>{q.load?"Conferindo…":"Conferir"}</button>
+                </div>}
+                {q.fb&&<div style={{marginTop:14,padding:"14px 16px",borderRadius:16,background:q.fb.ok?"rgba(60,112,48,.1)":"rgba(196,80,58,.1)"}}>
+                  <div style={{fontWeight:700,fontSize:14.5,color:q.fb.ok?"#3C7030":IDI_RED}}>{q.fb.msg?q.fb.msg:(q.fb.ok?(q.fb.quase?"Certo, só cuidado com acentos e grafia.":"Certo."):"Ainda não.")}</div>
+                  {!q.fb.ok&&!q.fb.msg&&<div style={{fontSize:15,marginTop:6,lineHeight:1.5}}>Resposta: <b style={{color:"#3C7030"}}>{(q.fb.ia&&q.fb.ia.correta)||ex.resp[0]}</b></div>}
+                  {q.fb.ia&&q.fb.ia.feedback&&<div style={{fontSize:13.5,marginTop:6,lineHeight:1.55,opacity:.85}}>{q.fb.ia.feedback}</div>}
+                  {ex.expl&&<div style={{fontSize:13.5,marginTop:6,lineHeight:1.55,opacity:.85}}>{ex.expl}</div>}
+                  {ex.erro&&<div style={{...lab,fontSize:9.5,marginTop:8,whiteSpace:"normal"}}>seu erro: {ex.erro}</div>}
+                </div>}
+                {q.fb&&<div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:12}}>
+                  <button style={btnP} onClick={trnProx}>{q.i+1>=q.fila.length?"Terminar":"Próximo"}</button>
+                  {q.fb.pedirIA&&<button style={{...btnS,whiteSpace:"normal",textAlign:"left"}} onClick={()=>trnConferir(true)}>Acho que está certa: conferir com a IA</button>}
+                </div>}
+              </>}
+              {q.modo==="treino"&&q.fim&&<>
+                <Titulo k="Treino concluído" t={q.ok+" de "+tot+" de primeira"} dir={sair}/>
+                <div style={{fontSize:14.5,lineHeight:1.6}}>{q.er===0?"Nenhum erro. Vale reescrever o texto do diário usando as correções.":q.er+(q.er===1?" exercício voltou":" exercícios voltaram")+" para o fim da fila e foram refeitos."} {q.ia==="carregando"?"Ainda estou criando frases novas.":""}</div>
+                <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16,alignItems:"center"}}>
+                  {q.i<q.fila.length&&<button style={btnP} onClick={()=>setTrn({...q,fim:false,fb:null,resp:"",dica:false})}>Continuar com {q.fila.length-q.i} {q.fila.length-q.i===1?"exercício novo":"exercícios novos"}</button>}
+                  <button style={q.i<q.fila.length?btnS:btnP} onClick={()=>setTrn({...q,modo:"treino",i:0,fila:q.fila.filter(x=>!x.rep),resp:"",fb:null,dica:false,ok:0,er:0,fim:false})}>Refazer tudo</button>
+                  {pdfBtn}
+                </div>
+                {avisoPdf&&<div style={{...lab,fontSize:9.5,marginTop:10,lineHeight:1.6,whiteSpace:"normal"}}>{avisoPdf}</div>}
+              </>}
+            </Card></div>);
+          })()}
           {dSel.length>0&&<Card>
             <Titulo k={dSel.length+(dSel.length===1?" texto":" textos")} t="Meu diário" dir={<button style={{...btnS,padding:"7px 14px",fontSize:12}} onClick={baixarTextos}>Baixar .txt</button>}/>
             {dSel.slice(0,drEd.todos?dSel.length:10).map(x=>{const on=drEnt&&drEnt.id===x.id;return (
