@@ -2020,17 +2020,17 @@ function gItemErro(m,nomeArea){
 }
 const IA_KC="velara_claude_key", IA_KG="velara_gemini_key";
 const iaKey=k=>{try{return localStorage.getItem(k)||"";}catch{return "";}};
-async function iaChamar(prompt,b64,json){
+async function iaChamar(prompt,b64,json,mt){
   const ck=iaKey(IA_KC), gk=iaKey(IA_KG);
   if(!ck&&!gk)throw new Error("SEM_CHAVE");
   if(ck){
-    const imgs=!b64?[]:(Array.isArray(b64)?b64:[b64]); const content=imgs.map(d=>({type:"image",source:{type:"base64",media_type:"image/jpeg",data:d}})); content.push({type:"text",text:prompt});
+    const imgs=!b64?[]:(Array.isArray(b64)?b64:[b64]); const content=imgs.map(d=>({type:"image",source:{type:"base64",media_type:mt||"image/jpeg",data:d}})); content.push({type:"text",text:prompt});
     const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"content-type":"application/json","x-api-key":ck,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:"claude-sonnet-5-5",max_tokens:4096,messages:[{role:"user",content}]})});
     const data=await resp.json();
     if(data.error)throw new Error(data.error.message||"erro na API");
     return (data.content||[]).filter(c=>c.type==="text").map(c=>c.text).join("");
   }
-  const imgs2=!b64?[]:(Array.isArray(b64)?b64:[b64]); const parts=imgs2.map(d=>({inline_data:{mime_type:"image/jpeg",data:d}})); parts.push({text:prompt});
+  const imgs2=!b64?[]:(Array.isArray(b64)?b64:[b64]); const parts=imgs2.map(d=>({inline_data:{mime_type:mt||"image/jpeg",data:d}})); parts.push({text:prompt});
   const resp=await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+gk,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({contents:[{parts}],generationConfig:json?{responseMimeType:"application/json",temperature:0.1}:{temperature:0.3}})});
   const data=await resp.json();
   if(data.error)throw new Error(data.error.message||"erro na API");
@@ -2091,7 +2091,7 @@ function aplicarCorrecoes(texto,erros){
 }
 function errAmigavel(e){
   const m=String((e&&e.message)||e||"");
-  if(/SEM_CHAVE/.test(m))return "Cadastre uma chave de IA (campo de chave do app).";
+  if(/SEM_CHAVE/.test(m))return "Cadastre a chave de IA em Menu › Chave de IA.";
   if(/credit balance|billing|quota|insufficient/i.test(m))return "A conta da API está sem crédito ou sem cota ("+m.slice(0,90)+").";
   if(/x-api-key|api key|authentication|unauthorized|permission/i.test(m))return "A chave de IA foi recusada ("+m.slice(0,90)+"). Confira a chave cadastrada.";
   if(/overloaded|rate.?limit|529|429|503/i.test(m))return "O servidor da IA está sobrecarregado agora. Tente de novo em instantes.";
@@ -4206,7 +4206,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       if(min>0)setLog([{id:uid(),lang:sel,tipo:"escrever",min,nota:"Texto corrigido"+(esc.tema.trim()?": "+esc.tema.trim():""),data:hoje},...log]);
       setEsc({...esc,load:false,res:r,orig:t,min:"",msg:"",salvo:0,foco:null});
     }catch(err){
-      setEsc({...esc,load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros (ou no campo de chave do app).":"Não consegui corrigir: "+errAmigavel(err)+" Seu texto continua aí, tente de novo."});
+      setEsc({...esc,load:false,msg:err.message==="SEM_CHAVE"?"Cadastre a chave de IA em Menu › Chave de IA.":"Não consegui corrigir: "+errAmigavel(err)+" Seu texto continua aí, tente de novo."});
     }
   };
   const abrirEscrito=x=>setEsc({texto:x.texto,tema:x.tema||"",min:"",load:false,res:{correta:x.correta,erros:x.erros,comentario:x.comentario||""},msg:"",salvo:0,orig:x.texto,foco:null});
@@ -4231,7 +4231,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
         setDrEd(q=>({...q,anaLoad:false}));
       }).catch(()=>setDrEd(q=>({...q,anaLoad:false})));
     }catch(err){
-      setDrEd(q=>({...q,load:"",det:err.raw||"",erro:err.message==="SEM_CHAVE"?"Cadastre uma chave de IA (campo de chave do app) para receber a correção. Seu texto está salvo.":"Não consegui corrigir agora: "+errAmigavel(err)+" Seu texto está salvo; toque em Corrigir agora para tentar de novo."}));
+      setDrEd(q=>({...q,load:"",det:err.raw||"",erro:err.message==="SEM_CHAVE"?"Cadastre a chave de IA em Menu › Chave de IA para receber a correção. Seu texto está salvo.":"Não consegui corrigir agora: "+errAmigavel(err)+" Seu texto está salvo; toque em Corrigir agora para tentar de novo."}));
     }
   };
   const salvarDiario=corrigir=>{
@@ -4424,7 +4424,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       setFrases([{id:uid(),lang:sel,data:hoje,termo:n.termo,art:n.art,frase:t,correta:r.correta,erros:r.erros,ok:r.erros.length===0},...frases].slice(0,300));
       setFq({...fq,load:false,res:r});
     }catch(err){
-      setFq({...fq,load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros.":"Não consegui corrigir ("+err.message+"). Seu texto continua aí, tente de novo."});
+      setFq({...fq,load:false,msg:err.message==="SEM_CHAVE"?"Cadastre a chave de IA em Menu › Chave de IA.":"Não consegui corrigir ("+err.message+"). Seu texto continua aí, tente de novo."});
     }
   };
   const proxFrase=()=>{
@@ -4493,7 +4493,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setAna({load:true,txt:"",msg:""});
     const st=gAreas.filter(([k])=>gTot(k)>0).map(([k,nome])=>nome.replace(/ \(.*\)/,"")+" "+gPct(k)+"% em "+gTot(k)).join("; ");
     try{const t=await gAnalisarErros(meusSel.slice(0,60),sel,gAreas,st);setAna({load:false,txt:t,msg:""});}
-    catch(err){setAna({load:false,txt:"",msg:err.message==="SEM_CHAVE"?"Cadastre uma chave acima.":"Não consegui analisar ("+err.message+")."});}
+    catch(err){setAna({load:false,txt:"",msg:err.message==="SEM_CHAVE"?"Cadastre a chave de IA em Menu › Chave de IA.":"Não consegui analisar ("+err.message+")."});}
   };
   const setRes=(i,pt)=>setFoto(f=>({...f,res:f.res.map((x,j)=>j===i?{...x,...pt}:x)}));
   const enviarFoto=async e=>{
@@ -4504,7 +4504,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       const r=await gFotoErros(f,sel,gAreas);
       setFoto({load:false,msg:r.erros.length?"":"Não achei erros legíveis nessa foto. Tente de perto, com boa luz e a página inteira no enquadramento.",res:r.erros.map(x=>({...x,on:true})),analise:r.analise});
     }catch(err){
-      setFoto({load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave acima.":"Não consegui analisar a foto ("+err.message+").",res:null,analise:""});
+      setFoto({load:false,msg:err.message==="SEM_CHAVE"?"Cadastre a chave de IA em Menu › Chave de IA.":"Não consegui analisar a foto ("+err.message+").",res:null,analise:""});
     }
   };
   const salvarFoto=()=>{
@@ -4525,7 +4525,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       setChatAll({...chatAll,[sel]:[...hist,{r:"a",t:resp||"(sem resposta)"}].slice(-40)});
     }catch(err){
       setChatAll({...chatAll,[sel]:antes}); setChatIn(t);
-      setChatErr(err.message==="SEM_CHAVE"?"Cadastre uma chave acima.":"Não consegui responder ("+err.message+").");
+      setChatErr(err.message==="SEM_CHAVE"?"Cadastre a chave de IA em Menu › Chave de IA.":"Não consegui responder ("+err.message+").");
     }
     setChatLoad(false);
   };
@@ -4936,7 +4936,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       setEid({load:false,msg:r.assuntos.length?"":"Não identifiquei assuntos. Descreva com mais detalhe ou mande uma foto mais nítida.",res:{fonte:fonteTxt||(lv?lv.rotulo:r.fonte),ctx:lv?lv.txt.slice(0,2500):"",lido:lv?lv.lido:"",avisos,assuntos:r.assuntos.map(x=>({...x,on:true}))}});
       return {n:r.assuntos.length,lido:lv?lv.lido:""};
     }catch(err){
-      setEid({load:false,msg:err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros.":"Não consegui identificar ("+err.message+").",res:null});
+      setEid({load:false,msg:err.message==="SEM_CHAVE"?"Cadastre a chave de IA em Menu › Chave de IA.":"Não consegui identificar ("+err.message+").",res:null});
       return {n:0,lido:""};
     }
   };
@@ -4980,7 +4980,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const setOffsetPdf=(x,v)=>setPdfs(pdfs.map(y=>y.id===x.id?{...y,offset:Math.max(-50,Math.min(300,parseInt(v,10)||0))}:y));
   const enviarLivro=async()=>{
     const t=lvIn.trim(); if(!t||lvLoad)return;
-    if(!iaNome){setLvErr("Cadastre uma chave em Gramática › Registrar erros.");return;}
+    if(!iaNome){setLvErr("Cadastre a chave de IA em Menu › Chave de IA.");return;}
     const hist=[...lvChat,{r:"u",t}]; setLvChat(hist); setLvIn(""); setLvErr("");
     let pags=pgParse(t);
     const relato=pags.length>0&&/\b(fiz|fizemos|estudei|terminei|conclu[ií]|completei|li|vi)\b/i.test(t)&&!/\?\s*$/.test(t);
@@ -5296,7 +5296,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       const n=Object.keys(mp).length;
       if(n){const nova=vocabRef.current.map(v=>mp[v.id]?{...v,cat:mp[v.id]}:v);vocabRef.current=nova;setVocab(nova);}
       setToast(n?n+(n>1?" palavras encaixadas nas suas categorias":" palavra encaixada na sua categoria")+(sem.length-n?" · "+(sem.length-n)+" sem categoria que combine":""):"Nenhuma combinou com as suas categorias.");
-    }catch(err){setToast(err.message==="SEM_CHAVE"?"Cadastre uma chave em Gramática › Registrar erros.":"Não consegui encaixar ("+err.message+").");}
+    }catch(err){setToast(err.message==="SEM_CHAVE"?"Cadastre a chave de IA em Menu › Chave de IA.":"Não consegui encaixar ("+err.message+").");}
     setEncaixando(false);
   };
   const moverPalavra=(id,tema)=>{const t=(tema||"").trim();setVocab(vocab.map(v=>v.id===id?{...v,cat:t}:v));setMapaNova("");if(t)setMapaCat(t.toLowerCase());else setMapaCat("");};
@@ -6315,7 +6315,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
                 {!gen&&tot.length>0&&pend.length===0&&iaNome&&<button style={{...btnS,padding:"8px 14px",fontSize:12}} onClick={()=>gerarExTopico(e)}>Mais 10</button>}
               </div>);})}
             {estSel.length>6&&<div style={{marginTop:10}}><button style={btnS} onClick={()=>setVerTodosEx(!verTodosEx)}>{verTodosEx?"mostrar menos":"ver todos ("+estSel.length+")"}</button></div>}
-            {!iaNome&&<div style={{...lab,fontSize:9.5,marginTop:12,lineHeight:1.6}}>Para gerar os exercícios, cadastre uma chave em Gramática › Registrar erros.</div>}
+            {!iaNome&&<div style={{...lab,fontSize:9.5,marginTop:12,lineHeight:1.6}}>Para gerar os exercícios, cadastre a chave de IA em Menu › Chave de IA.</div>}
           </>}
         </Card>}
         <div id="idi-estudei"><Card>
@@ -6486,7 +6486,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             <button style={{...btnP,opacity:prontos?1:.4}} disabled={!prontos} onClick={salvarAula}>Salvar {prontos||""} na minha lista</button>
             {iaNome&&<button style={{...btnS,opacity:itens.length&&!aulaBusy?1:.4}} disabled={!itens.length||aulaBusy} onClick={completarAula}>{aulaBusy?"Completando…":"Completar com "+iaNome}</button>}
           </div>
-          {!iaNome&&itens.length>0&&faltam>0&&<div style={{fontSize:12,opacity:.6,marginTop:10}}>Sem a tradução o item não é salvo. Para o app completar sozinho, cadastre uma chave em Gramática › Registrar erros.</div>}
+          {!iaNome&&itens.length>0&&faltam>0&&<div style={{fontSize:12,opacity:.6,marginTop:10}}>Sem a tradução o item não é salvo. Para o app completar sozinho, cadastre a chave de IA em Menu › Chave de IA.</div>}
         </Card>
         </div>
         {aulaDatas.length===0?(
@@ -7064,7 +7064,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
               <button style={btnS} onClick={()=>iniciarDrill("art")}>Escrever artigo + palavra</button>
               <button style={btnS} onClick={()=>iniciarDrill("plural")}>Treinar plurais</button>
             </div>
-            <div style={{fontSize:13,lineHeight:1.55,opacity:.7,maxWidth:480,margin:"14px auto 0"}}>{iaNomeF?"Você recebe o artigo e o substantivo, escreve 1 ou 2 frases e o "+iaNomeF+" corrige na hora. No fim, uma análise de gramática, ortografia, coesão e coerência.":"Para escrever frases com correção, cadastre uma chave em Gramática › Registrar erros."}</div>
+            <div style={{fontSize:13,lineHeight:1.55,opacity:.7,maxWidth:480,margin:"14px auto 0"}}>{iaNomeF?"Você recebe o artigo e o substantivo, escreve 1 ou 2 frases e o "+iaNomeF+" corrige na hora. No fim, uma análise de gramática, ortografia, coesão e coerência.":"Para escrever frases com correção, cadastre a chave de IA em Menu › Chave de IA."}</div>
             <div style={{...lab,marginTop:18}}>{poolAll.length} substantivos · {meusN.length} seus · o que você erra volta mais vezes</div>
           </>)}
           {fq&&!fq.fim&&(()=>{const n=fq.fila[fq.i];const r=fq.res;return (<>
@@ -7534,6 +7534,10 @@ const ROT_JORNADAS=[
     "Reescreva o texto do dia 2 usando as correções que você aprendeu."]},
 ];
 const ROT_DNOME=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+const rotMin=t=>{const m=/^(\d{1,2}):(\d{2})/.exec(t||"");return m?(+m[1])*60+(+m[2]):null;};
+const rotHora=m=>{const x=Math.max(0,Math.min(1440,Math.round(m)));return String(Math.floor(x/60)%24).padStart(2,"0")+":"+String(x%60).padStart(2,"0");};
+const rotDur=m=>{const x=Math.round(m);if(x<60)return x+" min";const h=Math.floor(x/60),r=x%60;return r?h+" h "+r+" min":h+" h";};
+const ROT_DURS=[15,30,45,60,90,120];
 const ROT_TREINOS=["Força","Cardio","Mobilidade","Outro"];
 const ROT_TURNOS=[["","Sem marcação"],["folga","Folga"],["dia","Plantão de dia"],["noite","Plantão de noite"],["transp","Transporte"],["estudo","Dia de estudo"]];
 const ROT_MODELO_PELE=[
@@ -7572,7 +7576,7 @@ function RotinaApp({userId,isMobile,onMenu,onTrocar}){
   const [cfg,setCfg]=useLS("v5_rot_cfg",{manha:"07:00",tarde:"14:00",noite:"21:30"},userId);
   const [jor,setJor]=useLS("v5_rot_jor",null,userId);
   const [sub,setSub]=useState("hoje");
-  const hfInit={nome:"",per:"manha",apos:"",min:"",dias:[0,1,2,3,4,5,6]};
+  const hfInit={nome:"",per:"manha",apos:"",min:"",hora:"",dias:[0,1,2,3,4,5,6]};
   const [hf,setHf]=useState(hfInit);
   const [editId,setEditId]=useState(null);
   const [conf,setConf]=useState("");
@@ -7596,12 +7600,12 @@ function RotinaApp({userId,isMobile,onMenu,onTrocar}){
   };
   const salvarHab=()=>{
     const nome=hf.nome.trim(); if(!nome||!hf.dias.length)return;
-    const item={nome,per:hf.per,apos:hf.apos&&hf.apos!==editId?hf.apos:"",min:+hf.min>0?+hf.min:0,dias:hf.dias,ativo:true};
+    const item={nome,per:hf.per,apos:hf.apos&&hf.apos!==editId?hf.apos:"",min:+hf.min>0?+hf.min:0,hora:hf.hora||"",dias:hf.dias,ativo:true};
     if(editId)setHabs(habs.map(h=>h.id===editId?{...h,...item}:h));
     else setHabs([...habs,{id:uid(),criado:hoje,...item}]);
     setHf(hfInit); setEditId(null);
   };
-  const editar=h=>{setEditId(h.id);setHf({nome:h.nome,per:h.per,apos:h.apos||"",min:h.min?String(h.min):"",dias:h.dias||[0,1,2,3,4,5,6]});try{window.scrollTo({top:0,behavior:"smooth"});}catch{ /* sem scroll */ }};
+  const editar=h=>{setEditId(h.id);setHf({nome:h.nome,per:h.per,apos:h.apos||"",min:h.min?String(h.min):"",hora:h.hora||"",dias:h.dias||[0,1,2,3,4,5,6]});try{window.scrollTo({top:0,behavior:"smooth"});}catch{ /* sem scroll */ }};
   const excluir=id=>{setHabs(habs.filter(h=>h.id!==id).map(h=>h.apos===id?{...h,apos:""}:h));setConf("");};
   const modelo=()=>{
     const ids={}; ROT_MODELO.forEach(m=>{ids[m.k]=uid();});
@@ -7686,6 +7690,80 @@ function RotinaApp({userId,isMobile,onMenu,onTrocar}){
   const salvarRev=()=>{setRev({...rev,[semIni]:{func:rfAtual.func.trim(),ajus:rfAtual.ajus.trim(),meta:rfAtual.meta.trim(),salvo:hoje}});setRf(null);setAviso("");};
   const revAnteriores=Object.keys(rev).filter(k=>k!==semIni).sort().reverse().slice(0,5);
 
+  // ── página Dia: linha do tempo com durações e tempo livre ──
+  const [agora,setAgora]=useState(()=>new Date());
+  useEffect(()=>{const t=setInterval(()=>setAgora(new Date()),30000);return ()=>clearInterval(t);},[]);
+  const [diaOff,setDiaOff]=useState(0);
+  const [tarefas,setTarefas]=useLS("v5_rot_tar",[],userId);
+  const [diaLog,setDiaLog]=useLS("v5_rot_dialog",{},userId);
+  const tkInit={nome:"",ini:"",dur:30,rep:false,dias:[0,1,2,3,4,5,6]};
+  const [tk,setTk]=useState(tkInit);
+  const dDia=addDays(hoje,diaOff);
+  const ehHoje=dDia===hoje;
+  const nowMin=agora.getHours()*60+agora.getMinutes();
+  const acordar=rotMin(cfg.acordar||"07:00"), dormir=rotMin(cfg.dormir||"23:00");
+  const itensDoDia=d=>{
+    const out=[];
+    plts.filter(x=>x.data===d&&rotMin(x.horaInicio)!==null).forEach(x=>{
+      const ini=rotMin(x.horaInicio), fr=rotMin(x.horaFim); const vira=fr!==null&&fr<=ini;
+      const fim=fr===null?Math.min(1440,ini+(+x.horas||12)*60):(vira?1440:fr);
+      out.push({k:"p"+x.id,tipo:"plt",nome:"Plantão"+(x.empresa?" · "+x.empresa:""),ini,fim,nota:vira?"continua amanhã até "+x.horaFim:""});
+    });
+    plts.filter(x=>x.data===addDays(d,-1)&&rotMin(x.horaInicio)!==null&&rotMin(x.horaFim)!==null&&rotMin(x.horaFim)<=rotMin(x.horaInicio)).forEach(x=>{
+      out.push({k:"pc"+x.id,tipo:"plt",nome:"Plantão"+(x.empresa?" · "+x.empresa:""),ini:0,fim:rotMin(x.horaFim),nota:"continuação do plantão de ontem"});
+    });
+    ativosEm(d).filter(h=>rotMin(h.hora)!==null).forEach(h=>{const ini=rotMin(h.hora);out.push({k:"h"+h.id,tipo:"hab",id:h.id,nome:h.nome,ini,fim:Math.min(1440,ini+(h.min||10)),feito:(log[d]||[]).includes(h.id)});});
+    tarefas.filter(t=>t.rep?(t.dias||[]).includes(dow(d)):t.data===d).forEach(t=>{const ini=rotMin(t.ini);if(ini===null)return;out.push({k:"t"+t.id,tipo:"tar",id:t.id,nome:t.nome,ini,fim:Math.min(1440,ini+(t.dur||30)),feito:(diaLog[d]||[]).includes(t.id),rep:!!t.rep});});
+    return out.sort((a,b)=>a.ini-b.ini||a.fim-b.fim);
+  };
+  const itensD=itensDoDia(dDia);
+  const semHora=ativosEm(dDia).filter(h=>rotMin(h.hora)===null);
+  const pltSemHora=plts.filter(x=>x.data===dDia&&rotMin(x.horaInicio)===null);
+  const linhasBase=(()=>{
+    const out=[]; let cur=acordar;
+    const gap=(a,b)=>{if(b-a>=5)out.push({t:"gap",a,b});};
+    itensD.forEach(it=>{
+      if(it.ini>cur)gap(cur,it.ini);
+      out.push({t:"item",a:it.ini,b:it.fim,it,conflito:it.ini<cur&&cur>acordar});
+      cur=Math.max(cur,it.fim);
+    });
+    if(dormir>cur)gap(cur,dormir);
+    return out;
+  })();
+  const linhasDia=(()=>{
+    if(!ehHoje)return linhasBase;
+    const rows=[]; let placed=false;
+    linhasBase.forEach(r=>{
+      if(!placed){
+        if(r.t==="gap"&&nowMin>r.a&&nowMin<r.b){rows.push({...r,b:nowMin,passou:true},{t:"agora",a:nowMin},{...r,a:nowMin});placed=true;return;}
+        if(r.t==="item"&&nowMin>=r.a&&nowMin<r.b)placed=true;
+        else if(nowMin<=r.a){rows.push({t:"agora",a:nowMin});placed=true;}
+      }
+      rows.push(r.t==="gap"&&r.b<=nowMin?{...r,passou:true}:r);
+    });
+    if(!placed)rows.push({t:"agora",a:nowMin});
+    return rows;
+  })();
+  const atualIt=ehHoje?itensD.find(it=>it.ini<=nowMin&&nowMin<it.fim):null;
+  const proxIt=ehHoje?itensD.find(it=>it.ini>nowMin):null;
+  const ultFim=ehHoje?Math.max(acordar,...itensD.filter(it=>it.fim<=nowMin).map(it=>it.fim)):0;
+  const livreTot=linhasBase.filter(r=>r.t==="gap").reduce((a,r)=>a+(ehHoje?Math.max(0,r.b-Math.max(r.a,nowMin)):r.b-r.a),0);
+  const ocupado=itensD.reduce((a,it)=>a+(it.fim-it.ini),0);
+  const alternarItem=it=>{
+    if(it.tipo==="hab"){const a=log[dDia]||[];setLog({...log,[dDia]:a.includes(it.id)?a.filter(x=>x!==it.id):[...a,it.id]});}
+    else if(it.tipo==="tar"){const a=diaLog[dDia]||[];setDiaLog({...diaLog,[dDia]:a.includes(it.id)?a.filter(x=>x!==it.id):[...a,it.id]});}
+  };
+  const salvarTarefa=()=>{
+    const nome=tk.nome.trim(); if(!nome||rotMin(tk.ini)===null||(tk.rep&&!tk.dias.length))return;
+    setTarefas([...tarefas,{id:uid(),nome,ini:tk.ini,dur:+tk.dur>0?+tk.dur:30,...(tk.rep?{rep:true,dias:tk.dias}:{data:dDia})}]);
+    setTk({...tkInit,ini:""});
+  };
+  const encaixar=(a,b)=>{
+    setTk({...tkInit,ini:rotHora(a),dur:Math.min(60,Math.max(15,Math.round((b-a)/5)*5))});
+    setTimeout(()=>{try{const e=document.getElementById("rot-add-tarefa");if(e)e.scrollIntoView({behavior:"smooth",block:"center"});}catch{ /* sem scroll */ }},80);
+  };
+  const rotuloDia=diaOff===0?"Hoje":diaOff===1?"Amanhã":diaOff===-1?"Ontem":ROT_DNOME[dow(dDia)];
+
   const T={ink:ROT_INK,sheet:ROT_SHEET,acc:ROT_ACC,rgb:"43,58,40",hrgb:"241,235,220"};
   const lab={fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10,letterSpacing:".12em",textTransform:"uppercase",color:"rgba(var(--rot-rgb),.6)"};
   const serif={fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,letterSpacing:"-.03em"};
@@ -7707,7 +7785,7 @@ function RotinaApp({userId,isMobile,onMenu,onTrocar}){
         {comCheck&&<span aria-hidden="true" style={{width:28,height:28,borderRadius:"50%",flexShrink:0,border:"2px solid "+(f?T.ink:"rgba(var(--rot-rgb),.35)"),background:f?T.ink:"transparent",color:T.sheet,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700}}>{f?"✓":""}</span>}
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:15.5,lineHeight:1.35,textDecoration:comCheck&&f?"line-through":"none",opacity:comCheck&&f?.55:1,wordBreak:"break-word"}}>{h.nome}</div>
-          <div style={{...lab,fontSize:9.5,marginTop:3,textTransform:"none",letterSpacing:".02em",whiteSpace:"normal"}}>{h.apos&&nomeDe(h.apos)?"depois de «"+nomeDe(h.apos)+"»":"horário livre"}{h.min?" · "+h.min+" min":""}{" · "+p.n+"/"+p.t+" nos últimos 7 dias"}</div>
+          <div style={{...lab,fontSize:9.5,marginTop:3,textTransform:"none",letterSpacing:".02em",whiteSpace:"normal"}}>{h.apos&&nomeDe(h.apos)?"depois de «"+nomeDe(h.apos)+"»":"horário livre"}{h.hora?" · às "+h.hora:""}{h.min?" · "+h.min+" min":""}{" · "+p.n+"/"+p.t+" nos últimos 7 dias"}</div>
         </div>
         {!comCheck&&<div style={{display:"flex",gap:6,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
           <button style={{...btnS,padding:"6px 12px",fontSize:12}} onClick={()=>editar(h)}>Editar</button>
@@ -7716,7 +7794,7 @@ function RotinaApp({userId,isMobile,onMenu,onTrocar}){
         </div>}
       </div>);
   };
-  const subs=[["hoje","Hoje"],["habitos","Hábitos"+(habs.length?" · "+habs.length:"")],["jornadas","Jornadas"],["treino","Treino"],["cuidados","Cuidados"],["semana","Semana"],["revisao","Revisão"]];
+  const subs=[["hoje","Hoje"],["dia","Dia"],["habitos","Hábitos"+(habs.length?" · "+habs.length:"")],["jornadas","Jornadas"],["treino","Treino"],["cuidados","Cuidados"],["semana","Semana"],["revisao","Revisão"]];
   const corBarra=p=>p>=1?T.ink:(p>0?"#C08A2D":"rgba(var(--rot-rgb),.12)");
 
   return (
@@ -7791,6 +7869,8 @@ function RotinaApp({userId,isMobile,onMenu,onTrocar}){
           </select>
           <div style={{...lab,marginTop:14}}>Dias da semana</div>
           <div style={{display:"flex",gap:6,marginTop:8}}>{ROT_DIAS.map((l,i)=>{const on=hf.dias.includes(i);return <button key={i} aria-pressed={on} aria-label={["domingo","segunda","terça","quarta","quinta","sexta","sábado"][i]} style={{width:38,height:38,borderRadius:"50%",border:"1px solid "+T.ink,background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}} onClick={()=>setHf({...hf,dias:on?hf.dias.filter(x=>x!==i):[...hf.dias,i].sort()})}>{l}</button>;})}</div>
+          <div style={{...lab,marginTop:14}}>Horário (opcional, aparece na página Dia)</div>
+          <input type="time" style={{...inp,marginTop:8,width:160}} value={hf.hora} onChange={e=>setHf({...hf,hora:e.target.value})}/>
           <div style={{...lab,marginTop:14}}>Tempo estimado (opcional)</div>
           <input type="number" inputMode="numeric" min="0" style={{...inp,marginTop:8,width:140}} value={hf.min} placeholder="min" onChange={e=>setHf({...hf,min:e.target.value})}/>
           <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:18,alignItems:"center"}}>
@@ -7835,6 +7915,118 @@ function RotinaApp({userId,isMobile,onMenu,onTrocar}){
               <div style={{flex:1,minWidth:200}}><div style={{...serif,fontSize:21,lineHeight:1.15}}>{x.nome}</div><div style={{fontSize:13.5,lineHeight:1.5,opacity:.75,marginTop:3}}>{x.sub}</div></div>
               <button style={btnP} onClick={()=>iniciarJor(x)}>{jT?"Trocar para esta":"Começar"}</button>
             </div>))}
+        </Card>
+      </>)}
+
+      {sub==="dia"&&(<>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+          <button style={{...btnS,padding:"8px 16px"}} onClick={()=>setDiaOff(diaOff-1)} aria-label="Dia anterior">‹</button>
+          <div style={{textAlign:"center"}}><div style={{...serif,fontSize:24}}>{rotuloDia}</div><div style={{...lab,fontSize:9.5,marginTop:2}}>{ROT_DNOME[dow(dDia)]} · {br(dDia)}</div></div>
+          <div style={{display:"flex",gap:6}}>{diaOff!==0&&<button style={{...btnS,padding:"8px 14px"}} onClick={()=>setDiaOff(0)}>Hoje</button>}<button style={{...btnS,padding:"8px 16px"}} onClick={()=>setDiaOff(diaOff+1)} aria-label="Próximo dia">›</button></div>
+        </div>
+        <Card style={{background:T.ink,color:T.sheet,border:"none"}}>
+          {ehHoje?<>
+            <div style={{...lab,color:"rgba(var(--rot-hrgb),.65)"}}>agora são {rotHora(nowMin)}</div>
+            {atualIt?<>
+              <div style={{...serif,fontSize:isMobile?28:34,lineHeight:1.1,marginTop:8}}>{atualIt.nome}</div>
+              <div style={{fontSize:15,marginTop:8,opacity:.9}}>termina às {rotHora(atualIt.fim)} · <b>faltam {rotDur(atualIt.fim-nowMin)}</b></div>
+              <div style={{height:8,borderRadius:99,background:"rgba(var(--rot-hrgb),.18)",marginTop:14,overflow:"hidden"}}><div style={{width:Math.min(100,Math.max(2,(nowMin-atualIt.ini)/Math.max(1,atualIt.fim-atualIt.ini)*100))+"%",height:"100%",background:"#E0B54A",borderRadius:99}}/></div>
+              <div style={{display:"flex",justifyContent:"space-between",...lab,color:"rgba(var(--rot-hrgb),.6)",marginTop:6}}><span>{rotHora(atualIt.ini)}</span><span>{rotHora(atualIt.fim)}</span></div>
+            </>:proxIt?<>
+              <div style={{...serif,fontSize:isMobile?28:34,lineHeight:1.1,marginTop:8}}>Tempo livre: {rotDur(proxIt.ini-nowMin)}</div>
+              <div style={{fontSize:15,marginTop:8,opacity:.9}}>Depois vem <b>{proxIt.nome}</b> às {rotHora(proxIt.ini)}</div>
+              <div style={{height:8,borderRadius:99,background:"rgba(var(--rot-hrgb),.18)",marginTop:14,overflow:"hidden"}}><div style={{width:Math.min(100,Math.max(2,(nowMin-ultFim)/Math.max(1,proxIt.ini-ultFim)*100))+"%",height:"100%",background:"#E0B54A",borderRadius:99}}/></div>
+              <div style={{display:"flex",justifyContent:"space-between",...lab,color:"rgba(var(--rot-hrgb),.6)",marginTop:6}}><span>{rotHora(ultFim)}</span><span>{rotHora(proxIt.ini)}</span></div>
+            </>:<>
+              <div style={{...serif,fontSize:isMobile?28:34,lineHeight:1.1,marginTop:8}}>Nada mais marcado hoje</div>
+              <div style={{fontSize:15,marginTop:8,opacity:.9}}>{nowMin<dormir?"Faltam "+rotDur(dormir-nowMin)+" até "+rotHora(dormir)+", a hora que você escolheu para dormir.":"Já passou da sua hora de dormir ("+rotHora(dormir)+")."}</div>
+            </>}
+            <div style={{display:"flex",gap:18,flexWrap:"wrap",marginTop:16,paddingTop:14,borderTop:"1px solid rgba(var(--rot-hrgb),.18)"}}>
+              <div><div style={{...lab,color:"rgba(var(--rot-hrgb),.6)"}}>resta do dia</div><div style={{...serif,fontSize:22,marginTop:2}}>{nowMin<dormir?rotDur(dormir-nowMin):"—"}</div></div>
+              <div><div style={{...lab,color:"rgba(var(--rot-hrgb),.6)"}}>livre até dormir</div><div style={{...serif,fontSize:22,marginTop:2}}>{rotDur(livreTot)}</div></div>
+            </div>
+          </>:<>
+            <div style={{...lab,color:"rgba(var(--rot-hrgb),.65)"}}>resumo do dia</div>
+            <div style={{display:"flex",gap:22,flexWrap:"wrap",marginTop:10}}>
+              <div><div style={{...serif,fontSize:34}}>{itensD.length}</div><div style={{...lab,color:"rgba(var(--rot-hrgb),.6)"}}>{itensD.length===1?"bloco":"blocos"}</div></div>
+              <div><div style={{...serif,fontSize:34}}>{rotDur(ocupado)}</div><div style={{...lab,color:"rgba(var(--rot-hrgb),.6)"}}>ocupado</div></div>
+              <div><div style={{...serif,fontSize:34}}>{rotDur(livreTot)}</div><div style={{...lab,color:"rgba(var(--rot-hrgb),.6)"}}>livre</div></div>
+            </div>
+          </>}
+        </Card>
+        <Card>
+          <Titulo k={rotHora(acordar)+" às "+rotHora(dormir)} t="Linha do tempo"/>
+          {linhasDia.length===0&&<Vazio>Nada marcado. Adicione um bloco abaixo ou dê um horário a um hábito na aba Hábitos.</Vazio>}
+          {linhasDia.map((r,i)=>{
+            const colRail=<div style={{width:14,display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}}>
+              <span style={{width:r.t==="item"?12:8,height:r.t==="item"?12:8,borderRadius:"50%",marginTop:r.t==="item"?4:6,background:r.t==="agora"?"#C4622D":(r.t==="item"?(r.it.tipo==="plt"?T.ink:(r.it.tipo==="tar"?"#C08A2D":"#7A8C5E")):"transparent"),border:r.t==="gap"?"1.5px solid rgba(var(--rot-rgb),.3)":"none"}}/>
+              <div style={{flex:1,borderLeft:"2px "+(r.t==="gap"?"dashed rgba(var(--rot-rgb),.22)":"solid rgba(var(--rot-rgb),.18)"),marginTop:3}}/>
+            </div>;
+            if(r.t==="agora")return (
+              <div key={"ag"+i} style={{display:"flex",gap:10,alignItems:"center",margin:"2px 0"}}>
+                <div style={{width:50,textAlign:"right",...lab,color:"#C4622D",fontWeight:700}}>{rotHora(r.a)}</div>
+                <span style={{width:14,display:"flex",justifyContent:"center"}}><span style={{width:12,height:12,borderRadius:"50%",background:"#C4622D",boxShadow:"0 0 0 4px rgba(196,98,45,.2)"}}/></span>
+                <div style={{flex:1,height:2,background:"#C4622D",borderRadius:2}}/><span style={{...lab,color:"#C4622D",fontWeight:700}}>agora</span>
+              </div>);
+            if(r.t==="gap"){const alt=Math.min(150,Math.max(40,(r.b-r.a)*.9));return (
+              <div key={"g"+i} style={{display:"flex",gap:10,minHeight:alt,opacity:r.passou?.45:1}}>
+                <div style={{width:50,textAlign:"right",...lab,fontSize:9.5,paddingTop:3}}>{rotHora(r.a)}</div>
+                {colRail}
+                <div style={{flex:1,paddingBottom:8}}>
+                  <div style={{fontSize:13.5,color:"rgba(var(--rot-rgb),.7)",fontStyle:"italic",paddingTop:1}}>Livre · {rotDur(r.b-r.a)}{r.passou?" (já passou)":""}</div>
+                  {!r.passou&&<button style={{...btnS,padding:"4px 12px",fontSize:12,marginTop:6}} onClick={()=>encaixar(r.a,r.b)}>+ Encaixar aqui</button>}
+                </div>
+              </div>);}
+            const it=r.it, dur=r.b-r.a, alt=Math.min(170,Math.max(64,dur));
+            const agoraDentro=ehHoje&&it.ini<=nowMin&&nowMin<it.fim; const passado=ehHoje&&it.fim<=nowMin;
+            const cor=it.tipo==="plt"?{bg:T.ink,fg:T.sheet}:(it.tipo==="tar"?{bg:"#E9DDB8",fg:T.ink}:{bg:"#fff",fg:T.ink});
+            return (
+              <div key={it.k} style={{display:"flex",gap:10,marginBottom:6}}>
+                <div style={{width:50,textAlign:"right",flexShrink:0}}><div style={{...lab,color:T.ink,fontWeight:700}}>{rotHora(it.ini)}</div><div style={{...lab,fontSize:9,marginTop:2}}>{rotHora(it.fim)}</div></div>
+                {colRail}
+                <div onClick={it.tipo!=="plt"?()=>alternarItem(it):undefined} style={{flex:1,minHeight:alt,background:cor.bg,color:cor.fg,border:it.tipo==="hab"?"1px solid rgba(var(--rot-rgb),.14)":"none",borderRadius:16,padding:"12px 14px",cursor:it.tipo!=="plt"?"pointer":"default",opacity:passado&&!it.feito&&it.tipo==="plt"?.7:1,boxShadow:agoraDentro?"0 0 0 2px #C4622D":"none",position:"relative"}}>
+                  <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
+                    {it.tipo!=="plt"&&<span aria-hidden="true" style={{width:24,height:24,borderRadius:"50%",flexShrink:0,border:"2px solid "+(it.feito?T.ink:"rgba(var(--rot-rgb),.4)"),background:it.feito?T.ink:"transparent",color:T.sheet,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700}}>{it.feito?"✓":""}</span>}
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:15.5,fontWeight:600,lineHeight:1.3,wordBreak:"break-word",textDecoration:it.feito?"line-through":"none",opacity:it.feito?.6:1}}>{it.nome}</div>
+                      <div style={{...lab,fontSize:9.5,marginTop:4,color:"inherit",opacity:.7,whiteSpace:"normal",textTransform:"none",letterSpacing:".02em"}}>{rotDur(it.fim-it.ini)}{it.tipo==="hab"?" · hábito":(it.rep?" · repete":"")}{it.nota?" · "+it.nota:""}{agoraDentro?" · faltam "+rotDur(it.fim-nowMin):""}{r.conflito?" · sobrepõe outro bloco":""}</div>
+                    </div>
+                    {it.tipo==="tar"&&(conf2===it.k?<button style={{...btnS,padding:"4px 10px",fontSize:11.5,color:"#A8321E",borderColor:"#A8321E",background:"#fff"}} onClick={e=>{e.stopPropagation();setTarefas(tarefas.filter(x=>x.id!==it.id));setConf2("");}}>Excluir?</button>:<button aria-label="Excluir bloco" style={{...btnS,padding:"2px 9px",fontSize:13,opacity:.6}} onClick={e=>{e.stopPropagation();setConf2(it.k);}}>×</button>)}
+                  </div>
+                </div>
+              </div>);
+          })}
+        </Card>
+        {(semHora.length>0||pltSemHora.length>0)&&<Card>
+          <Titulo k="Sem horário" t="Para encaixar"/>
+          {pltSemHora.map(x=><div key={x.id} style={{padding:"10px 0",fontSize:14.5}}><b>Plantão</b>{x.empresa?" · "+x.empresa:""} <span style={{...lab,textTransform:"none",letterSpacing:0}}>(sem horário em Finanças)</span></div>)}
+          {semHora.map((h,i)=>{const f=(log[dDia]||[]).includes(h.id);return (
+            <div key={h.id} onClick={()=>setLog({...log,[dDia]:f?(log[dDia]||[]).filter(x=>x!==h.id):[...(log[dDia]||[]),h.id]})} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 4px",borderTop:i===0&&!pltSemHora.length?"none":"1px solid rgba(var(--rot-rgb),.08)",cursor:"pointer"}}>
+              <span aria-hidden="true" style={{width:24,height:24,borderRadius:"50%",flexShrink:0,border:"2px solid "+(f?T.ink:"rgba(var(--rot-rgb),.35)"),background:f?T.ink:"transparent",color:T.sheet,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700}}>{f?"✓":""}</span>
+              <span style={{fontSize:15,textDecoration:f?"line-through":"none",opacity:f?.55:1}}>{h.nome}</span>
+            </div>);})}
+          <div style={{...lab,fontSize:9.5,marginTop:10,whiteSpace:"normal",lineHeight:1.6}}>dê um horário ao hábito na aba Hábitos para ele aparecer na linha do tempo</div>
+        </Card>}
+        <div id="rot-add-tarefa"><Card>
+          <Titulo k={rotuloDia.toLowerCase()+" · "+br(dDia)} t="Adicionar bloco"/>
+          <div style={lab}>O que é</div>
+          <input style={{...inp,marginTop:6}} value={tk.nome} placeholder="Ex.: estudar cardiologia" onChange={e=>setTk({...tk,nome:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")salvarTarefa();}}/>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
+            <div style={{flex:"1 1 130px"}}><div style={lab}>Começa às</div><input type="time" style={{...inp,marginTop:6}} value={tk.ini} onChange={e=>setTk({...tk,ini:e.target.value})}/></div>
+            <div style={{flex:"1 1 130px"}}><div style={lab}>Dura (min)</div><input type="number" inputMode="numeric" min="5" step="5" style={{...inp,marginTop:6}} value={tk.dur} onChange={e=>setTk({...tk,dur:e.target.value})}/></div>
+          </div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:10}}>{ROT_DURS.map(m=><button key={m} style={pill(+tk.dur===m)} onClick={()=>setTk({...tk,dur:m})}>{rotDur(m)}</button>)}</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginTop:14}}><button aria-pressed={tk.rep} style={pill(tk.rep)} onClick={()=>setTk({...tk,rep:!tk.rep})}>Repetir toda semana</button></div>
+          {tk.rep&&<div style={{display:"flex",gap:6,marginTop:10}}>{ROT_DIAS.map((l,i)=>{const on=tk.dias.includes(i);return <button key={i} aria-pressed={on} aria-label={ROT_DNOME[i]} style={{width:38,height:38,borderRadius:"50%",border:"1px solid "+T.ink,background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}} onClick={()=>setTk({...tk,dias:on?tk.dias.filter(x=>x!==i):[...tk.dias,i].sort()})}>{l}</button>;})}</div>}
+          <div style={{marginTop:16}}><button style={{...btnP,opacity:tk.nome.trim()&&rotMin(tk.ini)!==null?1:.4}} disabled={!tk.nome.trim()||rotMin(tk.ini)===null} onClick={salvarTarefa}>Adicionar à linha do tempo</button></div>
+        </Card></div>
+        <Card>
+          <Titulo k="Seu dia" t="Acordar e dormir"/>
+          <Vazio>A linha do tempo e o tempo livre usam estes horários.</Vazio>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginTop:12}}>
+            <div><div style={lab}>Acordo</div><input type="time" style={{...inp,marginTop:6}} value={cfg.acordar||"07:00"} onChange={e=>setCfg({...cfg,acordar:e.target.value||"07:00"})}/></div>
+            <div><div style={lab}>Durmo</div><input type="time" style={{...inp,marginTop:6}} value={cfg.dormir||"23:00"} onChange={e=>setCfg({...cfg,dormir:e.target.value||"23:00"})}/></div>
+          </div>
         </Card>
       </>)}
 
@@ -8453,17 +8645,8 @@ async function extractPDFText(arrayBuffer, password) {
 }
 
 async function extractFromImage(base64, mediaType) {
-  const apiKey = localStorage.getItem("velara_gemini_key")||"";
-  if(!apiKey) throw new Error("SEM_CHAVE");
   const prompt = `Analise este extrato bancário brasileiro. Extraia TODAS as transações visíveis. Retorne SOMENTE array JSON sem markdown: [{"desc":"descrição","valor":25.90,"tipo":"saida","data":"2025-06-01"}]. tipo: entrada=credito/PIX recebido, saida=debito/compra/PIX enviado. valor positivo. data YYYY-MM-DD ou null.`;
-  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({contents:[{parts:[{inline_data:{mime_type:mediaType,data:base64}},{text:prompt}]}]})
-  });
-  const data = await resp.json();
-  if(data.error) throw new Error(data.error.message||"Erro na API Gemini");
-  const txt = data.candidates?.[0]?.content?.parts?.[0]?.text||"[]";
+  const txt = (await iaChamar(prompt,base64,false,mediaType))||"[]";
   return JSON.parse(txt.replace(/```json|```/g,"").trim());
 }
 
@@ -8530,7 +8713,7 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
     try {
       const name = file.name.toLowerCase();
       if(name.endsWith(".png")||name.endsWith(".jpg")||name.endsWith(".jpeg")||name.endsWith(".webp")) {
-        setLoadMsg("📸 Claude está lendo o print...");
+        setLoadMsg("📸 A IA está lendo o print...");
         const b64 = await new Promise(res=>{const r=new FileReader();r.onload=ev=>res(ev.target.result.split(",")[1]);r.readAsDataURL(file);});
         const mt = name.endsWith(".png")?"image/png":"image/jpeg";
         const parsed = await extractFromImage(b64, mt);
@@ -8563,7 +8746,7 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
         applyTxns(parsed);
       }
     } catch(err) {
-      if(err.message==="SEM_CHAVE") setErro("Salve sua chave Gemini gratuita acima para importar prints.");
+      if(err.message==="SEM_CHAVE") setErro("Cadastre a chave de IA em Menu › Chave de IA para importar prints.");
       else setErro("Erro: "+err.message);
     }
     setLoading(false);
@@ -8638,14 +8821,9 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
                 <div style={{fontSize:13,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
                   Tire um <strong>print do app</strong> do C6 ou Itaú. O Claude AI extrai todas as transações automaticamente.
                 </div>
-                {!localStorage.getItem("velara_gemini_key")&&(
-                  <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:12,padding:"12px 14px"}}>
-                    <div style={{fontSize:12,fontWeight:700,color:"#8B6000",fontFamily:"'DM Sans',sans-serif",marginBottom:4}}><Key size={12} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Chave Gemini (gratuita)</div>
-                    <div style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",marginBottom:8}}>Acesse <strong>aistudio.google.com</strong> → Get API Key → criar chave gratuita (sem cartão).</div>
-                    <div style={{display:"flex",gap:6}}>
-                      <input id="gemini_key_input" placeholder="AIza..." style={{flex:1,background:"#F5F0E8",border:"1.5px solid #DDD5C8",borderRadius:8,padding:"8px 10px",fontSize:12,color:"#1A1209",outline:"none",fontFamily:"inherit"}}/>
-                      <button onClick={()=>{const v=document.getElementById("gemini_key_input").value;if(v.length>10){localStorage.setItem("velara_gemini_key",v);setErro("");}}} style={{background:"#B91D55",border:"none",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
-                    </div>
+                {!iaKey(IA_KC)&&!iaKey(IA_KG)&&(
+                  <div style={{background:"rgba(212,168,67,0.15)",border:"1px solid rgba(212,168,67,0.4)",borderRadius:12,padding:"12px 14px",fontSize:12,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif",lineHeight:1.5}}>
+                    <strong style={{color:"#8B6000"}}>Falta a chave de IA.</strong> Cole uma vez em <strong>Menu › Chave de IA</strong>; ela vale para o app todo.
                   </div>
                 )}
                 <label style={{display:"flex",flexDirection:"column",alignItems:"center",gap:10,background:"rgba(91,163,212,0.08)",border:"2px dashed rgba(91,163,212,0.4)",borderRadius:16,padding:"28px 20px",cursor:"pointer"}}>
@@ -8654,12 +8832,6 @@ function ImportacaoModal({open, onClose, onImport, cats, movsHistorico}) {
                   <span style={{fontSize:11,color:"#5A4A3A",fontFamily:"'DM Sans',sans-serif"}}>PNG · JPG — qualquer banco</span>
                   <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={handleFile} style={{display:"none"}}/>
                 </label>
-                {localStorage.getItem("velara_gemini_key")&&(
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:"rgba(45,90,16,0.08)",border:"1px solid rgba(45,90,16,0.2)",borderRadius:10,padding:"8px 12px"}}>
-                    <span style={{fontSize:11,color:"#2D5A10",fontFamily:"'DM Sans',sans-serif",fontWeight:600}}><CheckCircle2 size={13} strokeWidth={2.2} style={{marginRight:4,verticalAlign:"-2px"}}/>Chave Gemini salva</span>
-                    <button onClick={()=>{localStorage.removeItem("velara_gemini_key");setErro("");}} style={{background:"none",border:"none",color:"#B91D55",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Trocar chave</button>
-                  </div>
-                )}
                 
               </>
             )}
@@ -9655,7 +9827,7 @@ class ErrorBoundary extends React.Component {
           <div style={{fontSize:40,marginBottom:16}}><AlertTriangle size={36}/></div>
           <div style={{fontSize:18,fontWeight:700,color:"#1A1209",marginBottom:10}}>Algo deu errado</div>
           <div style={{fontSize:13,color:"#5A4A3A",marginBottom:20,maxWidth:400,wordBreak:"break-word"}}>{String(this.state.error?.message||this.state.error||"Erro desconhecido")}</div>
-          <button onClick={()=>{localStorage.clear();window.location.reload();}}
+          <button onClick={()=>{let k1="",k2="";try{k1=localStorage.getItem(IA_KC)||"";k2=localStorage.getItem(IA_KG)||"";}catch{ /* sem acesso */ }try{localStorage.clear();if(k1)localStorage.setItem(IA_KC,k1);if(k2)localStorage.setItem(IA_KG,k2);}catch{ /* sem acesso */ }window.location.reload();}}
             style={{background:"#B91D55",color:"#fff",border:"none",borderRadius:12,padding:"12px 24px",fontSize:14,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:7}}>
             <RefreshCw size={14} strokeWidth={2.2}/>Limpar dados e recarregar
           </button>
@@ -9690,6 +9862,9 @@ function AppMain({user, onLogout}) {
   const [bgId,      setBgId]      = useLS("v4_bg",     "tartan", userId);
   // Modo de tela: "auto" (decide pela largura), "celular" ou "pc"
   const [modoTela,  setModoTela]   = useLS("v4_modo",   "auto", userId);
+  const [chaveIn,setChaveIn]=useState(""); const [chaveT,setChaveT]=useState(0);
+  const salvarChaveGlobal=()=>{const v=chaveIn.trim(); if(v.length<10)return; try{localStorage.setItem(v.startsWith("sk-ant")?IA_KC:IA_KG,v);}catch{ /* sem acesso */ } setChaveIn(""); setChaveT(x=>x+1);};
+  const tirarChave=k=>{try{localStorage.removeItem(k);}catch{ /* sem acesso */ } setChaveT(x=>x+1);};
   const [larguraTela,setLarguraTela]=useState(typeof window!=="undefined"?window.innerWidth:1024);
   useEffect(()=>{
     const f=()=>setLarguraTela(window.innerWidth);
@@ -10740,6 +10915,17 @@ function AppMain({user, onLogout}) {
               {cnt>0&&<sup className="nav-count">{cnt}</sup>}
             </div>
           );})}
+        </div>
+        <div key={chaveT} style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
+          <div style={{fontSize:10,fontWeight:500,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:7}}>Chave de IA</div>
+          {[[IA_KC,"Claude"],[IA_KG,"Gemini"]].filter(([k])=>iaKey(k)).map(([k,n])=>(
+            <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:12,color:"#fff",marginBottom:6}}><span>✓ {n} neste aparelho</span><button onClick={()=>tirarChave(k)} style={{background:"none",border:"none",color:"rgba(255,255,255,.6)",fontSize:11,textDecoration:"underline",cursor:"pointer",fontFamily:"inherit"}}>remover</button></div>
+          ))}
+          <div style={{display:"flex",gap:6}}>
+            <input type="password" autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder={iaKey(IA_KC)||iaKey(IA_KG)?"trocar ou somar chave":"sk-ant… ou AIza…"} value={chaveIn} onChange={e=>setChaveIn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")salvarChaveGlobal();}} style={{flex:1,minWidth:0,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"8px 10px",fontSize:16,color:"#fff",outline:"none",fontFamily:"inherit"}}/>
+            <button onClick={salvarChaveGlobal} style={{background:"rgba(232,32,95,0.5)",border:"1px solid #B91D55",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
+          </div>
+          <div style={{fontSize:10.5,lineHeight:1.5,color:"rgba(255,255,255,.45)",marginTop:6}}>Uma vez só vale para Idiomas, Clínica e Finanças. Fica neste aparelho.</div>
         </div>
         <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
           <div style={{fontSize:10,fontWeight:500,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:7}}>Tela</div>
