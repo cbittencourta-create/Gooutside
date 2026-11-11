@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import {
   AlertTriangle, CreditCard, TrendingUp, RefreshCw, Package, Wallet, Cross, Target, Trash2,
   BarChart3, Landmark, Lightbulb, CheckCircle2, Sprout, Sandwich, Car, Home, Pill, Drama, Shirt,
@@ -982,14 +982,20 @@ const EST_SEED=[
 
 // ── Alternador entre mini-apps (Finanças ⇄ Estudos) ──
 function AppSwitch({atual,onTrocar}){
-  const itens=[["fin","Finanças","#8B2B3A"],["est","Estudos","#3E5C8A"],["idi","Idiomas","#B8832A"],["med","Clínica","#2E7D7A"]];
-  const idx=itens.findIndex(i=>i[0]===atual);
+  const itens=[["fin","Finanças","#8B2B3A"],["est","Estudos","#3E5C8A"],["idi","Idiomas","#B8832A"],["med","Clínica","#2E7D7A"],["rot","Rotina","#6B7F4E"]];
+  const wrapR=useRef(null); const btsR=useRef({}); const [ind,setInd]=useState(null);
+  useLayoutEffect(()=>{
+    const medir=()=>{const b=btsR.current[atual]; if(b)setInd({l:b.offsetLeft,w:b.offsetWidth});};
+    medir(); window.addEventListener("resize",medir);
+    if(typeof document!=="undefined"&&document.fonts&&document.fonts.ready)document.fonts.ready.then(medir).catch(()=>{});
+    return ()=>window.removeEventListener("resize",medir);
+  },[atual]);
   const estreito=typeof window!=="undefined"&&window.innerWidth<400;
   return (
-    <div role="tablist" aria-label="Trocar de aplicativo" style={{position:"relative",display:"inline-grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.3)",borderRadius:999,padding:3,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
-      <i style={{position:"absolute",top:3,bottom:3,left:3,width:"calc((100% - 6px) / 4)",borderRadius:999,background:"#FBF4E2",boxShadow:"0 6px 18px -8px rgba(0,0,0,.55)",transform:`translateX(${idx*100}%)`,transition:"transform .45s cubic-bezier(.5,0,.15,1)"}}/>
+    <div ref={wrapR} role="tablist" aria-label="Trocar de aplicativo" style={{position:"relative",display:"inline-flex",background:"rgba(255,255,255,.14)",border:"1px solid rgba(255,255,255,.3)",borderRadius:999,padding:3,backdropFilter:"blur(8px)",WebkitBackdropFilter:"blur(8px)"}}>
+      <i style={{position:"absolute",top:3,bottom:3,left:ind?ind.l:3,width:ind?ind.w:0,borderRadius:999,background:"#FBF4E2",boxShadow:"0 6px 18px -8px rgba(0,0,0,.55)",transition:"left .45s cubic-bezier(.5,0,.15,1),width .45s cubic-bezier(.5,0,.15,1)"}}/>
       {itens.map(([id,l,cor])=>(
-        <button key={id} role="tab" aria-selected={id===atual} onClick={()=>onTrocar(id)} style={{position:"relative",zIndex:1,height:34,minHeight:34,padding:estreito?"0 6px":"0 9px",border:"none",background:"transparent",cursor:"pointer",borderRadius:999,fontFamily:"'DM Sans',sans-serif",fontSize:estreito?11:12,fontWeight:id===atual?700:500,color:id===atual?"#15251E":"rgba(255,255,255,.88)",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:estreito?4:5,transition:"color .3s",whiteSpace:"nowrap"}}>
+        <button key={id} ref={el=>{btsR.current[id]=el;}} role="tab" aria-selected={id===atual} onClick={()=>onTrocar(id)} style={{position:"relative",zIndex:1,flex:"0 0 auto",height:34,minHeight:34,padding:estreito?"0 3px":"0 9px",border:"none",background:"transparent",cursor:"pointer",borderRadius:999,fontFamily:"'DM Sans',sans-serif",fontSize:estreito?10.5:12,fontWeight:id===atual?700:500,color:id===atual?"#15251E":"rgba(255,255,255,.88)",display:"inline-flex",alignItems:"center",justifyContent:"center",gap:estreito?4:5,transition:"color .3s",whiteSpace:"nowrap"}}>
           {!estreito&&<span style={{width:6,height:6,borderRadius:"50%",background:id===atual?cor:"rgba(255,255,255,.55)",transition:"background .3s"}}/>}{l}
         </button>))}
     </div>);
@@ -4004,6 +4010,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const plRef=useRef(null);
   const [lf,setLf]=useState({trad:"",art:""});
   const [mt,setMt]=useState("");
+  const [mc,setMc]=useState({id:"",load:false,erro:""});
   const [busca,setBusca]=useState("");
   const [verTodas,setVerTodas]=useState(false);
   const [rs,setRs]=useState(null);
@@ -4035,6 +4042,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [mapaMais,setMapaMais]=useState(false);
   const [mapaBusca,setMapaBusca]=useState("");
   const vocabRef=useRef(vocab); vocabRef.current=vocab;
+  const meusRef=useRef(meus); meusRef.current=meus;
   const catTentRef=useRef(new Set());
   const catBusy=useRef(false);
   const [encaixando,setEncaixando]=useState(false);
@@ -4681,7 +4689,27 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const prox=rs.i+1;
     setRs({...rs,fila,i:prox,show:false,resp:"",res:null,ok:rs.ok+(ok?1:0),er:rs.er+(ok?0:1),rep:ok?rs.rep:{...rs.rep,[id]:1},fim:prox>=fila.length});
   };
-  const salvarMinha=(id,t)=>{ if(!t.trim())return; setVocab(vocab.map(v=>v.id!==id?v:{...v,minha:t.trim()})); };
+  // frase própria com a palavra: salva na hora e corrige automaticamente (com chave de IA)
+  const corrigirMinha=async(id,t0)=>{
+    const t=String(t0||"").trim(); if(!t)return;
+    const v0=vocabRef.current.find(v=>v.id===id); if(!v0)return;
+    vocabRef.current=vocabRef.current.map(v=>v.id!==id?v:{...v,minha:t,minhaC:undefined,minhaE:undefined,minhaCom:undefined});
+    setVocab(vocabRef.current);
+    if(!iaNome){setMc({id,load:false,erro:""});return;}
+    setMc({id,load:true,erro:""});
+    try{
+      const nv=(L(v0.lang)||{}).nivel||"A2";
+      const termo=(v0.art?v0.art+" ":"")+v0.termo;
+      const r=await gCorrigirTexto(v0.lang,GRAM_AREAS[v0.lang]||[],nv,"Uma frase curta usando a palavra «"+termo+"» ("+(v0.trad||"")+"). Se a aluna não usou essa palavra, diga isso no COMENTARIO",t);
+      vocabRef.current=vocabRef.current.map(v=>v.id!==id?v:{...v,minha:t,minhaC:r.correta,minhaE:r.erros.map(e=>({t:e.trecho,c:e.correcao,p:e.porque})),minhaCom:r.comentario||""});
+      setVocab(vocabRef.current);
+      const novos=r.erros.filter(e=>e.correcao&&e.correcao!==e.trecho).map(e=>({id:uid(),lang:v0.lang,area:e.area||"outro",errada:e.trecho,certa:e.correcao,fonte:"frase com «"+v0.termo+"»",data:hoje}));
+      if(novos.length)setMeus([...novos,...meusRef.current]);
+      setMc({id:"",load:false,erro:""});
+    }catch(err){
+      setMc({id,load:false,erro:err.message==="SEM_CHAVE"?"":errAmigavel(err)});
+    }
+  };
   const abrirEdit=l=>{setFL({nivel:l.nivel,alvo:l.alvo,prova:l.prova||"",metaSem:l.metaSem,novosDia:(l.novosDia===undefined||l.novosDia===null)?"":l.novosDia,exame:l.exame||"",porque:l.porque||"",metaFala:l.metaFala||"",metaEscr:l.metaEscr||""});setEditL(l.id);setTimeout(()=>{const e=document.getElementById("idi-meta-form");if(e&&e.scrollIntoView)e.scrollIntoView({behavior:"smooth",block:"center"});},80);};
   const salvarEdit=()=>{
     const l=L(editL);
@@ -5461,14 +5489,31 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const res=(modoCur==="prod"&&cur.art)?confNome(rs.resp,cur):{r:confTexto(modoCur==="forma"?nF(rs.resp):rs.resp,modoCur==="forma"?nF(espCur):espCur,cur.lang),msg:""};
     setRs({...rs,res});
   };
-  const caixaMinha=()=>(
-    cur.minha
-      ?<div style={{fontSize:13.5,marginTop:12,lineHeight:1.5,opacity:.85}}><span style={{...lab,marginRight:8}}>minha frase</span>{cur.minha}</div>
-      :<div style={{display:"flex",gap:8,marginTop:14,justifyContent:"center",flexWrap:"wrap"}}>
-        <input style={{...inp,maxWidth:360}} value={mt} onChange={e=>setMt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){salvarMinha(cur.id,mt);setMt("");}}} placeholder="Escreva uma frase sua com esta palavra (opcional)"/>
-        <button style={{...btnS,padding:"9px 16px"}} disabled={!mt.trim()} onClick={()=>{salvarMinha(cur.id,mt);setMt("");}}>Salvar</button>
-      </div>
-  );
+  const caixaMinha=()=>{
+    const carregando=mc.load&&mc.id===cur.id;
+    const envia=()=>{const t=mt;setMt("");corrigirMinha(cur.id,t);};
+    if(cur.minha)return (
+      <div style={{marginTop:12,lineHeight:1.5,textAlign:"left",maxWidth:520,marginLeft:"auto",marginRight:"auto"}}>
+        <div style={{fontSize:13.5,opacity:.85}}><span style={{...lab,marginRight:8}}>minha frase</span>{cur.minha}</div>
+        {carregando&&<div style={{...lab,marginTop:8}}>corrigindo a sua frase…</div>}
+        {!carregando&&cur.minhaC&&<div style={{marginTop:10,padding:"12px 14px",borderRadius:14,background:"rgba(var(--idi-rgb),.06)"}}>
+          {cur.minhaE&&cur.minhaE.length===0
+            ?<div style={{fontSize:14,fontWeight:600,color:"#3C7030"}}>Sem erros. {cur.minhaC}</div>
+            :<><div style={lab}>corrigida</div><div style={{fontSize:15,fontWeight:600,marginTop:3}}>{cur.minhaC}</div>
+              {(cur.minhaE||[]).map((e,i)=><div key={i} style={{fontSize:13,marginTop:6,opacity:.85}}>«{e.t}» → «{e.c}»{e.p?" · "+e.p:""}</div>)}</>}
+          {cur.minhaCom&&<div style={{fontSize:13,marginTop:8,opacity:.75}}>{cur.minhaCom}</div>}
+        </div>}
+        {!carregando&&!cur.minhaC&&iaNome&&<div style={{marginTop:8,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+          <button style={{...btnS,padding:"7px 14px",fontSize:12.5}} onClick={()=>corrigirMinha(cur.id,cur.minha)}>Corrigir esta frase</button>
+          {mc.id===cur.id&&mc.erro&&<span style={{fontSize:12.5,color:IDI_RED}}>Não consegui corrigir: {mc.erro}</span>}
+        </div>}
+      </div>);
+    return (
+      <div style={{display:"flex",gap:8,marginTop:14,justifyContent:"center",flexWrap:"wrap"}}>
+        <input style={{...inp,maxWidth:360}} value={mt} onChange={e=>setMt(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&mt.trim())envia();}} placeholder={iaNome?"Escreva uma frase com esta palavra e eu corrijo":"Escreva uma frase sua com esta palavra (opcional)"}/>
+        <button style={{...btnS,padding:"9px 16px"}} disabled={!mt.trim()} onClick={envia}>{iaNome?"Corrigir":"Salvar"}</button>
+      </div>);
+  };
 
   return (
     <div className="idi" data-lang={sel} style={{"--idi-rgb":T.rgb,"--idi-hrgb":T.hrgb,minHeight:"100vh",background:T.bg,backgroundImage:"radial-gradient(1000px 560px at 92% -6%,rgba(255,255,255,.08),transparent 62%)",position:"relative",zIndex:1,color:T.sheet,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
@@ -7448,6 +7493,502 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
 // ═══════════════════════════════════════════════════════════════════
 // MÓDULO 3 — BALANÇO MENSAL COM GRÁFICOS
 // ═══════════════════════════════════════════════════════════════════
+
+
+// ═══════════════ ROTINA — hábitos, empilhamento e jornadas curtas ═══════════════
+const ROT_INK="#2B3A28", ROT_SHEET="#F1EBDC", ROT_ACC="#C08A2D";
+const ROT_PER=[["manha","Manhã"],["tarde","Tarde"],["noite","Noite"]];
+const ROT_DIAS=["D","S","T","Q","Q","S","S"];
+const ROT_MODELO=[
+  {k:"a",nome:"Copo de água ao acordar",per:"manha",apos:""},
+  {k:"b",nome:"Alongar 2 minutos",per:"manha",apos:"a"},
+  {k:"c",nome:"Rever 5 palavras de alemão",per:"manha",apos:"b"},
+  {k:"d",nome:"Separar a roupa e a mochila de amanhã",per:"noite",apos:""},
+  {k:"e",nome:"Escrever o diário em alemão",per:"noite",apos:"d"},
+  {k:"f",nome:"Celular fora da cama",per:"noite",apos:"e"},
+];
+const ROT_JORNADAS=[
+  {id:"estudo",nome:"Constância de estudo",sub:"7 dias para estudar no mesmo horário, sem depender de motivação",habito:{nome:"Estudar no horário fixo",per:"tarde"},passos:[
+    "Escolha um horário e um lugar fixos para estudar e anote os dois.",
+    "Estude só 10 minutos nesse horário. Pare ao terminar, mesmo com vontade de continuar.",
+    "Deixe o celular em outro cômodo durante o estudo.",
+    "Estude 15 minutos. Ao terminar, anote o que vai estudar amanhã.",
+    "Estude 20 minutos logo depois de algo que você já faz (café, banho).",
+    "Estude 25 minutos e marque o dia como feito sem exceção.",
+    "Revise a semana: qual dia foi mais fácil e por quê? Ajuste o horário se precisar."]},
+  {id:"sono",nome:"Sono depois do plantão",sub:"7 dias de pequenos ajustes para dormir melhor, mesmo com escala",habito:{nome:"Rotina de desligar antes de dormir",per:"noite"},passos:[
+    "Anote a que horas você deita e a que horas acorda hoje, sem mudar nada ainda.",
+    "Defina um horário-limite para cafeína, cerca de 6 horas antes de dormir.",
+    "Ao chegar em casa, faça 10 minutos de rotina fixa: banho, água, luz baixa.",
+    "Deixe o celular fora da cama nos 30 minutos antes de dormir.",
+    "Deixe o quarto escuro e fresco: ajuste luz e temperatura.",
+    "Nas folgas, acorde no máximo 1 hora depois do seu horário normal.",
+    "Revise: o que mais ajudou? Mantenha as duas práticas que mais ajudaram."]},
+  {id:"alemao",nome:"Alemão todos os dias",sub:"7 dias para criar o hábito de escrever e ouvir um pouco por dia",habito:{nome:"Escrever o diário em alemão",per:"noite"},passos:[
+    "Escreva 3 frases em alemão sobre o seu dia.",
+    "Escreva 5 frases e corrija-as na aba Diário do Idiomas.",
+    "Ouça 5 minutos de alemão (podcast ou aula) enquanto faz outra coisa.",
+    "Revise 5 palavras novas em Idiomas › Palavras.",
+    "Escreva 5 frases usando weil e confira o verbo no fim.",
+    "Fale 2 minutos em voz alta, em alemão, sobre o seu plantão.",
+    "Reescreva o texto do dia 2 usando as correções que você aprendeu."]},
+];
+const ROT_DNOME=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
+const ROT_TREINOS=["Força","Cardio","Mobilidade","Outro"];
+const ROT_TURNOS=[["","Sem marcação"],["folga","Folga"],["dia","Plantão de dia"],["noite","Plantão de noite"],["transp","Transporte"],["estudo","Dia de estudo"]];
+const ROT_MODELO_PELE=[
+  {nome:"Limpar o rosto",per:"manha",dias:[0,1,2,3,4,5,6]},
+  {nome:"Antioxidante (vitamina C)",per:"manha",dias:[0,1,2,3,4,5,6]},
+  {nome:"Hidratante",per:"manha",dias:[0,1,2,3,4,5,6]},
+  {nome:"Protetor solar",per:"manha",dias:[0,1,2,3,4,5,6]},
+  {nome:"Limpar o rosto",per:"noite",dias:[0,1,2,3,4,5,6]},
+  {nome:"Ativo da noite (dias alternados)",per:"noite",dias:[1,3,5]},
+  {nome:"Hidratante",per:"noite",dias:[0,1,2,3,4,5,6]},
+];
+function rotIcs(cfg,dataStr){
+  const z=n=>String(n).padStart(2,"0");
+  const stamp=new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  const nomes={manha:"Rotina da manhã",tarde:"Rotina da tarde",noite:"Rotina da noite"};
+  const ev=ROT_PER.map(([k])=>{
+    const [h,m]=String(cfg[k]||"08:00").split(":").map(x=>parseInt(x,10)||0);
+    const f=h*60+m+10;
+    const ini=dataStr.replace(/-/g,"")+"T"+z(h)+z(m)+"00";
+    const fim=dataStr.replace(/-/g,"")+"T"+z(Math.floor(f/60)%24)+z(f%60)+"00";
+    return ["BEGIN:VEVENT","UID:velara-rotina-"+k+"@velara","DTSTAMP:"+stamp,"DTSTART:"+ini,"DTEND:"+fim,"RRULE:FREQ=DAILY","SUMMARY:"+nomes[k],"DESCRIPTION:Abra o Velara › Rotina e marque os hábitos de hoje.","BEGIN:VALARM","TRIGGER:PT0M","ACTION:DISPLAY","DESCRIPTION:"+nomes[k],"END:VALARM","END:VEVENT"].join("\r\n");
+  });
+  return ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//Velara//Rotina//PT",...ev,"END:VCALENDAR"].join("\r\n");
+}
+function rotCadeia(lista){
+  const ids=new Set(lista.map(h=>h.id)), out=[], vis=new Set();
+  const add=h=>{ if(vis.has(h.id))return; vis.add(h.id); out.push(h); lista.filter(x=>x.apos===h.id).forEach(add); };
+  lista.filter(h=>!h.apos||!ids.has(h.apos)).forEach(add);
+  lista.forEach(add);
+  return out;
+}
+function RotinaApp({userId,isMobile,onMenu,onTrocar}){
+  const hoje=today();
+  const [habs,setHabs]=useLS("v5_rot_hab",[],userId);
+  const [log,setLog]=useLS("v5_rot_log",{},userId);
+  const [cfg,setCfg]=useLS("v5_rot_cfg",{manha:"07:00",tarde:"14:00",noite:"21:30"},userId);
+  const [jor,setJor]=useLS("v5_rot_jor",null,userId);
+  const [sub,setSub]=useState("hoje");
+  const hfInit={nome:"",per:"manha",apos:"",min:"",dias:[0,1,2,3,4,5,6]};
+  const [hf,setHf]=useState(hfInit);
+  const [editId,setEditId]=useState(null);
+  const [conf,setConf]=useState("");
+  const [aviso,setAviso]=useState("");
+  const dow=d=>new Date(d+"T12:00:00").getDay();
+  const ativosEm=d=>habs.filter(h=>h.ativo!==false&&(h.dias||[0,1,2,3,4,5,6]).includes(dow(d)));
+  const feitosEm=d=>{const ids=new Set(habs.map(h=>h.id));return (log[d]||[]).filter(i=>ids.has(i));};
+  const lista=ativosEm(hoje);
+  const feitosHoje=new Set(log[hoje]||[]);
+  const nFeitos=lista.filter(h=>feitosHoje.has(h.id)).length;
+  const sequencia=(()=>{let n=0,d=feitosEm(hoje).length?hoje:addDays(hoje,-1);while(feitosEm(d).length&&n<400){n++;d=addDays(d,-1);}return n;})();
+  const semana=Array.from({length:7},(_,i)=>{const d=addDays(hoje,i-6);const at=ativosEm(d);const f=at.filter(h=>(log[d]||[]).includes(h.id)).length;return {d,lbl:ROT_DIAS[dow(d)],pct:at.length?f/at.length:0,n:at.length,f,hojeD:d===hoje};});
+  const hab7=h=>{let n=0,t=0;for(let i=0;i<7;i++){const d=addDays(hoje,-i);if((h.dias||[0,1,2,3,4,5,6]).includes(dow(d))&&(h.criado||"0000")<=d){t++;if((log[d]||[]).includes(h.id))n++;}}return {n,t};};
+  const alternar=h=>{
+    const atual=log[hoje]||[]; const tem=atual.includes(h.id);
+    setLog({...log,[hoje]:tem?atual.filter(i=>i!==h.id):[...atual,h.id]});
+    if(!tem){
+      const filho=habs.find(x=>x.apos===h.id&&x.ativo!==false&&!atual.includes(x.id));
+      setAviso(filho?"Próximo: depois de «"+h.nome+"» vem «"+filho.nome+"».":"");
+    }else setAviso("");
+  };
+  const salvarHab=()=>{
+    const nome=hf.nome.trim(); if(!nome||!hf.dias.length)return;
+    const item={nome,per:hf.per,apos:hf.apos&&hf.apos!==editId?hf.apos:"",min:+hf.min>0?+hf.min:0,dias:hf.dias,ativo:true};
+    if(editId)setHabs(habs.map(h=>h.id===editId?{...h,...item}:h));
+    else setHabs([...habs,{id:uid(),criado:hoje,...item}]);
+    setHf(hfInit); setEditId(null);
+  };
+  const editar=h=>{setEditId(h.id);setHf({nome:h.nome,per:h.per,apos:h.apos||"",min:h.min?String(h.min):"",dias:h.dias||[0,1,2,3,4,5,6]});try{window.scrollTo({top:0,behavior:"smooth"});}catch{ /* sem scroll */ }};
+  const excluir=id=>{setHabs(habs.filter(h=>h.id!==id).map(h=>h.apos===id?{...h,apos:""}:h));setConf("");};
+  const modelo=()=>{
+    const ids={}; ROT_MODELO.forEach(m=>{ids[m.k]=uid();});
+    setHabs([...habs,...ROT_MODELO.map(m=>({id:ids[m.k],criado:hoje,nome:m.nome,per:m.per,apos:m.apos?ids[m.apos]:"",min:0,dias:[0,1,2,3,4,5,6],ativo:true}))]);
+  };
+  const baixarIcs=()=>{
+    try{
+      const blob=new Blob([rotIcs(cfg,hoje)],{type:"text/calendar"});
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="rotina.ics";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+    }catch{ /* download indisponível */ }
+  };
+  // jornadas
+  const jT=jor?ROT_JORNADAS.find(x=>x.id===jor.tid):null;
+  const jDia=jor&&jT?Math.min(jT.passos.length,Math.round((new Date(hoje+"T12:00:00")-new Date(jor.ini+"T12:00:00"))/86400000)+1):0;
+  const jFeitos=jor?Object.keys(jor.feitos||{}).length:0;
+  const jFim=!!(jT&&jFeitos>=jT.passos.length);
+  const iniciarJor=t=>setJor({tid:t.id,ini:hoje,feitos:{},virou:false});
+  const marcarPasso=n=>{if(!jor)return;const f={...(jor.feitos||{})};if(f[n])delete f[n];else f[n]=hoje;setJor({...jor,feitos:f});};
+  const virarHabito=()=>{
+    if(!jT||jor.virou)return;
+    setHabs([...habs,{id:uid(),criado:hoje,nome:jT.habito.nome,per:jT.habito.per,apos:"",min:0,dias:[0,1,2,3,4,5,6],ativo:true}]);
+    setJor({...jor,virou:true});
+  };
+
+  // ── novas páginas: Treino, Cuidados, Semana, Revisão ──
+  const [treinos,setTreinos]=useLS("v5_rot_treino",[],userId);
+  const [meds,setMeds]=useLS("v5_rot_med",[],userId);
+  const [pele,setPele]=useLS("v5_rot_pele",[],userId);
+  const [peleLog,setPeleLog]=useLS("v5_rot_pelelog",{},userId);
+  const [esc,setEsc]=useLS("v5_rot_esc",{},userId);
+  const [rev,setRev]=useLS("v5_rot_rev",{},userId);
+  const [plts]=useLS("v4_plt",[],userId);
+  const [semOff,setSemOff]=useState(0);
+  const tfInit={data:hoje,tipo:"Força",min:"",txt:""};
+  const [tf,setTf]=useState(tfInit);
+  const [mf,setMf]=useState({peso:"",cintura:""});
+  const pfInit={nome:"",per:"manha",dias:[0,1,2,3,4,5,6]};
+  const [pf,setPf]=useState(pfInit);
+  const [rf,setRf]=useState(null);
+  const [conf2,setConf2]=useState("");
+  const segIni=d=>addDays(d,-((dow(d)+6)%7));
+  const semIni=addDays(segIni(hoje),semOff*7);
+  const semDias=Array.from({length:7},(_,i)=>addDays(semIni,i));
+  const semFim=semDias[6];
+  const br=d=>d.slice(8)+"/"+d.slice(5,7);
+  const metaT=cfg.metaTreino||3;
+  const treinosSem=treinos.filter(t=>t.data>=segIni(hoje)&&t.data<=addDays(segIni(hoje),6));
+  const minSem=treinosSem.reduce((a,t)=>a+(+t.min||0),0);
+  const minDia=Array.from({length:7},(_,i)=>{const d=addDays(segIni(hoje),i);return {d,lbl:ROT_DNOME[dow(d)][0],min:treinos.filter(t=>t.data===d).reduce((a,t)=>a+(+t.min||0),0),hojeD:d===hoje};});
+  const maxMin=Math.max(30,...minDia.map(x=>x.min));
+  const salvarTreino=()=>{
+    const min=+tf.min; if(!(min>0)&&!tf.txt.trim())return;
+    setTreinos([{id:uid(),data:tf.data||hoje,tipo:tf.tipo,min:min>0?min:0,txt:tf.txt.trim()},...treinos].sort((a,b)=>b.data.localeCompare(a.data)));
+    setTf({...tfInit,tipo:tf.tipo});
+  };
+  const salvarMed=()=>{
+    const peso=parseFloat(String(mf.peso).replace(",",".")), cint=parseFloat(String(mf.cintura).replace(",","."));
+    if(!(peso>0)&&!(cint>0))return;
+    setMeds([{id:uid(),data:hoje,peso:peso>0?peso:null,cintura:cint>0?cint:null},...meds.filter(m=>m.data!==hoje)].sort((a,b)=>b.data.localeCompare(a.data)));
+    setMf({peso:"",cintura:""});
+  };
+  const passosPele=d=>pele.filter(x=>(x.dias||[0,1,2,3,4,5,6]).includes(dow(d)));
+  const peleFeitos=d=>new Set(peleLog[d]||[]);
+  const alternarPele=id=>{const a=peleLog[hoje]||[];setPeleLog({...peleLog,[hoje]:a.includes(id)?a.filter(x=>x!==id):[...a,id]});};
+  const peleCompleto=d=>{const l=passosPele(d);return l.length>0&&l.every(x=>(peleLog[d]||[]).includes(x.id));};
+  const salvarPasso=()=>{const nome=pf.nome.trim();if(!nome||!pf.dias.length)return;setPele([...pele,{id:uid(),nome,per:pf.per,dias:pf.dias}]);setPf({...pfInit,per:pf.per});};
+  const modeloPele=()=>setPele([...pele,...ROT_MODELO_PELE.map(x=>({id:uid(),...x}))]);
+  const pltsDia=d=>plts.filter(x=>x.data===d);
+  const horasSem=semDias.reduce((a,d)=>a+pltsDia(d).reduce((b,x)=>b+(+x.horas||0),0),0);
+  const nPltSem=semDias.reduce((a,d)=>a+pltsDia(d).length,0);
+  const habDia=d=>{const at=ativosEm(d);return {n:at.length,f:at.filter(h=>(log[d]||[]).includes(h.id)).length};};
+  const statsSem=(()=>{
+    let n=0,f=0; semDias.filter(d=>d<=hoje).forEach(d=>{const x=habDia(d);n+=x.n;f+=x.f;});
+    const tr=treinos.filter(t=>t.data>=semIni&&t.data<=semFim).length;
+    const pc=semDias.filter(d=>d<=hoje&&peleCompleto(d)).length;
+    const js=jor?Object.values(jor.feitos||{}).filter(dt=>dt>=semIni&&dt<=semFim).length:0;
+    return {n,f,tr,pc,js};
+  })();
+  const revSem=rev[semIni]||null;
+  const rfAtual=rf&&rf.sem===semIni?rf:{sem:semIni,func:revSem?revSem.func:"",ajus:revSem?revSem.ajus:"",meta:revSem?revSem.meta:""};
+  const salvarRev=()=>{setRev({...rev,[semIni]:{func:rfAtual.func.trim(),ajus:rfAtual.ajus.trim(),meta:rfAtual.meta.trim(),salvo:hoje}});setRf(null);setAviso("");};
+  const revAnteriores=Object.keys(rev).filter(k=>k!==semIni).sort().reverse().slice(0,5);
+
+  const T={ink:ROT_INK,sheet:ROT_SHEET,acc:ROT_ACC,rgb:"43,58,40",hrgb:"241,235,220"};
+  const lab={fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10,letterSpacing:".12em",textTransform:"uppercase",color:"rgba(var(--rot-rgb),.6)"};
+  const serif={fontFamily:"'Fraunces',Georgia,serif",fontWeight:300,letterSpacing:"-.03em"};
+  const chipBtn=ativo=>({background:ativo?T.sheet:"rgba(var(--rot-hrgb),.1)",color:ativo?T.ink:"rgba(var(--rot-hrgb),.88)",border:"1px solid "+(ativo?T.sheet:"rgba(var(--rot-hrgb),.3)"),borderRadius:999,padding:"0 16px",height:36,fontSize:12.5,fontWeight:ativo?700:500,cursor:"pointer",whiteSpace:"nowrap",flexShrink:0,fontFamily:"'DM Sans',sans-serif"});
+  const inp={background:"#fff",border:"1px solid rgba(var(--rot-rgb),.18)",borderRadius:12,padding:"11px 14px",fontSize:16,fontFamily:"'DM Sans',sans-serif",color:T.ink,width:"100%",minWidth:0,outline:"none"};
+  const btnP={background:T.ink,color:T.sheet,border:"none",borderRadius:999,padding:"11px 20px",fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"};
+  const btnS={background:"transparent",color:T.ink,border:"1px solid rgba(var(--rot-rgb),.25)",borderRadius:999,padding:"10px 18px",fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"};
+  const pill=on=>({height:34,padding:"0 14px",borderRadius:999,border:"1px solid "+T.ink,background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontSize:12.5,fontWeight:600,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",whiteSpace:"nowrap"});
+  const CardR=useRef(null);
+  CardR.current=({children,style})=><div style={{background:"#fff",border:"1px solid rgba(var(--rot-rgb),.1)",borderRadius:24,padding:isMobile?"20px 18px":"26px 28px",marginBottom:16,...style}}>{children}</div>;
+  const Card=useRef(pp=>CardR.current(pp)).current;
+  const Titulo=({k,t,dir})=><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",gap:12,marginBottom:18}}><div><div style={lab}>{k}</div><div style={{...serif,fontSize:isMobile?26:32,marginTop:6,lineHeight:1,color:T.ink}}>{t}</div></div>{dir}</div>;
+  const Vazio=({children})=><div style={{fontSize:14,lineHeight:1.55,color:"rgba(var(--rot-rgb),.65)"}}>{children}</div>;
+  const nomeDe=id=>(habs.find(h=>h.id===id)||{}).nome||"";
+  const linhaHab=(h,i,comCheck)=>{
+    const f=feitosHoje.has(h.id); const p=hab7(h);
+    return (
+      <div key={h.id} onClick={comCheck?()=>alternar(h):undefined} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 4px",borderTop:i===0?"none":"1px solid rgba(var(--rot-rgb),.08)",cursor:comCheck?"pointer":"default",minHeight:52,paddingLeft:h.apos&&comCheck?22:4}}>
+        {comCheck&&<span aria-hidden="true" style={{width:28,height:28,borderRadius:"50%",flexShrink:0,border:"2px solid "+(f?T.ink:"rgba(var(--rot-rgb),.35)"),background:f?T.ink:"transparent",color:T.sheet,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700}}>{f?"✓":""}</span>}
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:15.5,lineHeight:1.35,textDecoration:comCheck&&f?"line-through":"none",opacity:comCheck&&f?.55:1,wordBreak:"break-word"}}>{h.nome}</div>
+          <div style={{...lab,fontSize:9.5,marginTop:3,textTransform:"none",letterSpacing:".02em",whiteSpace:"normal"}}>{h.apos&&nomeDe(h.apos)?"depois de «"+nomeDe(h.apos)+"»":"horário livre"}{h.min?" · "+h.min+" min":""}{" · "+p.n+"/"+p.t+" nos últimos 7 dias"}</div>
+        </div>
+        {!comCheck&&<div style={{display:"flex",gap:6,flexShrink:0,flexWrap:"wrap",justifyContent:"flex-end"}}>
+          <button style={{...btnS,padding:"6px 12px",fontSize:12}} onClick={()=>editar(h)}>Editar</button>
+          <button style={{...btnS,padding:"6px 12px",fontSize:12}} onClick={()=>setHabs(habs.map(x=>x.id===h.id?{...x,ativo:x.ativo===false}:x))}>{h.ativo===false?"Retomar":"Pausar"}</button>
+          {conf===h.id?<button style={{...btnS,padding:"6px 12px",fontSize:12,color:"#A8321E",borderColor:"#A8321E"}} onClick={()=>excluir(h.id)}>Confirmar</button>:<button style={{...btnS,padding:"6px 12px",fontSize:12,opacity:.75}} onClick={()=>setConf(h.id)}>Excluir</button>}
+        </div>}
+      </div>);
+  };
+  const subs=[["hoje","Hoje"],["habitos","Hábitos"+(habs.length?" · "+habs.length:"")],["jornadas","Jornadas"],["treino","Treino"],["cuidados","Cuidados"],["semana","Semana"],["revisao","Revisão"]];
+  const corBarra=p=>p>=1?T.ink:(p>0?"#C08A2D":"rgba(var(--rot-rgb),.12)");
+
+  return (
+    <div className="rot" style={{"--rot-rgb":T.rgb,"--rot-hrgb":T.hrgb,minHeight:"100vh",background:T.ink,position:"relative",zIndex:1,color:T.ink,fontFamily:"'DM Sans','Segoe UI',sans-serif"}}>
+      <style>{`
+        .rot .rot-hero{position:relative;overflow:hidden;background:${T.ink};color:${T.sheet}}
+        .rot .rot-scrim{position:absolute;inset:0;background:linear-gradient(95deg,rgba(25,35,23,.97) 0%,rgba(25,35,23,.82) 50%,rgba(25,35,23,.35) 100%)}
+        .rot .rot-in{position:relative;max-width:1100px;margin:0 auto;padding:${isMobile?"18px 18px 54px":"26px 28px 62px"}}
+        .rot .rot-sheet{position:relative;background:${T.sheet};border-radius:30px 30px 0 0;margin-top:-28px;min-height:70vh;padding:${isMobile?"26px 14px 110px":"34px 28px 110px"}}
+        .rot .rot-wrap{max-width:1100px;margin:0 auto}
+        .rot .rot-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+        .rot .rot-row::-webkit-scrollbar{display:none}
+        .rot .rot-grid{display:grid;grid-template-columns:${isMobile?"1fr":"1fr 1fr"};gap:16px}
+        .rot input:focus,.rot select:focus{border-color:${T.ink}!important}
+        .rot button:active{transform:scale(.98)}
+      `}</style>
+      <div className="rot-hero">
+        <Motif s="manteiga" z={1.2} x={45} y={20} style={{position:"absolute",inset:0,opacity:.9}}/>
+        <div className="rot-scrim"/>
+        <div className="rot-in">
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:isMobile?22:30}}>
+            <button onClick={onMenu} aria-label="Abrir menu" style={{background:"rgba(var(--rot-hrgb),.12)",border:"1px solid rgba(var(--rot-hrgb),.3)",borderRadius:99,width:40,height:40,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4.5,flexShrink:0}}>{[0,1,2].map(i=><div key={i} style={{width:i===2?10:16,height:1.5,background:T.sheet,borderRadius:1,alignSelf:i===2?"flex-start":"auto",marginLeft:i===2?12:0}}/>)}</button>
+            <AppSwitch atual="rot" onTrocar={onTrocar}/>
+            <span style={{width:40,height:40}}/>
+          </div>
+          <div style={{...serif,fontSize:isMobile?38:52,lineHeight:1,color:T.sheet,marginBottom:10}}>Rotina</div>
+          <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".16em",textTransform:"uppercase",opacity:.75,marginBottom:6}}>Hábitos pequenos, um depois do outro</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:14,flexWrap:"wrap"}}><span style={{...serif,fontSize:isMobile?96:140,lineHeight:.85,color:T.sheet}}>{nFeitos}</span><span style={{...serif,fontSize:isMobile?22:30,opacity:.85}}>de {lista.length}<br/>{lista.length===1?"hábito hoje":"hábitos hoje"}</span></div>
+          <div style={{fontFamily:"'DM Mono',ui-monospace,monospace",fontSize:10.5,letterSpacing:".1em",opacity:.85,marginTop:18}}>{sequencia} {sequencia===1?"DIA SEGUIDO":"DIAS SEGUIDOS"} COM PELO MENOS 1 HÁBITO</div>
+          <div className="rot-row" style={{marginTop:20}}>{subs.map(([id,l])=><button key={id} onClick={()=>setSub(id)} style={chipBtn(sub===id)}>{l}</button>)}</div>
+        </div>
+      </div>
+      <div className="rot-sheet"><div className="rot-wrap">
+
+      {sub==="hoje"&&(<>
+        {habs.length===0?<Card>
+          <Titulo k="Comece pequeno" t="Sua primeira rotina"/>
+          <Vazio>Um hábito novo gruda melhor quando vem logo depois de outro que você já faz. Comece com um modelo de manhã e noite e ajuste do seu jeito, ou crie o seu na aba Hábitos.</Vazio>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16}}><button style={btnP} onClick={modelo}>Usar o modelo</button><button style={btnS} onClick={()=>setSub("habitos")}>Criar do zero</button></div>
+        </Card>:<>
+          {aviso&&<div style={{padding:"12px 16px",borderRadius:16,background:"#E9DDB8",fontSize:14,lineHeight:1.5,marginBottom:14}}>{aviso}</div>}
+          {lista.length===0?<Card><Vazio>Nenhum hábito marcado para hoje. Veja a aba Hábitos para ajustar os dias da semana.</Vazio></Card>:
+          ROT_PER.map(([k,nm])=>{const l=rotCadeia(lista.filter(h=>h.per===k)); if(!l.length)return null; const f=l.filter(h=>feitosHoje.has(h.id)).length; return (
+            <Card key={k}>
+              <Titulo k={cfg[k]+" · "+f+" de "+l.length} t={nm}/>
+              {l.map((h,i)=>linhaHab(h,i,true))}
+            </Card>);})}
+          <Card>
+            <Titulo k="Últimos 7 dias" t="Sua semana"/>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:isMobile?6:12,alignItems:"end",height:120}}>
+              {semana.map(x=>(<div key={x.d} title={x.d.slice(8)+"/"+x.d.slice(5,7)+": "+x.f+" de "+x.n+" hábitos"} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:"100%",gap:6}}>
+                <div style={{width:"100%",maxWidth:34,height:Math.max(8,x.pct*84)+"px",borderRadius:99,background:corBarra(x.pct)}}/>
+                <span style={{...lab,fontSize:10,color:x.hojeD?T.ink:undefined,fontWeight:x.hojeD?700:400}}>{x.lbl}</span>
+              </div>))}
+            </div>
+            <div style={{...lab,fontSize:9.5,marginTop:12,whiteSpace:"normal",lineHeight:1.6}}>barra cheia = todos os hábitos do dia · ocre = parte deles</div>
+          </Card>
+        </>}
+      </>)}
+
+      {sub==="habitos"&&(<>
+        <Card>
+          <Titulo k={editId?"Editando":"Novo"} t={editId?"Editar hábito":"Criar hábito"} dir={editId?<button style={{...btnS,padding:"6px 14px",fontSize:12}} onClick={()=>{setEditId(null);setHf(hfInit);}}>Cancelar</button>:null}/>
+          <div style={lab}>O que você vai fazer</div>
+          <input style={{...inp,marginTop:8}} value={hf.nome} placeholder="Ex.: rever 5 palavras de alemão" onChange={e=>setHf({...hf,nome:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")salvarHab();}}/>
+          <div style={{...lab,marginTop:14}}>Quando</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>{ROT_PER.map(([k,nm])=><button key={k} style={pill(hf.per===k)} onClick={()=>setHf({...hf,per:k})}>{nm}</button>)}</div>
+          <div style={{...lab,marginTop:14}}>Depois de qual hábito? (empilhar)</div>
+          <select style={{...inp,marginTop:8}} value={hf.apos} onChange={e=>setHf({...hf,apos:e.target.value})}>
+            <option value="">Nenhum, horário livre</option>
+            {habs.filter(h=>h.id!==editId).map(h=><option key={h.id} value={h.id}>{h.nome}</option>)}
+          </select>
+          <div style={{...lab,marginTop:14}}>Dias da semana</div>
+          <div style={{display:"flex",gap:6,marginTop:8}}>{ROT_DIAS.map((l,i)=>{const on=hf.dias.includes(i);return <button key={i} aria-pressed={on} aria-label={["domingo","segunda","terça","quarta","quinta","sexta","sábado"][i]} style={{width:38,height:38,borderRadius:"50%",border:"1px solid "+T.ink,background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}} onClick={()=>setHf({...hf,dias:on?hf.dias.filter(x=>x!==i):[...hf.dias,i].sort()})}>{l}</button>;})}</div>
+          <div style={{...lab,marginTop:14}}>Tempo estimado (opcional)</div>
+          <input type="number" inputMode="numeric" min="0" style={{...inp,marginTop:8,width:140}} value={hf.min} placeholder="min" onChange={e=>setHf({...hf,min:e.target.value})}/>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:18,alignItems:"center"}}>
+            <button style={{...btnP,opacity:hf.nome.trim()&&hf.dias.length?1:.4}} disabled={!hf.nome.trim()||!hf.dias.length} onClick={salvarHab}>{editId?"Salvar alterações":"Adicionar hábito"}</button>
+            {habs.length===0&&<button style={btnS} onClick={modelo}>Usar o modelo pronto</button>}
+          </div>
+        </Card>
+        {habs.length>0&&ROT_PER.map(([k,nm])=>{const l=rotCadeia(habs.filter(h=>h.per===k)); if(!l.length)return null; return (
+          <Card key={k}>
+            <Titulo k={cfg[k]} t={nm}/>
+            {l.map((h,i)=>(<div key={h.id} style={{opacity:h.ativo===false?.5:1}}>{linhaHab(h,i,false)}</div>))}
+          </Card>);})}
+        <Card>
+          <Titulo k="Avisos" t="Lembretes"/>
+          <Vazio>Escolha um horário para cada parte do dia. O arquivo abaixo cria um evento diário com alerta no Calendário do celular. O app sozinho não consegue avisar com ele fechado.</Vazio>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginTop:14}}>
+            {ROT_PER.map(([k,nm])=>(<div key={k}><div style={lab}>{nm}</div><input type="time" style={{...inp,marginTop:6,padding:"10px 8px"}} value={cfg[k]||""} onChange={e=>setCfg({...cfg,[k]:e.target.value||cfg[k]})}/></div>))}
+          </div>
+          <div style={{marginTop:14}}><button style={btnS} onClick={baixarIcs}>Baixar lembretes (.ics)</button></div>
+        </Card>
+      </>)}
+
+      {sub==="jornadas"&&(<>
+        {jT&&<Card>
+          <Titulo k={"Em andamento · dia "+jDia+" de "+jT.passos.length} t={jT.nome} dir={<button style={{...btnS,padding:"6px 14px",fontSize:12}} onClick={()=>setJor(null)}>Parar</button>}/>
+          <div style={{display:"flex",gap:6,marginBottom:14}}>{jT.passos.map((_,i)=><div key={i} style={{flex:1,height:8,borderRadius:99,background:(jor.feitos||{})[i+1]?T.ink:(i+1===jDia?"#C08A2D":"rgba(var(--rot-rgb),.12)")}}/>)}</div>
+          {jT.passos.map((txt,i)=>{const n=i+1, f=!!(jor.feitos||{})[n], lib=n<=jDia; return (
+            <div key={n} onClick={lib?()=>marcarPasso(n):undefined} style={{display:"flex",gap:12,padding:"12px 4px",borderTop:i===0?"none":"1px solid rgba(var(--rot-rgb),.08)",cursor:lib?"pointer":"default",opacity:lib?1:.4,alignItems:"flex-start"}}>
+              <span aria-hidden="true" style={{width:28,height:28,borderRadius:"50%",flexShrink:0,border:"2px solid "+(f?T.ink:"rgba(var(--rot-rgb),.35)"),background:f?T.ink:(n===jDia?"#E9DDB8":"transparent"),color:T.sheet,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700}}>{f?"✓":""}</span>
+              <div style={{flex:1,minWidth:0}}><div style={{...lab,fontSize:9.5}}>dia {n}{n===jDia?" · hoje":(lib?"":" · libera depois")}</div><div style={{fontSize:15,lineHeight:1.5,marginTop:3,textDecoration:f?"line-through":"none",opacity:f?.6:1}}>{lib?txt:"Disponível no dia "+n+"."}</div></div>
+            </div>);})}
+          {jFim&&<div style={{marginTop:16,padding:"14px 16px",borderRadius:16,background:"#E9DDB8"}}>
+            <div style={{fontSize:14.5,lineHeight:1.55}}>Jornada concluída. Que tal transformar o passo principal num hábito diário: «{jT.habito.nome}»?</div>
+            <div style={{marginTop:10}}>{jor.virou?<span style={{...lab,color:"#3C7030"}}>✓ adicionado aos seus hábitos</span>:<button style={btnP} onClick={virarHabito}>Adicionar aos hábitos</button>}</div>
+          </div>}
+        </Card>}
+        <Card>
+          <Titulo k={jT?"Outras jornadas":"Escolha uma"} t="Jornadas de 7 dias"/>
+          <Vazio>Uma jornada libera um passo pequeno por dia. Só uma de cada vez. Se perder um dia, o passo continua marcado quando você voltar.</Vazio>
+          {ROT_JORNADAS.filter(x=>!jT||x.id!==jT.id).map((x,i)=>(
+            <div key={x.id} style={{display:"flex",alignItems:"center",gap:12,padding:"14px 0",borderTop:"1px solid rgba(var(--rot-rgb),.08)",marginTop:i===0?14:0,flexWrap:"wrap"}}>
+              <div style={{flex:1,minWidth:200}}><div style={{...serif,fontSize:21,lineHeight:1.15}}>{x.nome}</div><div style={{fontSize:13.5,lineHeight:1.5,opacity:.75,marginTop:3}}>{x.sub}</div></div>
+              <button style={btnP} onClick={()=>iniciarJor(x)}>{jT?"Trocar para esta":"Começar"}</button>
+            </div>))}
+        </Card>
+      </>)}
+
+      {sub==="treino"&&(<>
+        <Card>
+          <Titulo k={"Meta: "+metaT+" por semana"} t="Esta semana" dir={<div style={{display:"flex",gap:6,alignItems:"center"}}><button aria-label="Diminuir meta" style={{...btnS,padding:"4px 12px",fontSize:16}} onClick={()=>setCfg({...cfg,metaTreino:Math.max(1,metaT-1)})}>−</button><button aria-label="Aumentar meta" style={{...btnS,padding:"4px 12px",fontSize:16}} onClick={()=>setCfg({...cfg,metaTreino:Math.min(7,metaT+1)})}>+</button></div>}/>
+          <div style={{display:"flex",alignItems:"baseline",gap:12,flexWrap:"wrap",marginBottom:16}}>
+            <span style={{...serif,fontSize:56,lineHeight:.9}}>{treinosSem.length}</span><span style={{...serif,fontSize:22,opacity:.8}}>de {metaT} {metaT===1?"treino":"treinos"}</span><span style={{...lab,marginLeft:"auto"}}>{minSem} min no total</span>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:isMobile?6:12,alignItems:"end",height:110}}>
+            {minDia.map(x=>(<div key={x.d} title={br(x.d)+": "+x.min+" min"} style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-end",height:"100%",gap:6}}>
+              <div style={{width:"100%",maxWidth:34,height:Math.max(8,x.min/maxMin*76)+"px",borderRadius:99,background:x.min>0?T.ink:"rgba(var(--rot-rgb),.12)"}}/>
+              <span style={{...lab,fontSize:10,color:x.hojeD?T.ink:undefined,fontWeight:x.hojeD?700:400}}>{x.lbl}</span>
+            </div>))}
+          </div>
+        </Card>
+        <Card>
+          <Titulo k="Novo" t="Registrar treino"/>
+          <div style={lab}>Tipo</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:8}}>{ROT_TREINOS.map(t=><button key={t} style={pill(tf.tipo===t)} onClick={()=>setTf({...tf,tipo:t})}>{t}</button>)}</div>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:14}}>
+            <div style={{flex:"1 1 140px"}}><div style={lab}>Data</div><input type="date" style={{...inp,marginTop:6}} value={tf.data} max={hoje} onChange={e=>setTf({...tf,data:e.target.value})}/></div>
+            <div style={{flex:"1 1 120px"}}><div style={lab}>Duração (min)</div><input type="number" inputMode="numeric" min="0" style={{...inp,marginTop:6}} value={tf.min} onChange={e=>setTf({...tf,min:e.target.value})}/></div>
+          </div>
+          <div style={{...lab,marginTop:14}}>Exercícios e anotações</div>
+          <textarea style={{...inp,marginTop:6,minHeight:96,resize:"vertical",lineHeight:1.6}} value={tf.txt} placeholder={"Um por linha. Ex.:\nAgachamento 4x10 40 kg\nCorrida 5 km"} onChange={e=>setTf({...tf,txt:e.target.value})}/>
+          <div style={{marginTop:14}}><button style={{...btnP,opacity:(+tf.min>0||tf.txt.trim())?1:.4}} disabled={!(+tf.min>0||tf.txt.trim())} onClick={salvarTreino}>Salvar treino</button></div>
+        </Card>
+        {treinos.length>0&&<Card>
+          <Titulo k={treinos.length+(treinos.length===1?" registro":" registros")} t="Histórico"/>
+          {treinos.slice(0,10).map((t,i)=>(<div key={t.id} style={{display:"flex",gap:12,padding:"12px 0",borderTop:i===0?"none":"1px solid rgba(var(--rot-rgb),.08)",alignItems:"flex-start"}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:15.5,fontWeight:600}}>{t.tipo}{t.min?" · "+t.min+" min":""}</div>
+              <div style={{...lab,fontSize:9.5,marginTop:2}}>{ROT_DNOME[dow(t.data)]} {br(t.data)}</div>
+              {t.txt&&<div style={{fontSize:13.5,lineHeight:1.55,marginTop:6,opacity:.8,whiteSpace:"pre-wrap",wordBreak:"break-word"}}>{t.txt}</div>}
+            </div>
+            {conf2===t.id?<button style={{...btnS,padding:"6px 12px",fontSize:12,color:"#A8321E",borderColor:"#A8321E"}} onClick={()=>{setTreinos(treinos.filter(x=>x.id!==t.id));setConf2("");}}>Confirmar</button>:<button style={{...btnS,padding:"6px 12px",fontSize:12,opacity:.75}} onClick={()=>setConf2(t.id)}>Excluir</button>}
+          </div>))}
+        </Card>}
+        <Card>
+          <Titulo k="Peso e cintura" t="Medidas"/>
+          <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}}>
+            <div style={{flex:"1 1 110px"}}><div style={lab}>Peso (kg)</div><input inputMode="decimal" style={{...inp,marginTop:6}} value={mf.peso} onChange={e=>setMf({...mf,peso:e.target.value})}/></div>
+            <div style={{flex:"1 1 110px"}}><div style={lab}>Cintura (cm)</div><input inputMode="decimal" style={{...inp,marginTop:6}} value={mf.cintura} onChange={e=>setMf({...mf,cintura:e.target.value})}/></div>
+            <button style={btnP} onClick={salvarMed}>Registrar hoje</button>
+          </div>
+          {meds.length===0?<div style={{marginTop:14}}><Vazio>Registre de vez em quando, uma vez por semana basta. As diferenças aparecem aqui.</Vazio></div>:<div style={{marginTop:14}}>
+            {meds.slice(0,6).map((m,i)=>{const ant=meds[i+1];const dp=ant&&m.peso&&ant.peso?m.peso-ant.peso:null;return (
+              <div key={m.id} style={{display:"flex",gap:12,padding:"10px 0",borderTop:i===0?"none":"1px solid rgba(var(--rot-rgb),.08)",fontSize:14.5,alignItems:"baseline",flexWrap:"wrap"}}>
+                <span style={{...lab,width:52}}>{br(m.data)}</span>
+                <span style={{flex:1}}>{m.peso?m.peso.toString().replace(".",",")+" kg":"—"}{dp!==null&&<span style={{...lab,marginLeft:8,textTransform:"none",letterSpacing:0}}>{(dp>0?"+":"")+dp.toFixed(1).replace(".",",")+" kg"}</span>}</span>
+                <span>{m.cintura?m.cintura.toString().replace(".",",")+" cm":""}</span>
+                <button aria-label="Excluir medida" style={{...btnS,padding:"2px 10px",fontSize:12,opacity:.6}} onClick={()=>setMeds(meds.filter(x=>x.id!==m.id))}>×</button>
+              </div>);})}
+          </div>}
+        </Card>
+      </>)}
+
+      {sub==="cuidados"&&(<>
+        {pele.length===0?<Card>
+          <Titulo k="Skincare" t="Sua rotina de pele"/>
+          <Vazio>Monte os passos de manhã e de noite e marque o que fez no dia. Produtos que não são de todo dia, como os ativos, você pode limitar a alguns dias da semana.</Vazio>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16}}><button style={btnP} onClick={modeloPele}>Usar o modelo</button></div>
+        </Card>:["manha","noite"].map(per=>{const l=passosPele(hoje).filter(x=>x.per===per);if(!l.length)return null;const f=peleFeitos(hoje);const nf=l.filter(x=>f.has(x.id)).length;return (
+          <Card key={per}>
+            <Titulo k={"Hoje · "+nf+" de "+l.length} t={per==="manha"?"Manhã":"Noite"}/>
+            {l.map((x,i)=>{const on=f.has(x.id);return (
+              <div key={x.id} onClick={()=>alternarPele(x.id)} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 4px",borderTop:i===0?"none":"1px solid rgba(var(--rot-rgb),.08)",cursor:"pointer",minHeight:52}}>
+                <span aria-hidden="true" style={{width:28,height:28,borderRadius:"50%",flexShrink:0,border:"2px solid "+(on?T.ink:"rgba(var(--rot-rgb),.35)"),background:on?T.ink:"transparent",color:T.sheet,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:15,fontWeight:700}}>{on?"✓":""}</span>
+                <span style={{fontSize:15.5,textDecoration:on?"line-through":"none",opacity:on?.55:1}}>{x.nome}</span>
+              </div>);})}
+          </Card>);})}
+        {pele.length>0&&passosPele(hoje).length===0&&<Card><Vazio>Nenhum passo marcado para hoje.</Vazio></Card>}
+        {pele.length>0&&<Card>
+          <Titulo k="Últimos 7 dias" t="Rotina completa"/>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:6}}>
+            {Array.from({length:7},(_,i)=>addDays(hoje,i-6)).map(d=>{const ok=peleCompleto(d);const parc=!ok&&passosPele(d).some(x=>(peleLog[d]||[]).includes(x.id));return (
+              <div key={d} title={br(d)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
+                <span aria-hidden="true" style={{width:26,height:26,borderRadius:"50%",background:ok?T.ink:(parc?"#C08A2D":"rgba(var(--rot-rgb),.12)")}}/>
+                <span style={{...lab,fontSize:10,color:d===hoje?T.ink:undefined,fontWeight:d===hoje?700:400}}>{ROT_DNOME[dow(d)][0]}</span>
+              </div>);})}
+          </div>
+        </Card>}
+        <Card>
+          <Titulo k="Passos" t="Montar a rotina"/>
+          <div style={lab}>Nome do passo</div>
+          <input style={{...inp,marginTop:6}} value={pf.nome} placeholder="Ex.: sérum, esfoliante, máscara" onChange={e=>setPf({...pf,nome:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")salvarPasso();}}/>
+          <div style={{...lab,marginTop:14}}>Quando</div>
+          <div style={{display:"flex",gap:8,marginTop:8}}>{[["manha","Manhã"],["noite","Noite"]].map(([k,n])=><button key={k} style={pill(pf.per===k)} onClick={()=>setPf({...pf,per:k})}>{n}</button>)}</div>
+          <div style={{...lab,marginTop:14}}>Dias da semana</div>
+          <div style={{display:"flex",gap:6,marginTop:8}}>{ROT_DIAS.map((l,i)=>{const on=pf.dias.includes(i);return <button key={i} aria-pressed={on} aria-label={ROT_DNOME[i]} style={{width:38,height:38,borderRadius:"50%",border:"1px solid "+T.ink,background:on?T.ink:"transparent",color:on?T.sheet:T.ink,fontSize:13,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif"}} onClick={()=>setPf({...pf,dias:on?pf.dias.filter(x=>x!==i):[...pf.dias,i].sort()})}>{l}</button>;})}</div>
+          <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:16}}><button style={{...btnP,opacity:pf.nome.trim()&&pf.dias.length?1:.4}} disabled={!pf.nome.trim()||!pf.dias.length} onClick={salvarPasso}>Adicionar passo</button></div>
+          {pele.length>0&&<div style={{marginTop:18}}>{pele.map((x,i)=>(<div key={x.id} style={{display:"flex",gap:10,alignItems:"center",padding:"10px 0",borderTop:i===0?"none":"1px solid rgba(var(--rot-rgb),.08)"}}>
+            <div style={{flex:1,minWidth:0,fontSize:14.5}}>{x.nome}<div style={{...lab,fontSize:9.5,marginTop:2,textTransform:"none",letterSpacing:".02em"}}>{x.per==="manha"?"manhã":"noite"} · {(x.dias||[]).length===7?"todos os dias":(x.dias||[]).map(d=>ROT_DNOME[d].toLowerCase()).join(", ")}</div></div>
+            {conf2===x.id?<button style={{...btnS,padding:"6px 12px",fontSize:12,color:"#A8321E",borderColor:"#A8321E"}} onClick={()=>{setPele(pele.filter(y=>y.id!==x.id));setConf2("");}}>Confirmar</button>:<button style={{...btnS,padding:"6px 12px",fontSize:12,opacity:.75}} onClick={()=>setConf2(x.id)}>Excluir</button>}
+          </div>))}</div>}
+        </Card>
+      </>)}
+
+      {(sub==="semana"||sub==="revisao")&&<div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,marginBottom:14,flexWrap:"wrap"}}>
+        <button style={{...btnS,padding:"8px 16px"}} onClick={()=>setSemOff(semOff-1)} aria-label="Semana anterior">‹ Anterior</button>
+        <div style={{textAlign:"center"}}><div style={{...serif,fontSize:22}}>{br(semIni)} a {br(semFim)}</div><div style={{...lab,fontSize:9.5,marginTop:2}}>{semOff===0?"esta semana":(semOff<0?Math.abs(semOff)+(semOff===-1?" semana atrás":" semanas atrás"):"daqui a "+semOff+(semOff===1?" semana":" semanas"))}</div></div>
+        <div style={{display:"flex",gap:6}}>{semOff!==0&&<button style={{...btnS,padding:"8px 14px"}} onClick={()=>setSemOff(0)}>Hoje</button>}<button style={{...btnS,padding:"8px 16px"}} onClick={()=>setSemOff(semOff+1)} aria-label="Próxima semana">Próxima ›</button></div>
+      </div>}
+
+      {sub==="semana"&&(<>
+        <Card>
+          <Titulo k={nPltSem+(nPltSem===1?" plantão":" plantões")+" · "+horasSem+" h"} t="Semana"/>
+          {semDias.map((d,i)=>{const ps=pltsDia(d);const t=esc[d]||"";const h=habDia(d);const pass=d<=hoje;return (
+            <div key={d} style={{display:"flex",gap:12,padding:"12px 8px",margin:"0 -8px",borderTop:i===0?"none":"1px solid rgba(var(--rot-rgb),.08)",alignItems:"center",flexWrap:"wrap",background:d===hoje?"rgba(192,138,45,.12)":"transparent",borderRadius:d===hoje?12:0}}>
+              <div style={{width:52,flexShrink:0}}><div style={{...serif,fontSize:22,lineHeight:1}}>{d.slice(8)}</div><div style={{...lab,fontSize:9.5,marginTop:2}}>{ROT_DNOME[dow(d)]}</div></div>
+              <div style={{flex:"1 1 160px",minWidth:0}}>
+                {ps.map(x=><div key={x.id} style={{fontSize:13.5,lineHeight:1.45}}><b>Plantão</b>{x.empresa?" · "+x.empresa:""}{x.horaInicio?" · "+x.horaInicio+(x.horaFim?"–"+x.horaFim:""):""}</div>)}
+                <select aria-label={"Turno de "+br(d)} style={{...inp,marginTop:ps.length?6:0,padding:"7px 10px",fontSize:14,width:"auto",maxWidth:"100%"}} value={t} onChange={e=>setEsc({...esc,[d]:e.target.value})}>{ROT_TURNOS.map(([v,n])=><option key={v} value={v}>{n}</option>)}</select>
+              </div>
+              <div style={{...lab,flexShrink:0,textAlign:"right",lineHeight:1.5,whiteSpace:"normal"}}>{h.n===0?"sem hábitos":(pass?h.f+" de "+h.n+" hábitos":h.n+" hábitos")}</div>
+            </div>);})}
+          <div style={{...lab,fontSize:9.5,marginTop:14,whiteSpace:"normal",lineHeight:1.6}}>os plantões vêm do app Finanças; o turno acima é só uma marcação sua para organizar a semana</div>
+        </Card>
+      </>)}
+
+      {sub==="revisao"&&(<>
+        <Card>
+          <Titulo k={br(semIni)+" a "+br(semFim)} t="Como foi a semana"/>
+          <div className="rot-grid">
+            {[["Hábitos",statsSem.n?Math.round(statsSem.f/statsSem.n*100)+"%":"—",statsSem.f+" de "+statsSem.n+" feitos"],["Treinos",statsSem.tr+" de "+metaT,"meta da semana"],["Pele",statsSem.pc+" "+(statsSem.pc===1?"dia":"dias"),"com a rotina completa"],["Plantões",horasSem+" h",nPltSem+(nPltSem===1?" plantão":" plantões")]].map(([k,v,sub2])=>(
+              <div key={k} style={{padding:"12px 14px",borderRadius:16,background:"rgba(var(--rot-rgb),.05)"}}><div style={lab}>{k}</div><div style={{...serif,fontSize:34,lineHeight:1.05,marginTop:4}}>{v}</div><div style={{fontSize:12.5,opacity:.65,marginTop:2}}>{sub2}</div></div>))}
+          </div>
+          {jor&&jT&&<div style={{...lab,marginTop:12,whiteSpace:"normal"}}>jornada «{jT.nome}»: {statsSem.js} {statsSem.js===1?"passo feito":"passos feitos"} nesta semana</div>}
+        </Card>
+        <Card>
+          <Titulo k={revSem?"Salvo em "+br(revSem.salvo):"Balanço"} t="Sua revisão"/>
+          <div style={lab}>O que funcionou</div>
+          <textarea style={{...inp,marginTop:6,minHeight:80,resize:"vertical",lineHeight:1.6}} value={rfAtual.func} onChange={e=>setRf({...rfAtual,func:e.target.value})}/>
+          <div style={{...lab,marginTop:14}}>O que ajustar</div>
+          <textarea style={{...inp,marginTop:6,minHeight:80,resize:"vertical",lineHeight:1.6}} value={rfAtual.ajus} onChange={e=>setRf({...rfAtual,ajus:e.target.value})}/>
+          <div style={{...lab,marginTop:14}}>Meta da próxima semana</div>
+          <input style={{...inp,marginTop:6}} value={rfAtual.meta} placeholder="Uma coisa só, simples" onChange={e=>setRf({...rfAtual,meta:e.target.value})}/>
+          <div style={{marginTop:14,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}><button style={{...btnP,opacity:(rfAtual.func.trim()||rfAtual.ajus.trim()||rfAtual.meta.trim())?1:.4}} disabled={!(rfAtual.func.trim()||rfAtual.ajus.trim()||rfAtual.meta.trim())} onClick={salvarRev}>{revSem?"Atualizar revisão":"Salvar revisão"}</button>{revSem&&!rf&&<span style={{...lab,color:"#3C7030"}}>✓ salva</span>}</div>
+        </Card>
+        {revAnteriores.length>0&&<Card>
+          <Titulo k="Semanas anteriores" t="Histórico"/>
+          {revAnteriores.map((k,i)=>{const r=rev[k];return (
+            <div key={k} onClick={()=>setSemOff(Math.round((new Date(k+"T12:00:00")-new Date(segIni(hoje)+"T12:00:00"))/604800000))} style={{padding:"12px 0",borderTop:i===0?"none":"1px solid rgba(var(--rot-rgb),.08)",cursor:"pointer"}}>
+              <div style={{...lab,fontSize:9.5}}>{br(k)} a {br(addDays(k,6))}</div>
+              {r.meta&&<div style={{fontSize:14.5,marginTop:4}}><b>Meta:</b> {r.meta}</div>}
+              {r.func&&<div style={{fontSize:13.5,marginTop:3,opacity:.75}}>{r.func.length>110?r.func.slice(0,110)+"…":r.func}</div>}
+            </div>);})}
+        </Card>}
+      </>)}
+
+      </div></div>
+    </div>);
+}
 
 function BalancoTab({movs, plantoes, cartoes, selMes}) {
   // Últimos 12 meses relativos ao mês sendo visualizado (não a hoje)
@@ -9953,14 +10494,15 @@ function AppMain({user, onLogout}) {
     {id:"estudos",icon:"✦",label:"Estudos"},
     {id:"idiomas",icon:"✎",label:"Idiomas"},
     {id:"clinica",icon:"✚",label:"Clínica"},
+    {id:"rotina",icon:"❋",label:"Rotina"},
   ];
   const navTo=id=>{setTab(id);setSideOpen(false);};
   const [trocando,setTrocando]=useState(null);
   const trocarApp=dest=>{
-    const atualApp=tab==="estudos"?"est":tab==="idiomas"?"idi":tab==="clinica"?"med":"fin";
+    const atualApp=tab==="estudos"?"est":tab==="idiomas"?"idi":tab==="clinica"?"med":tab==="rotina"?"rot":"fin";
     if(dest===atualApp||trocando)return;
     setTrocando(dest);
-    setTimeout(()=>{navTo(dest==="est"?"estudos":dest==="idi"?"idiomas":dest==="med"?"clinica":"dashboard");try{window.scrollTo(0,0);}catch{}},300);
+    setTimeout(()=>{navTo(dest==="est"?"estudos":dest==="idi"?"idiomas":dest==="med"?"clinica":dest==="rot"?"rotina":"dashboard");try{window.scrollTo(0,0);}catch{}},300);
     setTimeout(()=>setTrocando(null),900);
   };
   const showCard=id=>dashCards[id]!==false;
@@ -9980,7 +10522,7 @@ function AppMain({user, onLogout}) {
   const TMUT="rgba(26,18,9,0.45)";
 
   return (
-    <div className={"vl"+(isMobile?" mobile":"")+(tab==="estudos"||tab==="idiomas"||tab==="clinica"?" est-on":"")+(tab==="idiomas"?" idi-on":"")+(tab==="clinica"?" clin-on":"")} style={{...((p)=>({"--m1":p.m1,"--m2":p.m2,"--m3":p.m3,"--m4":p.m4,"--base":p.base,"--h1":p.h1,"--h2":p.h2,"--h3":p.h3,"--hb":p.hb,"--acc":p.acc}))(BG_PALETTES[bgId]||BG_PALETTES.tartan),minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
+    <div className={"vl"+(isMobile?" mobile":"")+(tab==="estudos"||tab==="idiomas"||tab==="clinica"||tab==="rotina"?" est-on":"")+(tab==="idiomas"?" idi-on":"")+(tab==="clinica"?" clin-on":"")+(tab==="rotina"?" rot-on":"")} style={{...((p)=>({"--m1":p.m1,"--m2":p.m2,"--m3":p.m3,"--m4":p.m4,"--base":p.base,"--h1":p.h1,"--h2":p.h2,"--h3":p.h3,"--hb":p.hb,"--acc":p.acc}))(BG_PALETTES[bgId]||BG_PALETTES.tartan),minHeight:"100vh",color:TXT,fontFamily:"'DM Sans','Segoe UI',sans-serif",position:"relative"}}>
       <div className="wallpaper-bg" style={bgToStyle(BG_OPTIONS.find(b=>b.id===bgId)||BG_OPTIONS[0])}/>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500&display=swap');
@@ -10051,6 +10593,7 @@ function AppMain({user, onLogout}) {
         .vl.est-on,body:has(.vl.est-on){background:#15251E}
         .vl.idi-on,body:has(.vl.idi-on){background:#2A1E14}
         .vl.clin-on,body:has(.vl.clin-on){background:#0B2229}
+        .vl.rot-on,body:has(.vl.rot-on){background:#1F2A1D}
         .vl .sheet{background:var(--base);border-radius:30px 30px 0 0;margin-top:-26px;position:relative;z-index:1;min-height:70vh}
         .mobile .sheet{margin-top:-24px}
         .mobile .main-wrap{padding:24px 14px 96px!important}
@@ -10320,6 +10863,7 @@ function AppMain({user, onLogout}) {
         </div>);})()}
       {tab==="idiomas"&&<IdiomasApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
       {tab==="clinica"&&<ClinicaApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
+      {tab==="rotina"&&<RotinaApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
       {tab==="estudos"&&<EstudosApp userId={userId} isMobile={isMobile} onMenu={()=>setSideOpen(true)} onTrocar={trocarApp}/>}
       <div className="sheet">
       <div className="main-wrap" style={{maxWidth:1100,margin:"0 auto",padding:"14px 24px 80px",position:"relative",zIndex:1}}>
