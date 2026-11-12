@@ -2020,6 +2020,24 @@ function gItemErro(m,nomeArea){
 }
 const IA_KC="velara_claude_key", IA_KG="velara_gemini_key";
 const iaKey=k=>{try{return localStorage.getItem(k)||"";}catch{return "";}};
+// ── sincronizar a chave entre aparelhos: só sai do aparelho criptografada com uma frase-senha ──
+const iaB64=u=>btoa(String.fromCharCode(...new Uint8Array(u)));
+const iaUnb64=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
+async function iaDerivar(frase,salt){
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(frase),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:310000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]);
+}
+async function iaCifrar(obj,frase){
+  const salt=crypto.getRandomValues(new Uint8Array(16)), iv=crypto.getRandomValues(new Uint8Array(12));
+  const k=await iaDerivar(frase,salt);
+  const d=await crypto.subtle.encrypt({name:"AES-GCM",iv},k,new TextEncoder().encode(JSON.stringify(obj)));
+  return {v:1,s:iaB64(salt),i:iaB64(iv),d:iaB64(d)};
+}
+async function iaDecifrar(pac,frase){
+  const k=await iaDerivar(frase,iaUnb64(pac.s));
+  const d=await crypto.subtle.decrypt({name:"AES-GCM",iv:iaUnb64(pac.i)},k,iaUnb64(pac.d));
+  return JSON.parse(new TextDecoder().decode(d));
+}
 async function iaChamar(prompt,b64,json,mt){
   const ck=iaKey(IA_KC), gk=iaKey(IA_KG);
   if(!ck&&!gk)throw new Error("SEM_CHAVE");
@@ -9863,6 +9881,31 @@ function AppMain({user, onLogout}) {
   // Modo de tela: "auto" (decide pela largura), "celular" ou "pc"
   const [modoTela,  setModoTela]   = useLS("v4_modo",   "auto", userId);
   const [chaveIn,setChaveIn]=useState(""); const [chaveT,setChaveT]=useState(0);
+  const [nuvem,setNuvem]=useState(undefined); const [frase,setFrase]=useState(""); const [syncMsg,setSyncMsg]=useState(""); const [syncBusy,setSyncBusy]=useState(false);
+  useEffect(()=>{let vivo=true; supaGet("velara_chavecrypt",userId).then(r=>{if(vivo)setNuvem(r&&r.d?r:null);}); return ()=>{vivo=false;};},[userId,chaveT]);
+  const enviarNuvem=async()=>{
+    const c=iaKey(IA_KC), g=iaKey(IA_KG);
+    if((!c&&!g)||frase.trim().length<8){setSyncMsg("Use uma frase-senha com pelo menos 8 caracteres.");return;}
+    setSyncBusy(true); setSyncMsg("");
+    try{
+      const pac=await iaCifrar({c,g},frase.trim());
+      await supaSet("velara_chavecrypt",pac,userId);
+      const volta=await supaGet("velara_chavecrypt",userId);
+      if(volta&&volta.d){setNuvem(volta);setFrase("");setSyncMsg("Pronto: a chave está na sua conta, criptografada.");}
+      else setSyncMsg("Não consegui guardar agora. Tente de novo.");
+    }catch{setSyncMsg("Não consegui criptografar neste navegador.");}
+    setSyncBusy(false);
+  };
+  const liberarNuvem=async()=>{
+    if(!nuvem)return; setSyncBusy(true); setSyncMsg("");
+    try{
+      const o=await iaDecifrar(nuvem,frase.trim());
+      try{if(o.c)localStorage.setItem(IA_KC,o.c);if(o.g)localStorage.setItem(IA_KG,o.g);}catch{ /* sem acesso */ }
+      setFrase(""); setChaveT(x=>x+1); setSyncMsg("Chave liberada neste aparelho.");
+    }catch{setSyncMsg("Frase-senha incorreta.");}
+    setSyncBusy(false);
+  };
+  const apagarNuvem=async()=>{await supaSet("velara_chavecrypt",null,userId); setNuvem(null); setSyncMsg("Removida da sua conta.");};
   const salvarChaveGlobal=()=>{const v=chaveIn.trim(); if(v.length<10)return; try{localStorage.setItem(v.startsWith("sk-ant")?IA_KC:IA_KG,v);}catch{ /* sem acesso */ } setChaveIn(""); setChaveT(x=>x+1);};
   const tirarChave=k=>{try{localStorage.removeItem(k);}catch{ /* sem acesso */ } setChaveT(x=>x+1);};
   const [larguraTela,setLarguraTela]=useState(typeof window!=="undefined"?window.innerWidth:1024);
@@ -10925,7 +10968,21 @@ function AppMain({user, onLogout}) {
             <input type="password" autoComplete="off" autoCapitalize="off" spellCheck={false} placeholder={iaKey(IA_KC)||iaKey(IA_KG)?"trocar ou somar chave":"sk-ant… ou AIza…"} value={chaveIn} onChange={e=>setChaveIn(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")salvarChaveGlobal();}} style={{flex:1,minWidth:0,background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"8px 10px",fontSize:16,color:"#fff",outline:"none",fontFamily:"inherit"}}/>
             <button onClick={salvarChaveGlobal} style={{background:"rgba(232,32,95,0.5)",border:"1px solid #B91D55",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit"}}>Salvar</button>
           </div>
-          <div style={{fontSize:10.5,lineHeight:1.5,color:"rgba(255,255,255,.45)",marginTop:6}}>Uma vez só vale para Idiomas, Clínica e Finanças. Fica neste aparelho.</div>
+          <div style={{fontSize:10.5,lineHeight:1.5,color:"rgba(255,255,255,.45)",marginTop:6}}>Uma vez só vale para Idiomas, Clínica e Finanças.</div>
+          {nuvem!==undefined&&(()=>{
+            const tem=!!(iaKey(IA_KC)||iaKey(IA_KG));
+            const bx={background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"8px 10px",fontSize:16,color:"#fff",outline:"none",fontFamily:"inherit",flex:1,minWidth:0};
+            const bt={background:"rgba(232,32,95,0.5)",border:"1px solid #B91D55",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:700,color:"#fff",cursor:"pointer",fontFamily:"inherit",opacity:syncBusy?.5:1};
+            const tx={fontSize:10.5,lineHeight:1.5,color:"rgba(255,255,255,.6)",marginBottom:6};
+            return <div style={{marginTop:12,paddingTop:10,borderTop:"1px dashed rgba(255,255,255,0.15)"}}>
+              {nuvem&&tem&&<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:12,color:"#fff"}}><span>✓ Também na sua conta</span><button onClick={apagarNuvem} style={{background:"none",border:"none",color:"rgba(255,255,255,.6)",fontSize:11,textDecoration:"underline",cursor:"pointer",fontFamily:"inherit"}}>apagar da conta</button></div>}
+              {nuvem&&!tem&&<><div style={tx}>Há uma chave guardada na sua conta. Digite a frase-senha para usar neste aparelho.</div>
+                <div style={{display:"flex",gap:6}}><input type="password" autoComplete="off" placeholder="frase-senha" value={frase} onChange={e=>setFrase(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")liberarNuvem();}} style={bx}/><button disabled={syncBusy||frase.trim().length<8} onClick={liberarNuvem} style={bt}>Liberar</button></div></>}
+              {!nuvem&&tem&&<><div style={tx}>Quer a chave em todos os seus aparelhos? Crie uma frase-senha: a chave é criptografada aqui antes de ir para a sua conta. Anote a frase, ela não pode ser recuperada.</div>
+                <div style={{display:"flex",gap:6}}><input type="password" autoComplete="new-password" placeholder="frase-senha (8+ caracteres)" value={frase} onChange={e=>setFrase(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")enviarNuvem();}} style={bx}/><button disabled={syncBusy||frase.trim().length<8} onClick={enviarNuvem} style={bt}>Guardar</button></div></>}
+              {syncMsg&&<div style={{fontSize:11,color:"#fff",marginTop:6}}>{syncMsg}</div>}
+            </div>;
+          })()}
         </div>
         <div style={{padding:"12px 16px",borderTop:"1px solid rgba(255,255,255,0.1)"}}>
           <div style={{fontSize:10,fontWeight:500,letterSpacing:".07em",textTransform:"uppercase",color:"rgba(255,255,255,0.4)",fontFamily:"'DM Mono',ui-monospace,monospace",marginBottom:7}}>Tela</div>
