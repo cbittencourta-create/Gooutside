@@ -2308,14 +2308,7 @@ function exDosErros(texto,erros){
   });
   return [...lac,...cor];
 }
-async function gExerciciosErros(lang,erros,texto){
-  const idioma=lang==="de"?"alemão":"francês";
-  const lis=(erros||[]).filter(e=>e&&e.trecho&&String(e.correcao||"")!==String(e.trecho)).slice(0,5);
-  if(!lis.length)return [];
-  const n=Math.min(8,Math.max(4,lis.length*2));
-  const lista=lis.map((e,i)=>(i+1)+". «"+e.trecho+"» → «"+(e.correcao||"(retirar)")+"» ("+String(e.porque||"").replace(/\|/g,"/")+")").join("\n");
-  const prompt="Você é professor de "+idioma+" de uma aluna brasileira, médica, que escreveu este texto: «"+texto+"». Ela errou estes pontos:\n"+lista+"\nCrie EXATAMENTE "+n+" exercícios NOVOS (frases diferentes das do texto dela, vocabulário simples do dia a dia, pode usar contexto de hospital) que treinem exatamente essas regras, distribuídos entre os erros, do mais fácil ao mais difícil. Tipos: lacuna (frase em "+idioma+" com UMA lacuna ___), corrigir (frase em "+idioma+" com UM erro igual ao que ela cometeu; a resposta é a frase inteira corrigida), reordenar (palavras embaralhadas separadas por \" / \"; a resposta é a frase correta), traducao (frase curta em português; a resposta é a tradução). Responda SOMENTE em texto puro, uma linha por exercício, sem markdown e sem JSON, neste formato:\nEX | tipo | enunciado | resposta (se houver variantes aceitas, separe por ;) | dica curta em português sem entregar a resposta | regra em uma frase em português\nNenhum campo pode conter o caractere |.";
-  const raw=await iaChamar(prompt,null,false);
+function exParse(raw,n){
   const out=[];
   String(raw||"").replace(/```[a-z]*|```/g,"").split(/\r?\n/).forEach(ln=>{
     const m=ln.match(/^\s*[-*•\d.)\s]*EX\s*\|\s*(.*)$/i); if(!m)return;
@@ -2329,6 +2322,25 @@ async function gExerciciosErros(lang,erros,texto){
   });
   if(!out.length)throw new Error("a resposta da IA veio num formato inesperado");
   return out.slice(0,n);
+}
+async function gExerciciosFixar(lang,nivel,erros,frase,termo){
+  const idioma=lang==="de"?"alemão":"francês";
+  const lis=(erros||[]).filter(e=>e&&e.trecho&&String(e.correcao||"")!==String(e.trecho)).slice(0,4);
+  if(!lis.length)return [];
+  const n=Math.min(6,Math.max(3,lis.length*2));
+  const lista=lis.map((e,i)=>(i+1)+". «"+e.trecho+"» → «"+(e.correcao||"(retirar)")+"» ("+String(e.porque||"").replace(/\|/g,"/")+")").join("\n");
+  const prompt="Você é professor de "+idioma+" (nível "+nivel+") de uma aluna brasileira, médica, que ainda erra pontos BÁSICOS. Ela escreveu «"+frase+"» tentando usar a palavra «"+termo+"» e errou:\n"+lista+"\nCrie EXATAMENTE "+n+" exercícios de FIXAÇÃO que a obriguem a pensar e a escrever a resposta (nunca múltipla escolha). Treine a REGRA por trás de cada erro, não a frase dela: varie gênero, número, caso e pessoa (por exemplo, em possessivos, varie quem possui e o gênero, o número e o caso do que é possuído). Frases NOVAS, curtas, do dia a dia ou de hospital, do mais fácil ao mais difícil, distribuídas entre os erros. Tipos: traducao (frase curta em português cuja tradução exige a regra; a resposta é a tradução, e variantes aceitas vão separadas por ;), lacuna (frase em "+idioma+" com UMA lacuna ___), corrigir (frase em "+idioma+" com UM erro igual ao dela; a resposta é a frase inteira corrigida). Pelo menos metade dos exercícios deve ser traducao. Responda SOMENTE em texto puro, uma linha por exercício, sem markdown e sem JSON, neste formato:\nEX | tipo | enunciado | resposta (variantes separadas por ;) | dica curta em português sem entregar a resposta | regra em uma frase em português\nNenhum campo pode conter o caractere |.";
+  return exParse(await iaChamar(prompt,null,false),n);
+}
+async function gExerciciosErros(lang,erros,texto){
+  const idioma=lang==="de"?"alemão":"francês";
+  const lis=(erros||[]).filter(e=>e&&e.trecho&&String(e.correcao||"")!==String(e.trecho)).slice(0,5);
+  if(!lis.length)return [];
+  const n=Math.min(8,Math.max(4,lis.length*2));
+  const lista=lis.map((e,i)=>(i+1)+". «"+e.trecho+"» → «"+(e.correcao||"(retirar)")+"» ("+String(e.porque||"").replace(/\|/g,"/")+")").join("\n");
+  const prompt="Você é professor de "+idioma+" de uma aluna brasileira, médica, que escreveu este texto: «"+texto+"». Ela errou estes pontos:\n"+lista+"\nCrie EXATAMENTE "+n+" exercícios NOVOS (frases diferentes das do texto dela, vocabulário simples do dia a dia, pode usar contexto de hospital) que treinem exatamente essas regras, distribuídos entre os erros, do mais fácil ao mais difícil. Tipos: lacuna (frase em "+idioma+" com UMA lacuna ___), corrigir (frase em "+idioma+" com UM erro igual ao que ela cometeu; a resposta é a frase inteira corrigida), reordenar (palavras embaralhadas separadas por \" / \"; a resposta é a frase correta), traducao (frase curta em português; a resposta é a tradução). Responda SOMENTE em texto puro, uma linha por exercício, sem markdown e sem JSON, neste formato:\nEX | tipo | enunciado | resposta (se houver variantes aceitas, separe por ;) | dica curta em português sem entregar a resposta | regra em uma frase em português\nNenhum campo pode conter o caractere |.";
+  const raw=await iaChamar(prompt,null,false);
+  return exParse(raw,n);
 }
 function exAbrirPdf(titulo,sub,textoOrig,fila){
   const h=x=>String(x==null?"":x).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
@@ -4001,6 +4013,10 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const [exerc,setExerc]=useLS("v5_idi_exerc",[],userId);
   const exercRef=useRef(exerc); exercRef.current=exerc;
   const [exS,setExS]=useState(null);
+  const [fix,setFix]=useLS("v5_idi_fix",[],userId);
+  const fixRef=useRef(fix); fixRef.current=fix;
+  const [fxG,setFxG]=useState({id:"",load:false,n:0,erro:""});
+  const [fx,setFx]=useState(null);
   const [trn,setTrn]=useState(null);
   const [gerEx,setGerEx]=useState({});
   const [gerMsg,setGerMsg]=useState("");
@@ -4708,6 +4724,17 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     setRs({...rs,fila,i:prox,show:false,resp:"",res:null,ok:rs.ok+(ok?1:0),er:rs.er+(ok?0:1),rep:ok?rs.rep:{...rs.rep,[id]:1},fim:prox>=fila.length});
   };
   // frase própria com a palavra: salva na hora e corrige automaticamente (com chave de IA)
+  const criarFixacao=async(v0,termo,frase,lis)=>{
+    const mk=x=>({id:uid(),lang:v0.lang,vocId:v0.id,termo,tipo:x.tipo,enun:x.enun,resp:x.resp,dica:x.dica||"",expl:x.expl||"",erro:x.erro||"",chk:x.chk,estado:"pendente",err:0,ac:0,prox:hoje,data:hoje});
+    const base=exDosErros(frase,lis.map(e=>({trecho:e.trecho,correcao:e.correcao,porque:e.porque,tipo:e.tipo}))).map(mk);
+    fixRef.current=[...base,...fixRef.current.filter(x=>!(x.vocId===v0.id&&!x.ult))]; setFix(fixRef.current);
+    setFxG({id:v0.id,load:true,n:base.length,erro:""});
+    try{
+      const novos=(await gExerciciosFixar(v0.lang,(L(v0.lang)||{}).nivel||"A2",lis,frase,termo)).map(mk);
+      fixRef.current=[...fixRef.current,...novos]; setFix(fixRef.current);
+      setFxG({id:v0.id,load:false,n:base.length+novos.length,erro:""});
+    }catch(err){setFxG({id:v0.id,load:false,n:base.length,erro:errAmigavel(err)});}
+  };
   const corrigirMinha=async(id,t0)=>{
     const t=String(t0||"").trim(); if(!t)return;
     const v0=vocabRef.current.find(v=>v.id===id); if(!v0)return;
@@ -4724,6 +4751,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       const novos=r.erros.filter(e=>e.correcao&&e.correcao!==e.trecho).map(e=>({id:uid(),lang:v0.lang,area:e.area||"outro",errada:e.trecho,certa:e.correcao,fonte:"frase com «"+v0.termo+"»",data:hoje}));
       if(novos.length)setMeus([...novos,...meusRef.current]);
       setMc({id:"",load:false,erro:""});
+      const lisFx=r.erros.filter(e=>e.correcao&&e.correcao!==e.trecho);
+      if(lisFx.length)criarFixacao(v0,termo,t,lisFx);
     }catch(err){
       setMc({id,load:false,erro:err.message==="SEM_CHAVE"?"":errAmigavel(err)});
     }
@@ -5080,6 +5109,8 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
   const exSel=exerc.filter(x=>x.lang===sel);
   const exPend=exSel.filter(x=>x.estado!=="feito");
   const exTopicosPend=new Set(exPend.map(x=>x.estId)).size;
+  const fixSel=fix.filter(x=>x.lang===sel);
+  const fixPend=fixSel.filter(x=>x.estado!=="feito"&&(x.prox||"")<=hoje);
   const exNorm=x=>(x||"").toLowerCase().replace(/[.,;:!?"“”«»()]/g,"").replace(/\s+/g," ").trim();
   const exFold=x=>semAcento(exNorm(x).replace(/ß/g,"ss")).replace(/ae/g,"a").replace(/oe/g,"o").replace(/ue/g,"u");
   const exLocal=(r,lista)=>{let m="er";for(const a of lista){if(exNorm(r)===exNorm(a))return "ok";if(exFold(r)===exFold(a))m="quase";}return m;};
@@ -5177,6 +5208,48 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
     const titulo="Exercícios do meu diário em "+(sel==="de"?"alemão":"francês")+" · "+ent.data.split("-").reverse().join("/");
     const r=exAbrirPdf(titulo,"Velara · Idiomas · treino dos meus erros",ent.texto,base);
     setTrn(x=>({...x,pdf:r||"erro"}));
+  };
+  // ── Fixação: 5 exercícios escritos, vindos dos erros das suas frases ──
+  const iniciarFix=()=>{
+    const gr={}; [...fixPend].sort((a,b)=>(b.err||0)-(a.err||0)).forEach(x=>{const k=x.erro||x.id;(gr[k]=gr[k]||[]).push(x);});
+    const pri={traducao:0,corrigir:1,reordenar:2,lacuna:3};
+    Object.values(gr).forEach(a=>a.sort((p,q)=>(pri[p.tipo]??4)-(pri[q.tipo]??4)));
+    const ord=Object.values(gr); const ids=[];
+    for(let k=0;ids.length<5&&k<30;k++){ord.forEach(a=>{if(a[k]&&ids.length<5)ids.push(a[k].id);});}
+    if(!ids.length)return;
+    setFx({fila:ids,i:0,resp:"",load:false,fb:null,dica:false,ok:0,er:0,rep:{},fim:false});
+  };
+  const fxCur=fx&&!fx.fim?fix.find(x=>x.id===fx.fila[fx.i]):null;
+  const fxConferir=async forcarIA=>{
+    if(!fx||!fxCur||fx.fb||fx.load)return;
+    const t=fx.resp.trim(); if(!t)return;
+    let ok=false,quase=false,ia=null;
+    const loc=exLocal(t,fxCur.resp);
+    if(loc!=="er"){ok=true;quase=loc==="quase";}
+    else if(fxCur.chk&&fxCur.chk.co){
+      const a=exNorm(t),c=exNorm(fxCur.chk.co),r=exNorm(fxCur.chk.tr);
+      if(c&&a.includes(c)&&(!r||c.includes(r)||!a.includes(r)))ok=true;
+    }
+    if(!ok&&iaNome&&(fxCur.tipo==="traducao"||forcarIA===true)){
+      setFx(x=>({...x,load:true}));
+      try{ia=await gAvaliarExercicio(sel,{tipo:fxCur.tipo,enun:fxCur.enun,resp:fxCur.resp},t,"fixação da palavra "+fxCur.termo);ok=ia.ok;}
+      catch(err){setFx(x=>({...x,load:false,fb:{ok:false,msg:"Não consegui conferir com a IA ("+errAmigavel(err)+")."}}));return;}
+    }
+    if(!fx.rep[fxCur.id]){
+      const nova=fixRef.current.map(x=>{
+        if(x.id!==fxCur.id)return x;
+        if(ok){const ac=(x.ac||0)+1;return {...x,ac,ult:hoje,estado:ac>=2?"feito":"pendente",prox:addDays(hoje,ac>=2?0:3)};}
+        return {...x,ac:0,err:(x.err||0)+1,ult:hoje,prox:addDays(hoje,1)};
+      });
+      fixRef.current=nova; setFix(nova);
+    }
+    setFx(x=>({...x,load:false,fb:{ok,quase,ia,pedirIA:!ok&&!!iaNome&&!ia&&fxCur.tipo!=="traducao"}}));
+  };
+  const fxProx=()=>{
+    if(!fx||!fx.fb)return;
+    const erro=!fx.fb.ok; const id=fx.fila[fx.i];
+    const fila=(erro&&!fx.rep[id])?[...fx.fila,id]:fx.fila; const p=fx.i+1;
+    setFx({...fx,fila,rep:erro?{...fx.rep,[id]:1}:fx.rep,i:p,resp:"",fb:null,dica:false,ok:fx.ok+(!erro&&!fx.rep[id]?1:0),er:fx.er+(erro&&!fx.rep[id]?1:0),fim:p>=fila.length});
   };
   // ── Sessão do dia: monta o treino a partir do que está vencido, errado e fraco ──
   const planoDia=()=>{
@@ -5482,7 +5555,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       </Card>}
     </>);
   };
-  const subs=[["hoje","Hoje"],["aula","Aula"],["diario","Diário"+(drPend?" · !":"")],["prova","Prova"+(provaDueN?" · "+provaDueN:"")],["pratica","Praticar"+((estDue.length+exTopicosPend)?" · "+(estDue.length+exTopicosPend):"")],["palavras","Palavras"+(totHoje?" · "+totHoje:"")],["mapa","Mapa"],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
+  const subs=[["hoje","Hoje"],["aula","Aula"],["diario","Diário"+(drPend?" · !":"")],["prova","Prova"+(provaDueN?" · "+provaDueN:"")],["pratica","Praticar"+((estDue.length+exTopicosPend)?" · "+(estDue.length+exTopicosPend):"")],["palavras","Palavras"+(totHoje+fixPend.length?" · "+(totHoje+fixPend.length):"")],["mapa","Mapa"],["subst","Substantivos"],["gram","Gramática"],["ler","Leitura"],["midia","Escuta"],["evol","Evolução"]];
   const nomeSel=`${unica.nome} · ${unica.nivel} → ${unica.alvo}`+(dProva!==null&&dProva>=0?` · prova em ${dProva} ${dProva===1?"dia":"dias"}`:"");
 
   // Evolução
@@ -5520,6 +5593,7 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
             :<><div style={lab}>corrigida</div><div style={{fontSize:15,fontWeight:600,marginTop:3}}>{cur.minhaC}</div>
               {(cur.minhaE||[]).map((e,i)=><div key={i} style={{fontSize:13,marginTop:6,opacity:.85}}>«{e.t}» → «{e.c}»{e.p?" · "+e.p:""}</div>)}</>}
           {cur.minhaCom&&<div style={{fontSize:13,marginTop:8,opacity:.75}}>{cur.minhaCom}</div>}
+          {fxG.id===cur.id&&<div style={{fontSize:12.5,marginTop:10,paddingTop:8,borderTop:"1px dashed rgba(var(--idi-rgb),.2)"}}>{fxG.load?"Criando exercícios de fixação…":"✓ "+fxG.n+(fxG.n===1?" exercício de fixação criado":" exercícios de fixação criados")+". Eles esperam em Palavras › Fixação."+(fxG.erro?" Os extras com IA não saíram ("+fxG.erro+"); ficaram os da sua frase.":"")}</div>}
         </div>}
         {!carregando&&!cur.minhaC&&iaNome&&<div style={{marginTop:8,display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
           <button style={{...btnS,padding:"7px 14px",fontSize:12.5}} onClick={()=>corrigirMinha(cur.id,cur.minha)}>Corrigir esta frase</button>
@@ -6650,6 +6724,49 @@ function IdiomasApp({userId,isMobile,onMenu,onTrocar}){
       })()}
 
       {sub==="palavras"&&(<>
+        {(fixSel.length>0||fx)&&!rs&&<Card>
+          <Titulo k="Fixação" t="Exercícios dos seus erros" dir={!fx&&fixPend.length>0?<button style={{...btnP,padding:"9px 16px",fontSize:12}} onClick={iniciarFix}>Fazer {Math.min(5,fixPend.length)}</button>:null}/>
+          {!fx&&<Vazio>{fixPend.length>0?fixPend.length+(fixPend.length===1?" exercício pronto":" exercícios prontos")+". Cada rodada tem até 5, e você escreve cada resposta, sem múltipla escolha.":"Nada para hoje. "+fixSel.filter(x=>x.estado!=="feito").length+" voltam nos próximos dias."}</Vazio>}
+          {fx&&!fx.fim&&fxCur&&(()=>{const f=fx.fb; return (
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:10,gap:10}}><span style={lab}>{EX_TIPOS[fxCur.tipo]} · {fxCur.termo}</span><span style={lab}>{Math.min(fx.i+1,fx.fila.length)} / {fx.fila.length}</span></div>
+              <div style={{height:4,borderRadius:99,background:"rgba(var(--idi-rgb),.1)",overflow:"hidden",marginBottom:18}}><div style={{width:(fx.i/fx.fila.length*100)+"%",height:"100%",background:T.ink,transition:"width .3s"}}/></div>
+              <div style={{fontSize:isMobile?19:22,lineHeight:1.5,marginBottom:14,wordBreak:"break-word"}}>{fxCur.enun}</div>
+              {!f&&<>
+                {fxCur.tipo==="lacuna"
+                  ?<input autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,fontSize:17}} value={fx.resp} onChange={e=>setFx({...fx,resp:e.target.value})} onKeyDown={e=>{if(e.key==="Enter")fxConferir();}} aria-label="Resposta do exercício" placeholder="preencha a lacuna"/>
+                  :<textarea autoFocus autoCapitalize="off" autoCorrect="off" spellCheck={false} style={{...inp,minHeight:80,resize:"vertical",lineHeight:1.5,fontSize:16}} value={fx.resp} onChange={e=>setFx({...fx,resp:e.target.value})} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();fxConferir();}}} aria-label="Resposta do exercício" placeholder={fxCur.tipo==="traducao"?"escreva a tradução":"escreva a frase"}/>}
+                <div style={{display:"flex",gap:6,flexWrap:"wrap",marginTop:10}}>{G.chars.map(c=><button key={c} onClick={()=>setFx({...fx,resp:fx.resp+c})} style={{width:38,height:38,borderRadius:12,border:"1px solid rgba(var(--idi-rgb),.2)",background:"transparent",cursor:"pointer",fontSize:16,color:"inherit"}}>{c}</button>)}</div>
+                {fx.dica&&fxCur.dica&&<div style={{marginTop:12,padding:"10px 14px",borderRadius:14,background:"#FBF1D8",fontSize:13.5,lineHeight:1.5}}>💡 {fxCur.dica}</div>}
+                <div style={{display:"flex",gap:10,marginTop:14,flexWrap:"wrap"}}>
+                  <button style={{...btnP,opacity:(fx.resp.trim()&&!fx.load)?1:.4}} disabled={!fx.resp.trim()||fx.load} onClick={()=>fxConferir()}>{fx.load?"Conferindo…":"Conferir"}</button>
+                  {fxCur.dica&&!fx.dica&&<button style={btnS} onClick={()=>setFx({...fx,dica:true})}>Dica</button>}
+                  <button style={btnS} onClick={()=>setFx(null)}>Sair (ficam para depois)</button>
+                </div>
+              </>}
+              {f&&<div>
+                <div style={{padding:"14px 16px",borderRadius:16,background:f.ok?"#E3EFDB":"#F8E0D9",marginBottom:10}}>
+                  <div style={{fontWeight:700,fontSize:15,color:f.ok?"#3C7030":"#B23F2A"}}>{f.msg?f.msg:(f.ok?(f.quase?"✓ Certo · atenção à grafia":"✓ Certo"):"✗ Ainda não")}</div>
+                  {fx.resp&&<div style={{fontSize:13,marginTop:6,opacity:.8}}>Você escreveu: <i>{fx.resp}</i></div>}
+                  {f.ia&&f.ia.feedback&&<div style={{fontSize:14,lineHeight:1.55,marginTop:6}}>{f.ia.feedback}</div>}
+                  {!f.ok&&((f.ia&&f.ia.correta)||fxCur.resp[0])&&<div style={{fontSize:14.5,marginTop:8,fontWeight:600,lineHeight:1.5}}>{(f.ia&&f.ia.correta)||fxCur.resp[0]}</div>}
+                </div>
+                {fxCur.expl&&<div style={{fontSize:13.5,lineHeight:1.6,marginBottom:10}}><b>Regra:</b> {fxCur.expl}</div>}
+                {fxCur.erro&&<div style={{fontSize:12.5,opacity:.65,marginBottom:10}}>Seu erro original: {fxCur.erro}</div>}
+                {!f.ok&&<div style={{...lab,fontSize:9.5,marginBottom:10}}>Este exercício volta nesta rodada e amanhã.</div>}
+                <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+                  <button style={btnP} onClick={fxProx}>{fx.i+1>=fx.fila.length?"Finalizar":"Próximo"}</button>
+                  {f.pedirIA&&<button style={btnS} onClick={()=>fxConferir(true)}>Minha resposta também vale? Pedir ao {iaNome}</button>}
+                </div>
+              </div>}
+            </div>);})()}
+          {fx&&fx.fim&&<div style={{textAlign:"center"}}>
+            <div style={lab}>Rodada concluída</div>
+            <div style={{...serif,fontSize:isMobile?56:72,margin:"14px 0 6px",lineHeight:1}}>{fx.ok}<small style={{fontSize:"45%",opacity:.45}}> / {fx.ok+fx.er}</small></div>
+            <Vazio>{fixPend.length>0?fixPend.length+(fixPend.length===1?" exercício continua":" exercícios continuam")+" para fazer, incluindo os que você errou.":"Nada mais para hoje. O que você acertou volta em 3 dias para confirmar."}</Vazio>
+            <div style={{marginTop:16,display:"flex",gap:10,justifyContent:"center",flexWrap:"wrap"}}>{fixPend.length>0&&<button style={btnP} onClick={iniciarFix}>Mais {Math.min(5,fixPend.length)}</button>}<button style={fixPend.length>0?btnS:btnP} onClick={()=>setFx(null)}>Fechar</button></div>
+          </div>}
+        </Card>}
         {rs&&(
           <Card style={{textAlign:"center",padding:isMobile?"26px 18px":"36px 28px"}}>
             {rs.fim?(<>
